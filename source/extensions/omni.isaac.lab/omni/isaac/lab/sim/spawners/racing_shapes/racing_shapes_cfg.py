@@ -8,24 +8,17 @@ from dataclasses import MISSING
 
 from omni.isaac.lab.sim import schemas
 from omni.isaac.lab.sim.spawners import materials
-from omni.isaac.lab.sim.spawners.spawner_cfg import SpawnerCfg
+from omni.isaac.lab.sim.spawners.spawner_cfg import RigidObjectSpawnerCfg
 from omni.isaac.lab.utils import configclass
 
 from . import racing_shapes
 
 
 @configclass
-class RacingShapeCfg(SpawnerCfg):
+class RacingShapeCfg(RigidObjectSpawnerCfg):
     """Configuration parameters for a USD Geometry or Geom prim."""
 
-    collision_props: schemas.CollisionPropertiesCfg | None = None
-    """Properties to apply to all collision meshes."""
-
-    activate_contact_sensors: bool = False
-    """Activate contact reporting on all rigid bodies. Defaults to False.
-
-    This adds the PhysxContactReporter API to all the rigid bodies in the given prim path and its children.
-    """
+    pass
 
 
 @configclass

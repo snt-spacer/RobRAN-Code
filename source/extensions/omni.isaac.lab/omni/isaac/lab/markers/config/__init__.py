@@ -130,3 +130,62 @@ POSITION_GOAL_MARKER_CFG = VisualizationMarkersCfg(
     }
 )
 """Configuration for the end-effector tracking marker."""
+
+##
+# Navigation goal markers.
+##
+
+PIN_SPHERE_CFG = VisualizationMarkersCfg(
+    markers={
+        "pin_sphere": sim_utils.PinSphereCfg(
+            sphere_radius=0.125,
+            pin_radius=0.01,
+            pin_length=1.0,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+        ),
+    }
+)
+"""Configuration for the pin with sphere marker."""
+
+PIN_DIAMOND_CFG = VisualizationMarkersCfg(
+    markers={
+        "pin_diamond": sim_utils.PinDiamondCfg(
+            diamond_height=0.3,
+            diamond_width=0.2,
+            pin_radius=0.01,
+            pin_length=1.0,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.333, 1.0, 0.0)),
+        ),
+    }
+)
+"""Configuration for the pin with diamond marker."""
+
+##
+# Racing markers.
+##
+
+
+##
+# Robot Pose/Position Markers.
+##
+
+DIAMOND_CFG = VisualizationMarkersCfg(
+    markers={
+        "diamond": sim_utils.DiamondCfg(
+            diamond_height=0.15,
+            diamond_width=0.1,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.333, 1.0, 0.0)),
+        ),
+    }
+)
+
+BICOLOR_DIAMOND_CFG = VisualizationMarkersCfg(
+    markers={
+        "diamond": sim_utils.BiColorDiamondCfg(
+            diamond_height=0.15,
+            diamond_width=0.1,
+            front_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.333, 1.0, 0.0)),
+            back_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.1, 0.0)),
+        ),
+    }
+)

@@ -3,23 +3,23 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import MISSING
 
-from omni.isaac.lab.sim import schemas
 from omni.isaac.lab.sim.spawners import materials
-from omni.isaac.lab.sim.spawners.spawner_cfg import SpawnerCfg
+from omni.isaac.lab.sim.spawners.spawner_cfg import RigidObjectSpawnerCfg
+
+# from omni.isaac.lab.sim import schemas
 from omni.isaac.lab.utils import configclass
 
 from . import navigation_shapes
 
 
 @configclass
-class NavigationShapeCfg(SpawnerCfg):
+class NavigationShapeCfg(RigidObjectSpawnerCfg):
     """Configuration parameters for a USD Geometry or Geom prim."""
-
-    collision_props: schemas.CollisionPropertiesCfg | None = None
-    """Properties to apply to all collision meshes."""
 
     visual_material_path: str = "material"
     """Path to the visual material to use for the prim. Defaults to "material".
@@ -80,14 +80,14 @@ class BiColorDiamondCfg(NavigationShapeCfg):
     """Height of the diamond (in m)."""
     diamond_width: float = MISSING
     """Width of the diamond (in m)."""
-    front_material_path: str = "material"
+    front_material_path: str = "material_front"
     """Path to the visual material to use for the front of the prim. Defaults to "material".
 
     If the path is relative, then it will be relative to the prim's path.
     This parameter is ignored if `front_material` is not None.
     """
     front_material: materials.VisualMaterialCfg | None = None
-    back_material_path: str = "material"
+    back_material_path: str = "material_back"
     """Path to the visual material to use for the back of the prim. Defaults to "material".
 
     If the path is relative, then it will be relative to the prim's path.
