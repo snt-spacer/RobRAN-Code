@@ -203,6 +203,83 @@ def spawn_arrow(
 
 
 @clone
+def spawn_position_marker_3d(
+    prim_path: str,
+    cfg: navigation_shapes_cfg.PositionMarker3DCfg,
+    translation: tuple[float, float, float] | None = None,
+    rotation: tuple[float, float, float, float] | None = None,
+) -> Usd.Prim:
+    """Create a USDGeom-based 3D position marker using the given attributes.
+
+    It uses a combination of cylinder and spheres to create an non oriented 3D position marker. This is meant
+    to be used in 3D navigation tasks to visualize the position of a goal.
+
+    .. note::
+        This function is decorated with :func:`clone` that resolves prim path into list of paths
+        if the input prim path is a regex pattern. This is done to support spawning multiple assets
+        from a single and cloning the USD prim at the given path expression.
+
+    Args:
+        prim_path: The prim path or pattern to spawn the asset at. If the prim path is a regex pattern,
+            then the asset is spawned at all the matching prim paths.
+        cfg: The configuration instance.
+        translation: The translation to apply to the prim w.r.t. its parent prim. Defaults to None, in which case
+            this is set to the origin.
+        orientation: The orientation in (w, x, y, z) to apply to the prim w.r.t. its parent prim. Defaults to None,
+            in which case this is set to identity.
+
+    Returns:
+        The created prim.
+
+    Raises:
+        ValueError: If a prim already exists at the given path.
+    """
+    make_3d_position_marker_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    return prim_utils.get_prim_at_path(prim_path)
+
+
+@clone
+def spawn_pose_marker_3d(
+    prim_path: str,
+    cfg: navigation_shapes_cfg.PoseMarker3DCfg,
+    translation: tuple[float, float, float] | None = None,
+    rotation: tuple[float, float, float, float] | None = None,
+) -> Usd.Prim:
+    """Create a USDGeom-based 3D pose marker using the given attributes.
+
+    It uses a combination of cylinders and cones to create an oriented 3D pose marker. This is meant
+    to be used in 3D navigation tasks to visualize the position and orientation of a goal.
+
+    .. note::
+        This function is decorated with :func:`clone` that resolves prim path into list of paths
+        if the input prim path is a regex pattern. This is done to support spawning multiple assets
+        from a single and cloning the USD prim at the given path expression.
+
+    Args:
+        prim_path: The prim path or pattern to spawn the asset at. If the prim path is a regex pattern,
+            then the asset is spawned at all the matching prim paths.
+        cfg: The configuration instance.
+        translation: The translation to apply to the prim w.r.t. its parent prim. Defaults to None, in which case
+            this is set to the origin.
+        orientation: The orientation in (w, x, y, z) to apply to the prim w.r.t. its parent prim. Defaults to None,
+            in which case this is set to identity.
+
+    Returns:
+        The created prim.
+
+    Raises:
+        ValueError: If a prim already exists at the given path.
+    """
+    make_3d_pose_marker_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    return prim_utils.get_prim_at_path(prim_path)
+
+
+"""
+Helper functions.
+"""
+
+
+@clone
 def spawn_pin_with_arrow(
     prim_path: str,
     cfg: navigation_shapes_cfg.PinArrowCfg,
@@ -424,9 +501,33 @@ def make_diamond(
         ValueError: If a prim already exists at the given paths.
     """
     vertices = np.array(
-        [[0, 0, 0], [0.5, 0.0, 0.5], [0.0, 0.5, 0.5], [-0.5, 0.0, 0.5], [0.0, -0.5, 0.5], [0.0, 0.0, 1.0]]
+        [
+            [0, 0, 0],  # Bottom (0)
+            [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+            [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+            [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+            [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+            [0.0, 0.0, 1.0],  # Top (7)
+        ]
     )
-    faces = np.array([[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [5, 1, 2], [5, 2, 3], [5, 3, 4], [5, 4, 1]])
+    faces = np.array(
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+            [0, 3, 4],
+            [0, 4, 5],
+            [0, 5, 6],
+            [0, 6, 1],
+            [7, 1, 2],
+            [7, 2, 3],
+            [7, 3, 4],
+            [7, 4, 5],
+            [7, 5, 6],
+            [7, 6, 1],
+        ]
+    )
 
     mesh_prim = prim_utils.create_prim(
         mesh_prim_path,
@@ -539,14 +640,61 @@ def make_bicolor_diamond(
         ValueError: If a prim already exists at the given paths.
     """
     vertices_1 = np.array(
-        [[0, 0, 0], [0.5, 0.0, 0.5], [0.0, 0.5, 0.5], [0.0, 0.0, 0.5], [0.0, -0.5, 0.5], [0.0, 0.0, 1.0]]
+        [
+            [0, 0, 0],  # Bottom (0)
+            [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+            [0.0, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+            [0.0, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+            [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+            [0.0, 0.0, 1.0],  # Top (7)
+        ]
     )
-    faces_1 = np.array([[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [5, 1, 2], [5, 2, 3], [5, 3, 4], [5, 4, 1]])
+    faces_1 = np.array(
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+            [0, 3, 4],
+            [0, 4, 5],
+            [0, 5, 6],
+            [0, 6, 1],
+            [7, 1, 2],
+            [7, 2, 3],
+            [7, 3, 4],
+            [7, 4, 5],
+            [7, 5, 6],
+            [7, 6, 1],
+        ]
+    )
     vertices_2 = np.array(
-        [[0, 0, 0], [0.0, 0.0, 0.5], [0.0, 0.5, 0.5], [-0.5, 0.0, 0.5], [0.0, -0.5, 0.5], [0.0, 0.0, 1.0]]
+        [
+            [0, 0, 0],  # Bottom (0)
+            [0.0, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+            [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+            [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+            [0.0, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+            [0.0, 0.0, 1.0],  # Top (7)
+        ]
     )
-    faces_2 = np.array([[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [5, 1, 2], [5, 2, 3], [5, 3, 4], [5, 4, 1]])
-
+    faces_2 = np.array(
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+            [0, 3, 4],
+            [0, 4, 5],
+            [0, 5, 6],
+            [0, 6, 1],
+            [7, 1, 2],
+            [7, 2, 3],
+            [7, 3, 4],
+            [7, 4, 5],
+            [7, 5, 6],
+            [7, 6, 1],
+        ]
+    )
     mesh_front = prim_utils.create_prim(
         front_mesh_prim_path,
         prim_type="Mesh",
@@ -702,6 +850,276 @@ def make_pin_with_arrow_prim(
 
     add_material(geom_prim_path, mesh_prim_path, cfg)
     return prim
+
+
+def make_3d_position_marker_prim(
+    prim_path: str,
+    cfg: navigation_shapes_cfg.PositionMarker3DCfg,
+    translation: tuple[float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
+) -> Usd.Prim:
+    """Create a USDGeom-based 3D position marker using the given attributes.
+
+    Args:
+        prim_path: The prim path to spawn the asset at.
+        cfg: The config containing the properties to apply.
+        attributes: The attributes to apply to the prim.
+        translation: The translation to apply to the prim w.r.t. its parent prim. Defaults to None, in which case
+            this is set to the origin.
+        orientation: The orientation in (w, x, y, z) to apply to the prim w.r.t. its parent prim. Defaults to None,
+            in which case this is set to identity.
+
+    Returns:
+        The created root prim.
+
+    Raises:
+        ValueError: If a prim already exists at the given path.
+    """
+    if prim_utils.is_prim_path_valid(prim_path):
+        raise ValueError(f"A prim already exists at path: '{prim_path}'.")
+
+    prim = prim_utils.create_prim(prim_path, "Xform", translation=translation, orientation=orientation)
+
+    geom_prim_path = prim_path + "/geometry"
+    mesh_prim_path = geom_prim_path + "/mesh"
+
+    container = prim_utils.create_prim(mesh_prim_path, "Xform")
+
+    x_pin_attributes = {"radius": cfg.pin_radius, "height": cfg.pin_length, "axis": "X"}
+    y_pin_attributes = {"radius": cfg.pin_radius, "height": cfg.pin_length, "axis": "Y"}
+    z_pin_attributes = {"radius": cfg.pin_radius, "height": cfg.pin_length, "axis": "Z"}
+    sphere_attributes = {"radius": cfg.sphere_radius}
+    x_pos_sphere_translation = (cfg.pin_length / 2.0, 0, 0)
+    x_neg_sphere_translation = (-cfg.pin_length / 2.0, 0, 0)
+    y_pos_sphere_translation = (0, cfg.pin_length / 2.0, 0)
+    y_neg_sphere_translation = (0, -cfg.pin_length / 2.0, 0)
+    z_pos_sphere_translation = (0, 0, cfg.pin_length / 2.0)
+    z_neg_sphere_translation = (0, 0, -cfg.pin_length / 2.0)
+
+    x_pin = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("x_pin")),
+        "Cylinder",
+        position=(0, 0, 0),
+        attributes=x_pin_attributes,
+    )
+    y_pin = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("y_pin")),
+        "Cylinder",
+        position=(0, 0, 0),
+        attributes=y_pin_attributes,
+    )
+    z_pin = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("z_pin")),
+        "Cylinder",
+        position=(0, 0, 0),
+        attributes=z_pin_attributes,
+    )
+    x_pos_sphere = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("x_pos_sphere")),
+        "Sphere",
+        position=x_pos_sphere_translation,
+        attributes=sphere_attributes,
+    )
+    x_neg_sphere = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("x_neg_sphere")),
+        "Sphere",
+        position=x_neg_sphere_translation,
+        attributes=sphere_attributes,
+    )
+    y_pos_sphere = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("y_pos_sphere")),
+        "Sphere",
+        position=y_pos_sphere_translation,
+        attributes=sphere_attributes,
+    )
+    y_neg_sphere = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("y_neg_sphere")),
+        "Sphere",
+        position=y_neg_sphere_translation,
+        attributes=sphere_attributes,
+    )
+    z_pos_sphere = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("z_pos_sphere")),
+        "Sphere",
+        position=z_pos_sphere_translation,
+        attributes=sphere_attributes,
+    )
+    z_neg_sphere = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("z_neg_sphere")),
+        "Sphere",
+        position=z_neg_sphere_translation,
+        attributes=sphere_attributes,
+    )
+
+    if cfg.collision_props is not None:
+        schemas.define_collision_properties(str(x_pin.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(y_pin.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(z_pin.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(x_pos_sphere.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(x_neg_sphere.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(y_pos_sphere.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(y_neg_sphere.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(z_pos_sphere.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(z_neg_sphere.GetPath()), cfg.collision_props)
+
+    if cfg.x_material is not None:
+        if not cfg.x_material_path.startswith("/"):
+            material_path = f"{geom_prim_path}/{cfg.x_material_path}"
+        else:
+            material_path = cfg.x_material_path
+        # create material
+        cfg.x_material.func(material_path, cfg.x_material)
+        # apply material
+        bind_visual_material(str(x_pin.GetPath()), material_path)
+        bind_visual_material(str(x_pos_sphere.GetPath()), material_path)
+        bind_visual_material(str(x_neg_sphere.GetPath()), material_path)
+    if cfg.y_material is not None:
+        if not cfg.y_material_path.startswith("/"):
+            material_path = f"{geom_prim_path}/{cfg.y_material_path}"
+        else:
+            material_path = cfg.y_material_path
+        # create material
+        cfg.y_material.func(material_path, cfg.y_material)
+        # apply material
+        bind_visual_material(str(y_pin.GetPath()), material_path)
+        bind_visual_material(str(y_pos_sphere.GetPath()), material_path)
+        bind_visual_material(str(y_neg_sphere.GetPath()), material_path)
+    if cfg.z_material is not None:
+        if not cfg.z_material_path.startswith("/"):
+            material_path = f"{geom_prim_path}/{cfg.z_material_path}"
+        else:
+            material_path = cfg.z_material_path
+        # create material
+        cfg.z_material.func(material_path, cfg.z_material)
+        # apply material
+        bind_visual_material(str(z_pin.GetPath()), material_path)
+        bind_visual_material(str(z_pos_sphere.GetPath()), material_path)
+        bind_visual_material(str(z_neg_sphere.GetPath()), material_path)
+
+
+def make_3d_pose_marker_prim(
+    prim_path: str,
+    cfg: navigation_shapes_cfg.PoseMarker3DCfg,
+    translation: tuple[float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
+) -> Usd.Prim:
+    """Create a USDGeom-based 3D pose marker prim using the given attributes.
+
+    Args:
+        prim_path: The prim path to spawn the asset at.
+        cfg: The config containing the properties to apply.
+        attributes: The attributes to apply to the prim.
+        translation: The translation to apply to the prim w.r.t. its parent prim. Defaults to None, in which case
+            this is set to the origin.
+        orientation: The orientation in (w, x, y, z) to apply to the prim w.r.t. its parent prim. Defaults to None,
+            in which case this is set to identity.
+
+    Returns:
+        The created root prim.
+
+    Raises:
+        ValueError: If a prim already exists at the given path.
+    """
+
+    if prim_utils.is_prim_path_valid(prim_path):
+        raise ValueError(f"A prim already exists at path: '{prim_path}'.")
+
+    prim = prim_utils.create_prim(prim_path, "Xform", translation=translation, orientation=orientation)
+
+    geom_prim_path = prim_path + "/geometry"
+    mesh_prim_path = geom_prim_path + "/mesh"
+
+    container = prim_utils.create_prim(mesh_prim_path, "Xform")
+
+    x_pin_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "X"}
+    y_pin_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "Y"}
+    z_pin_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "Z"}
+    x_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "X"}
+    y_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "Y"}
+    z_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "Z"}
+
+    x_body_translation = (cfg.arrow_body_length / 2.0, 0, 0)
+    x_head_translation = (cfg.arrow_body_length + cfg.arrow_head_length / 2.0, 0, 0)
+    y_body_translation = (0, cfg.arrow_body_length / 2.0, 0)
+    y_head_translation = (0, cfg.arrow_body_length + cfg.arrow_head_length / 2.0, 0)
+    z_body_translation = (0, 0, cfg.arrow_body_length / 2.0)
+    z_head_translation = (0, 0, cfg.arrow_body_length + cfg.arrow_head_length / 2.0)
+
+    x_pin = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("x_pin")),
+        "Cylinder",
+        position=x_body_translation,
+        attributes=x_pin_attributes,
+    )
+    y_pin = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("y_pin")),
+        "Cylinder",
+        position=y_body_translation,
+        attributes=y_pin_attributes,
+    )
+    z_pin = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("z_pin")),
+        "Cylinder",
+        position=z_body_translation,
+        attributes=z_pin_attributes,
+    )
+    x_head = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("x_head")),
+        "Cone",
+        position=x_head_translation,
+        attributes=x_head_attributes,
+    )
+    y_head = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("y_head")),
+        "Cone",
+        position=y_head_translation,
+        attributes=y_head_attributes,
+    )
+    z_head = prim_utils.create_prim(
+        str(container.GetPath().AppendChild("z_head")),
+        "Cone",
+        position=z_head_translation,
+        attributes=z_head_attributes,
+    )
+
+    if cfg.collision_props is not None:
+        schemas.define_collision_properties(str(x_pin.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(y_pin.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(z_pin.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(x_head.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(y_head.GetPath()), cfg.collision_props)
+        schemas.define_collision_properties(str(z_head.GetPath()), cfg.collision_props)
+
+    if cfg.x_material is not None:
+        if not cfg.x_material_path.startswith("/"):
+            material_path = f"{geom_prim_path}/{cfg.x_material_path}"
+        else:
+            material_path = cfg.x_material_path
+        # create material
+        cfg.x_material.func(material_path, cfg.x_material)
+        # apply material
+        bind_visual_material(str(x_pin.GetPath()), material_path)
+        bind_visual_material(str(x_head.GetPath()), material_path)
+    if cfg.y_material is not None:
+        if not cfg.y_material_path.startswith("/"):
+            material_path = f"{geom_prim_path}/{cfg.y_material_path}"
+        else:
+            material_path = cfg.y_material_path
+        # create material
+        cfg.y_material.func(material_path, cfg.y_material)
+        # apply material
+        bind_visual_material(str(y_pin.GetPath()), material_path)
+        bind_visual_material(str(y_head.GetPath()), material_path)
+    if cfg.z_material is not None:
+        if not cfg.z_material_path.startswith("/"):
+            material_path = f"{geom_prim_path}/{cfg.z_material_path}"
+        else:
+            material_path = cfg.z_material_path
+        # create material
+        cfg.z_material.func(material_path, cfg.z_material)
+        # apply material
+        bind_visual_material(str(z_pin.GetPath()), material_path)
+        bind_visual_material(str(z_head.GetPath()), material_path)
 
 
 def add_material(

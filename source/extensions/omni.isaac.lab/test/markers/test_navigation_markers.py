@@ -28,6 +28,8 @@ from omni.isaac.lab.markers.config import (
     ARROW_CFG,
     DIAMOND_CFG,
     BICOLOR_DIAMOND_CFG,
+    POSITION_MARKER_3D_CFG,
+    POSE_MARKER_3D_CFG,
 )
 from omni.isaac.lab.utils.math import random_orientation
 from omni.isaac.lab.utils.timer import Timer
@@ -63,6 +65,8 @@ class TestNavigationMarkers(unittest.TestCase):
         config_arrow = ARROW_CFG.replace(prim_path="/World/Visuals/test_arrow")
         config_diamond = DIAMOND_CFG.replace(prim_path="/World/Visuals/test_diamond")
         config_bicolor_diamond = BICOLOR_DIAMOND_CFG.replace(prim_path="/World/Visuals/test_bicolor_diamond")
+        config_position_marker_3d = POSITION_MARKER_3D_CFG.replace(prim_path="/World/Visuals/test_position_marker_3d")
+        config_pose_marker_3d = POSE_MARKER_3D_CFG.replace(prim_path="/World/Visuals/test_pose_marker_3d")
         # Try to build the markers
         test_pin_sphere = VisualizationMarkers(config_pin_sphere)
         test_pin_arrow = VisualizationMarkers(config_pin_arrow)
@@ -70,6 +74,8 @@ class TestNavigationMarkers(unittest.TestCase):
         test_arrow = VisualizationMarkers(config_arrow)
         test_diamond = VisualizationMarkers(config_diamond)
         test_bicolor_diamond = VisualizationMarkers(config_bicolor_diamond)
+        test_position_marker_3d = VisualizationMarkers(config_position_marker_3d)
+        test_pose_marker_3d = VisualizationMarkers(config_pose_marker_3d)
         # Try to visualize the markers
         test_pin_sphere.visualize(translations=torch.tensor([[0.0, 0.0, 0.0]]))
         test_pin_arrow.visualize(translations=torch.tensor([[1.0, 0.0, 0.0]]))
@@ -77,6 +83,8 @@ class TestNavigationMarkers(unittest.TestCase):
         test_arrow.visualize(translations=torch.tensor([[3.0, 0.0, 0.0]]))
         test_diamond.visualize(translations=torch.tensor([[4.0, 0.0, 0.0]]))
         test_bicolor_diamond.visualize(translations=torch.tensor([[5.0, 0.0, 0.0]]))
+        test_position_marker_3d.visualize(translations=torch.tensor([[6.0, 0.0, 0.0]]))
+        test_pose_marker_3d.visualize(translations=torch.tensor([[7.0, 0.0, 0.0]]))
 
         # play the simulation
         self.sim.reset()
@@ -95,6 +103,8 @@ class TestNavigationMarkers(unittest.TestCase):
         config_arrow = ARROW_CFG.replace(prim_path="/World/Visuals/test_arrow")
         config_diamond = DIAMOND_CFG.replace(prim_path="/World/Visuals/test_diamond")
         config_bicolor_diamond = BICOLOR_DIAMOND_CFG.replace(prim_path="/World/Visuals/test_bicolor_diamond")
+        config_position_maker_3d = POSITION_MARKER_3D_CFG.replace(prim_path="/World/Visuals/test_position_marker_3d")
+        config_pose_marker_3d = POSE_MARKER_3D_CFG.replace(prim_path="/World/Visuals/test_pose_marker_3d")
         config_pin_sphere.markers["pin_sphere"].visual_material = sim_utils.PreviewSurfaceCfg(
             diffuse_color=(1.0, 0.0, 0.0)
         )
@@ -112,6 +122,24 @@ class TestNavigationMarkers(unittest.TestCase):
         config_bicolor_diamond.markers["bicolor_diamond"].back_material = sim_utils.PreviewSurfaceCfg(
             diffuse_color=(0.0, 0.0, 1.0)
         )
+        config_position_maker_3d.markers["position_marker_3d"].x_material = sim_utils.PreviewSurfaceCfg(
+            diffuse_color=(1.0, 0.0, 0.0)
+        )
+        config_position_maker_3d.markers["position_marker_3d"].y_material = sim_utils.PreviewSurfaceCfg(
+            diffuse_color=(0.0, 1.0, 0.0)
+        )
+        config_position_maker_3d.markers["position_marker_3d"].z_material = sim_utils.PreviewSurfaceCfg(
+            diffuse_color=(0.0, 0.0, 1.0)
+        )
+        config_pose_marker_3d.markers["pose_marker_3d"].x_material = sim_utils.PreviewSurfaceCfg(
+            diffuse_color=(1.0, 0.0, 0.0)
+        )
+        config_pose_marker_3d.markers["pose_marker_3d"].y_material = sim_utils.PreviewSurfaceCfg(
+            diffuse_color=(0.0, 1.0, 0.0)
+        )
+        config_pose_marker_3d.markers["pose_marker_3d"].z_material = sim_utils.PreviewSurfaceCfg(
+            diffuse_color=(0.0, 0.0, 1.0)
+        )
         # Try to build the markers
         test_pin_sphere = VisualizationMarkers(config_pin_sphere)
         test_pin_arrow = VisualizationMarkers(config_pin_arrow)
@@ -119,6 +147,8 @@ class TestNavigationMarkers(unittest.TestCase):
         test_arrow = VisualizationMarkers(config_arrow)
         test_diamond = VisualizationMarkers(config_diamond)
         test_bicolor_diamond = VisualizationMarkers(config_bicolor_diamond)
+        test_position_marker_3d = VisualizationMarkers(config_position_maker_3d)
+        test_pose_marker_3d = VisualizationMarkers(config_pose_marker_3d)
         # Try to visualize the markers
         test_pin_sphere.visualize(translations=torch.tensor([[0.0, 0.0, 0.0]]))
         test_pin_arrow.visualize(translations=torch.tensor([[1.0, 0.0, 0.0]]))
@@ -126,6 +156,8 @@ class TestNavigationMarkers(unittest.TestCase):
         test_arrow.visualize(translations=torch.tensor([[3.0, 0.0, 0.0]]))
         test_diamond.visualize(translations=torch.tensor([[4.0, 0.0, 0.0]]))
         test_bicolor_diamond.visualize(translations=torch.tensor([[5.0, 0.0, 0.0]]))
+        test_position_marker_3d.visualize(translations=torch.tensor([[6.0, 0.0, 0.0]]))
+        test_pose_marker_3d.visualize(translations=torch.tensor([[7.0, 0.0, 0.0]]))
 
         # play the simulation
         self.sim.reset()
@@ -143,6 +175,8 @@ class TestNavigationMarkers(unittest.TestCase):
         config_arrow = ARROW_CFG.replace(prim_path="/World/Visuals/test_arrow")
         config_diamond = DIAMOND_CFG.replace(prim_path="/World/Visuals/test_diamond")
         config_bicolor_diamond = BICOLOR_DIAMOND_CFG.replace(prim_path="/World/Visuals/test_bicolor_diamond")
+        config_position_marker_3d = POSITION_MARKER_3D_CFG.replace(prim_path="/World/Visuals/test_position_marker_3d")
+        config_pose_marker_3d = POSE_MARKER_3D_CFG.replace(prim_path="/World/Visuals/test_pose_marker_3d")
         config_pin_sphere.markers["pin_sphere"].pin_radius = 0.1
         config_pin_sphere.markers["pin_sphere"].pin_length = 2.0
         config_pin_sphere.markers["pin_sphere"].sphere_radius = 0.5
@@ -164,6 +198,13 @@ class TestNavigationMarkers(unittest.TestCase):
         config_diamond.markers["diamond"].diamond_width = 0.6
         config_bicolor_diamond.markers["bicolor_diamond"].diamond_height = 0.9
         config_bicolor_diamond.markers["bicolor_diamond"].diamond_width = 0.6
+        config_position_marker_3d.markers["position_marker_3d"].pin_length = 1.0
+        config_position_marker_3d.markers["position_marker_3d"].pin_radius = 0.05
+        config_position_marker_3d.markers["position_marker_3d"].sphere_radius = 0.25
+        config_pose_marker_3d.markers["pose_marker_3d"].arrow_body_length = 1.0
+        config_pose_marker_3d.markers["pose_marker_3d"].arrow_body_radius = 0.05
+        config_pose_marker_3d.markers["pose_marker_3d"].arrow_head_radius = 0.1
+        config_pose_marker_3d.markers["pose_marker_3d"].arrow_head_length = 0.15
         # Try to build the markers
         test_pin_sphere = VisualizationMarkers(config_pin_sphere)
         test_pin_arrow = VisualizationMarkers(config_pin_arrow)
@@ -171,6 +212,8 @@ class TestNavigationMarkers(unittest.TestCase):
         test_arrow = VisualizationMarkers(config_arrow)
         test_diamond = VisualizationMarkers(config_diamond)
         test_bicolor_diamond = VisualizationMarkers(config_bicolor_diamond)
+        test_position_marker_3d = VisualizationMarkers(config_position_marker_3d)
+        test_pose_marker_3d = VisualizationMarkers(config_pose_marker_3d)
         # Try to visualize the markers
         test_pin_sphere.visualize(translations=torch.tensor([[0.0, 0.0, 0.0]]))
         test_pin_arrow.visualize(translations=torch.tensor([[1.0, 0.0, 0.0]]))
@@ -178,6 +221,8 @@ class TestNavigationMarkers(unittest.TestCase):
         test_arrow.visualize(translations=torch.tensor([[3.0, 0.0, 0.0]]))
         test_diamond.visualize(translations=torch.tensor([[4.0, 0.0, 0.0]]))
         test_bicolor_diamond.visualize(translations=torch.tensor([[5.0, 0.0, 0.0]]))
+        test_position_marker_3d.visualize(translations=torch.tensor([[6.0, 0.0, 0.0]]))
+        test_pose_marker_3d.visualize(translations=torch.tensor([[7.0, 0.0, 0.0]]))
 
         # play the simulation
         self.sim.reset()

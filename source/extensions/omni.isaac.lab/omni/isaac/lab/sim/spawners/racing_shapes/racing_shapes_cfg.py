@@ -30,27 +30,45 @@ class Gate3DCfg(RacingShapeCfg):
 
     func: Callable = racing_shapes.spawn_gate_3d
 
-    gate_width: float = MISSING
+    width: float = MISSING
     """Width of the gate (in m)."""
-    gate_height: float = MISSING
+    height: float = MISSING
     """Height of the gate (in m)."""
-    gate_depth: float = MISSING
+    depth: float = MISSING
     """Depth of the gate (in m)."""
-    gate_thickness: float = MISSING
+    thickness: float = MISSING
     """Thickness of the gate (in m)."""
-    gate_corner_color: materials.VisualMaterialCfg | None = None
+    corner_material_path: str = "material_corner"
+    """Path to the visual material to use for the corners of the prim. Defaults to "material_corner".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `corner_material` is not None.
+    """
+    front_material_path: str = "material_front"
+    """Path to the visual material to use for the front of the prim. Defaults to "material_front".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `front_material` is not None.
+    """
+    back_material_path: str = "material_back"
+    """Path to the visual material to use for the back of the prim. Defaults to "material_back".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `back_material` is not None.
+    """
+    corner_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
         If None, then no visual material will be added.
     """
-    gate_front_color: materials.VisualMaterialCfg | None = None
+    front_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
         If None, then no visual material will be added.
     """
-    gate_back_color: materials.VisualMaterialCfg | None = None
+    back_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
@@ -58,6 +76,7 @@ class Gate3DCfg(RacingShapeCfg):
     """
 
 
+@configclass
 class Gate2DCfg(RacingShapeCfg):
     """Configuration parameters for a 2d gate prim.
 
@@ -66,27 +85,45 @@ class Gate2DCfg(RacingShapeCfg):
 
     func: Callable = racing_shapes.spawn_gate_2d
 
-    gate_width: float = MISSING
+    width: float = MISSING
     """Width of the gate (in m)."""
-    gate_height: float = MISSING
+    height: float = MISSING
     """Height of the gate (in m)."""
-    gate_depth: float = MISSING
+    depth: float = MISSING
     """Depth of the gate (in m)."""
-    gate_thickness: float = MISSING
+    thickness: float = MISSING
     """Thickness of the gate (in m)."""
-    gate_corner_color: materials.VisualMaterialCfg | None = None
+    corner_material_path: str = "material_corner"
+    """Path to the visual material to use for the corners of the prim. Defaults to "material_corner.
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `corner_material` is not None.
+    """
+    front_material_path: str = "material_front"
+    """Path to the visual material to use for the front of the prim. Defaults to "material_front".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `front_material` is not None.
+    """
+    back_material_path: str = "material_back"
+    """Path to the visual material to use for the back of the prim. Defaults to "material_back".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `back_material` is not None.
+    """
+    corner_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
         If None, then no visual material will be added.
     """
-    gate_front_color: materials.VisualMaterialCfg | None = None
+    front_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
         If None, then no visual material will be added.
     """
-    gate_back_color: materials.VisualMaterialCfg | None = None
+    back_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
@@ -94,6 +131,7 @@ class Gate2DCfg(RacingShapeCfg):
     """
 
 
+@configclass
 class GatePylonsCfg(RacingShapeCfg):
     """Configuration parameters for a gate prim.
 
@@ -102,19 +140,31 @@ class GatePylonsCfg(RacingShapeCfg):
 
     func: Callable = racing_shapes.spawn_gate_pylons
 
-    gate_width: float = MISSING
+    width: float = MISSING
     """Width of the gate (in m)."""
-    pole_height: float = MISSING
+    height: float = MISSING
     """Height of the gate (in m)."""
-    pole_thickness: float = MISSING
+    radius: float = MISSING
     """Thickness of the gate (in m)."""
-    left_pole_color: materials.VisualMaterialCfg | None = None
+    left_pole_material_path: str = "material_left"
+    """Path to the visual material to use for the left pole. Defaults to "material_left".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `front_material` is not None.
+    """
+    right_pole_material_path: str = "material_right"
+    """Path to the visual material to use for the right pole. Defaults to "material_right".
+
+    If the path is relative, then it will be relative to the prim's path.
+    This parameter is ignored if `front_material` is not None.
+    """
+    left_pole_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
         If None, then no visual material will be added.
     """
-    right_pole_color: materials.VisualMaterialCfg | None = None
+    right_pole_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
 
     Note:
