@@ -117,93 +117,43 @@ class PinDiamondCfg(NavigationShapeCfg):
     """Length of the pin (in m)."""
 
 
-# @configclass
-# class PinArrowCfg(NavigationShapeCfg):
-#    """Configuration parameters for a pin with an arrow mesh on top.
-#
-#    See :meth:`spawn_pin_arrow` for more information.
-#    """
-#
-#    func: Callable = navigation_shapes.spawn_pin_with_arrow
-#
-#    arrow_body_radius: float = MISSING
-#    """Radius of the arrow's body (in m)."""
-#    arrow_body_length: float = MISSING
-#    """Length of the arrow's body (in m)."""
-#    arrow_head_radius: float = MISSING
-#    """Radius of the arrow's head (in m)."""
-#    arrow_head_length: float = MISSING
-#    """Length of the arrow's head (in m)."""
-#    pin_radius: float = MISSING
-#    """Radius of the pin (in m)."""
-#    pin_length: float = MISSING
-#    """Length of the pin (in m)."""
+@configclass
+class ArrowCfg(NavigationShapeCfg):
+    """Configuration parameters for a pin with an arrow mesh on top.
+
+    See :meth:`spawn_pin_arrow` for more information.
+    """
+
+    func: Callable = navigation_shapes.spawn_arrow
+
+    arrow_body_radius: float = MISSING
+    """Radius of the arrow's body (in m)."""
+    arrow_body_length: float = MISSING
+    """Length of the arrow's body (in m)."""
+    arrow_head_radius: float = MISSING
+    """Radius of the arrow's head (in m)."""
+    arrow_head_length: float = MISSING
+    """Length of the arrow's head (in m)."""
 
 
-# @configclass
-# class Gate3DCfg(NavigationShapeCfg):
-#    """Configuration parameters for a 3d gate prim.
-#
-#    See :meth:`spawn_gate_3d` for more information.
-#    """
-#
-#    func: Callable = advanced_shapes.spawn_gate_3d
-#
-#    gate_width: float = MISSING
-#    """Width of the gate (in m)."""
-#    gate_height: float = MISSING
-#    """Height of the gate (in m)."""
-#    gate_depth: float = MISSING
-#    """Depth of the gate (in m)."""
-#    gate_thickness: float = MISSING
-#    """Thickness of the gate (in m)."""
-#    gate_corner_color: Tuple[float, float, float] = (1.0, 1.0, 1.0)
-#    """Color (RGB) of the gate's corners."""
-#    gate_front_color: Tuple[float, float, float] = (0.0, 0.0, 1.0)
-#    """Color (RGB) of the gate's front."""
-#    gate_back_color: Tuple[float, float, float] = (1.0, 0.0, 0.0)
-#    """Color (RGB) of the gate's back."""
-#
-#
-# class Gate2DCfg(NavigationShapeCfg):
-#    """Configuration parameters for a 2d gate prim.
-#
-#    See :meth:`spawn_gate_2d` for more information.
-#    """
-#
-#    func: Callable = advanced_shapes.spawn_gate_2d
-#
-#    gate_width: float = MISSING
-#    """Width of the gate (in m)."""
-#    gate_height: float = MISSING
-#    """Height of the gate (in m)."""
-#    gate_depth: float = MISSING
-#    """Depth of the gate (in m)."""
-#    gate_thickness: float = MISSING
-#    """Thickness of the gate (in m)."""
-#    gate_corner_color: Tuple[float, float, float] = (1.0, 1.0, 1.0)
-#    """Color (RGB) of the gate's corners."""
-#    gate_front_color: Tuple[float, float, float] = (0.0, 0.0, 1.0)
-#    """Color (RGB) of the gate's front."""
-#    gate_back_color: Tuple[float, float, float] = (1.0, 0.0, 0.0)
-#    """Color (RGB) of the gate's back."""
-#
-#
-# class Gate2PolesCfg(NavigationShapeCfg):
-#    """Configuration parameters for a gate prim.
-#
-#    See :meth:`spawn_gate` for more information.
-#    """
-#
-#    func: Callable = advanced_shapes.spawn_gate_2_poles
-#
-#    gate_width: float = MISSING
-#    """Width of the gate (in m)."""
-#    pole_height: float = MISSING
-#    """Height of the gate (in m)."""
-#    pole_thickness: float = MISSING
-#    """Thickness of the gate (in m)."""
-#    left_pole_color: Tuple[float, float, float] = (0.0, 0.0, 1.0)
-#    """Color (RGB) of the left pole of the gate."""
-#    right_pole_color: Tuple[float, float, float] = (0.0, 1.0, 0.0)
-#    """Color (RGB) of the right pole of the gate."""
+@configclass
+class PinArrowCfg(NavigationShapeCfg):
+    """Configuration parameters for a pin with an arrow mesh on top.
+
+    See :meth:`spawn_pin_arrow` for more information.
+    """
+
+    func: Callable = navigation_shapes.spawn_pin_with_arrow
+
+    arrow_body_radius: float = MISSING
+    """Radius of the arrow's body (in m)."""
+    arrow_body_length: float = MISSING
+    """Length of the arrow's body (in m)."""
+    arrow_head_radius: float = MISSING
+    """Radius of the arrow's head (in m)."""
+    arrow_head_length: float = MISSING
+    """Length of the arrow's head (in m)."""
+    pin_radius: float = MISSING
+    """Radius of the pin (in m)."""
+    pin_length: float = MISSING
+    """Length of the pin (in m)."""

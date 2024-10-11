@@ -141,7 +141,7 @@ PIN_SPHERE_CFG = VisualizationMarkersCfg(
             sphere_radius=0.125,
             pin_radius=0.01,
             pin_length=1.0,
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.05, 0.0)),
         ),
     }
 )
@@ -160,6 +160,20 @@ PIN_DIAMOND_CFG = VisualizationMarkersCfg(
 )
 """Configuration for the pin with diamond marker."""
 
+PIN_ARROW_CFG = VisualizationMarkersCfg(
+    markers={
+        "pin_arrow": sim_utils.PinArrowCfg(
+            arrow_body_length=0.2,
+            arrow_body_radius=0.05,
+            arrow_head_radius=0.1,
+            arrow_head_length=0.15,
+            pin_radius=0.01,
+            pin_length=1.0,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.05, 0.0)),
+        ),
+    }
+)
+"""Configuration for the pin with arrow marker."""
 ##
 # Racing markers.
 ##
@@ -181,11 +195,23 @@ DIAMOND_CFG = VisualizationMarkersCfg(
 
 BICOLOR_DIAMOND_CFG = VisualizationMarkersCfg(
     markers={
-        "diamond": sim_utils.BiColorDiamondCfg(
+        "bicolor_diamond": sim_utils.BiColorDiamondCfg(
             diamond_height=0.15,
             diamond_width=0.1,
             front_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.333, 1.0, 0.0)),
-            back_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.1, 0.0)),
+            back_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.05, 0.0)),
+        ),
+    }
+)
+
+ARROW_CFG = VisualizationMarkersCfg(
+    markers={
+        "arrow": sim_utils.ArrowCfg(
+            arrow_body_length=0.2,
+            arrow_body_radius=0.05,
+            arrow_head_radius=0.1,
+            arrow_head_length=0.15,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.05, 0.0)),
         ),
     }
 )
