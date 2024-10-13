@@ -23,7 +23,7 @@ def spawn_pin_with_sphere(
     prim_path: str,
     cfg: navigation_shapes_cfg.PinSphereCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based pin prim with a sphere on top using the given attributes.
 
@@ -52,7 +52,7 @@ def spawn_pin_with_sphere(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_pin_with_sphere_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_pin_with_sphere_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -61,7 +61,7 @@ def spawn_pin_with_diamond(
     prim_path: str,
     cfg: navigation_shapes_cfg.PinDiamondCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based pin prim with a diamond on top using the given attributes.
 
@@ -89,7 +89,7 @@ def spawn_pin_with_diamond(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_pin_with_diamond_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_pin_with_diamond_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -98,7 +98,7 @@ def spawn_diamond(
     prim_path: str,
     cfg: navigation_shapes_cfg.DiamondCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based diamond prim using the given attributes.
 
@@ -125,7 +125,7 @@ def spawn_diamond(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_diamond_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_diamond_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -134,7 +134,7 @@ def spawn_bicolor_diamond(
     prim_path: str,
     cfg: navigation_shapes_cfg.BiColorDiamondCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based bicolor diamond prim using the given attributes.
 
@@ -162,7 +162,7 @@ def spawn_bicolor_diamond(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_bicolor_diamond_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_bicolor_diamond_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -171,7 +171,7 @@ def spawn_arrow(
     prim_path: str,
     cfg: navigation_shapes_cfg.ArrowCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based arrow using the given attributes.
 
@@ -198,7 +198,7 @@ def spawn_arrow(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_arrow_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_arrow_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -207,7 +207,7 @@ def spawn_position_marker_3d(
     prim_path: str,
     cfg: navigation_shapes_cfg.PositionMarker3DCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based 3D position marker using the given attributes.
 
@@ -234,7 +234,7 @@ def spawn_position_marker_3d(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_3d_position_marker_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_3d_position_marker_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -243,7 +243,7 @@ def spawn_pose_marker_3d(
     prim_path: str,
     cfg: navigation_shapes_cfg.PoseMarker3DCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based 3D pose marker using the given attributes.
 
@@ -270,7 +270,7 @@ def spawn_pose_marker_3d(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_3d_pose_marker_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_3d_pose_marker_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -284,7 +284,7 @@ def spawn_pin_with_arrow(
     prim_path: str,
     cfg: navigation_shapes_cfg.PinArrowCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based pin prim with an arrow on top using the given attributes.
 
@@ -313,7 +313,7 @@ def spawn_pin_with_arrow(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_pin_with_arrow_prim(prim_path, cfg, translation=translation, orientation=rotation)
+    make_pin_with_arrow_prim(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
