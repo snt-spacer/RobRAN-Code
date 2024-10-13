@@ -23,7 +23,7 @@ def spawn_gate_3d(
     prim_path: str,
     cfg: racing_shapes_cfg.Gate3DCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based 3D gate prim using the given attributes.
 
@@ -70,7 +70,7 @@ def spawn_gate_3d(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_gate_3d(prim_path, cfg, translation=translation, orientation=rotation)
+    make_gate_3d(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -79,7 +79,7 @@ def spawn_gate_2d(
     prim_path: str,
     cfg: racing_shapes_cfg.Gate2DCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based 2D gate prim using the given attributes.
 
@@ -127,7 +127,7 @@ def spawn_gate_2d(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_gate_2d(prim_path, cfg, translation=translation, orientation=rotation)
+    make_gate_2d(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -136,7 +136,7 @@ def spawn_gate_pylons(
     prim_path: str,
     cfg: racing_shapes_cfg.GatePylonsCfg,
     translation: tuple[float, float, float] | None = None,
-    rotation: tuple[float, float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
     """Create a USDGeom-based 2D gate prim using the given attributes.
 
@@ -186,7 +186,7 @@ def spawn_gate_pylons(
     Raises:
         ValueError: If a prim already exists at the given path.
     """
-    make_gate_pylons(prim_path, cfg, translation=translation, orientation=rotation)
+    make_gate_pylons(prim_path, cfg, translation=translation, orientation=orientation)
     return prim_utils.get_prim_at_path(prim_path)
 
 
@@ -290,9 +290,6 @@ def make_gate_3d(
     front_vrt_size = min([cfg.depth / 2, cfg.thickness, cfg.height - cfg.thickness])
     front_hzt_attribute = {"size": front_hzt_size}
     front_vrt_attribute = {"size": front_vrt_size}
-    print("depth", cfg.depth, "thickness", cfg.thickness, "height", cfg.height, "width", cfg.width)
-    print("front_hzt_size", front_hzt_size)
-    print("front_vrt_size", front_vrt_size)
     front_hzt_scale = [dim / front_hzt_size for dim in [cfg.depth / 2, cfg.width - cfg.thickness, cfg.thickness]]
     front_vrt_scale = [dim / front_vrt_size for dim in [cfg.depth / 2, cfg.thickness, cfg.height - cfg.thickness]]
     front_left_position = [-cfg.depth / 4, -cfg.width / 2, 0]
@@ -412,6 +409,11 @@ def make_gate_3d(
         bind_visual_material(str(top_right_corner.GetPath()), material_path)
         bind_visual_material(str(bottom_right_corner.GetPath()), material_path)
 
+    if cfg.rigid_props is not None:
+        schemas.define_rigid_body_properties(prim_path, cfg.rigid_props)
+    if cfg.mass_props is not None:
+        schemas.define_mass_properties(prim_path, cfg.mass_props)
+
     return prim
 
 
@@ -496,12 +498,9 @@ def make_gate_2d(
     )
     # Front
     front_hzt_size = min([cfg.depth / 2, cfg.width - cfg.thickness, cfg.thickness])
-    front_vrt_size = min([cfg.depth / 2, cfg.thickness, cfg.height - cfg.thickness])
+    front_vrt_size = min([cfg.depth / 2, cfg.thickness, cfg.height])
     front_hzt_attribute = {"size": front_hzt_size}
     front_vrt_attribute = {"size": front_vrt_size}
-    print("depth", cfg.depth, "thickness", cfg.thickness, "height", cfg.height, "width", cfg.width)
-    print("front_hzt_size", front_hzt_size)
-    print("front_vrt_size", front_vrt_size)
     front_hzt_scale = [dim / front_hzt_size for dim in [cfg.depth / 2, cfg.width - cfg.thickness, cfg.thickness]]
     front_vrt_scale = [dim / front_vrt_size for dim in [cfg.depth / 2, cfg.thickness, cfg.height - cfg.thickness]]
     front_left_position = [-cfg.depth / 4, -cfg.width / 2, cfg.height / 2]
@@ -596,6 +595,11 @@ def make_gate_2d(
         # apply material
         bind_visual_material(str(top_left_corner.GetPath()), material_path)
         bind_visual_material(str(top_right_corner.GetPath()), material_path)
+
+    if cfg.rigid_props is not None:
+        schemas.define_rigid_body_properties(prim_path, cfg.rigid_props)
+    if cfg.mass_props is not None:
+        schemas.define_mass_properties(prim_path, cfg.mass_props)
 
     return prim
 
@@ -696,5 +700,10 @@ def make_gate_pylons(
         cfg.right_pole_material.func(material_path, cfg.right_pole_material)
         # apply material
         bind_visual_material(str(right_pylon.GetPath()), material_path)
+
+    if cfg.rigid_props is not None:
+        schemas.define_rigid_body_properties(prim_path, cfg.rigid_props)
+    if cfg.mass_props is not None:
+        schemas.define_mass_properties(prim_path, cfg.mass_props)
 
     return prim
