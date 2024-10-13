@@ -43,3 +43,4 @@ from .asset_base import AssetBase
 from .asset_base_cfg import AssetBaseCfg
 from .deformable_object import DeformableObject, DeformableObjectCfg, DeformableObjectData
 from .rigid_object import RigidObject, RigidObjectCfg, RigidObjectData
+from .static_collider_object import StaticColliderObject, StaticColliderObjectCfg

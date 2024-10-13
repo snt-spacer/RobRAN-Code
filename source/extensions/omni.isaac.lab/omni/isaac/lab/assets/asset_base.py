@@ -79,9 +79,14 @@ class AssetBase(ABC):
                 orientation=self.cfg.init_state.rot,
             )
         # check that spawn was successful
-        matching_prims = sim_utils.find_matching_prims(self.cfg.prim_path)
-        if len(matching_prims) == 0:
-            raise RuntimeError(f"Could not find prim with path {self.cfg.prim_path}.")
+        if type(self.cfg.spawn) is sim_utils.ManyAssetSpawnerCfg:
+            matching_prims = sim_utils.find_matching_prims(f"{self.cfg.prim_path}_.*")
+            if len(matching_prims) == 0:
+                raise RuntimeError(f"Could not find prim with path {self.cfg.prim_path}.")
+        else:
+            matching_prims = sim_utils.find_matching_prims(self.cfg.prim_path)
+            if len(matching_prims) == 0:
+                raise RuntimeError(f"Could not find prim with path {self.cfg.prim_path}.")
 
         # note: Use weakref on all callbacks to ensure that this object can be deleted when its destructor is called.
         # add callbacks for stage play/stop

@@ -65,3 +65,33 @@ class MultiUsdFileCfg(UsdFileCfg):
     If False, the asset configurations are spawned in the order they are provided in the list.
     If True, a random asset configuration is selected for each spawn.
     """
+
+
+@configclass
+class ManyAssetSpawnerCfg(RigidObjectSpawnerCfg, DeformableObjectSpawnerCfg):
+    """Configuration parameters for loading multiple assets from their individual configurations.
+    Unlike MultiAssetSpawnerCfg, this configuration spawns multiple assets of the same type.
+
+    Specifying values for any properties at the configuration level will override the settings of
+    individual assets' configuration. For instance if the attribute
+    :attr:`MultiAssetSpawnerCfg.mass_props` is specified, its value will overwrite the values of the
+    mass properties in each configuration inside :attr:`assets_cfg` (wherever applicable).
+    This is done to simplify configuring similar properties globally. By default, all properties are set to None.
+
+    The following is an exception to the above:
+
+    * :attr:`visible`: This parameter is ignored. Its value for the individual assets is used.
+    * :attr:`semantic_tags`: If specified, it will be appended to each individual asset's semantic tags.
+    """
+
+    func = wrappers.spawn_many_asset
+
+    assets_cfg: list[SpawnerCfg] = MISSING
+    """List of asset configurations to spawn."""
+
+    num_assets: list[int] = MISSING
+    """Whether to randomly select an asset configuration. Default is True.
+
+    If False, the asset configurations are spawned in the order they are provided in the list.
+    If True, a random asset configuration is selected for each spawn.
+    """

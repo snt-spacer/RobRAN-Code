@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import carb
 import omni.isaac.core.utils.prims as prim_utils
 import omni.isaac.core.utils.stage as stage_utils
-from pxr import Sdf, Usd
+from pxr import Sdf, Usd, Gf
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.sim.spawners.from_files import UsdFileCfg
@@ -167,3 +167,148 @@ def spawn_multi_usd_file(
 
     # call the original function
     return spawn_multi_asset(prim_path, multi_asset_cfg, translation, orientation)
+
+
+def spawn_many_asset(
+    prim_path: str,
+    cfg: wrappers_cfg.ManyAssetSpawnerCfg,
+    translation: list[list[tuple[float, float, float]]] | None = None,
+    orientation: list[list[tuple[float, float, float, float]]] | None = None,
+) -> Usd.Prim:
+    """Spawn multiple assets based on the provided configurations.
+
+    This function spawns multiple assets based on the provided configurations. The assets are spawned
+    in the order they are provided in the list. If the :attr:`~MultiAssetSpawnerCfg.random_choice` parameter is
+    set to True, a random asset configuration is selected for each spawn.
+
+    Args:
+        prim_path: The prim path to spawn the assets.
+        cfg: The configuration for spawning the assets.
+        translation: The translation of the spawned assets. Default is None.
+        orientation: The orientation of the spawned assets in (w, x, y, z) order. Default is None.
+
+    Returns:
+        The created prim at the first prim path.
+    """
+
+    # Check inputs:
+    if translation is None:
+        raise RuntimeError(f"Translation is required for spawning multiple assets.")
+    if orientation is None:
+        raise RuntimeError(f"Orientation is required for spawning multiple assets.")
+
+    # Check if the number of assets match the length of the list holding the number of instances.
+    if len(cfg.num_assets) != len(cfg.assets_cfg):
+        raise RuntimeError(
+            f"Number of assets ({len(cfg.assets_cfg)}) must match the length of the list holding the number of instances ({len(cfg.num_assets)})."
+        )
+
+    # Check if the number of translations and orientations match the number of assets
+    if len(translation) != len(cfg.assets_cfg):
+        raise RuntimeError(
+            f"Number of translations ({len(translation)}) must match the number of assets ({len(cfg.assets_cfg)})."
+        )
+    if len(orientation) != len(cfg.assets_cfg):
+        raise RuntimeError(
+            f"Number of orientations ({len(orientation)}) must match the number of assets ({len(cfg.assets_cfg)})."
+        )
+
+    # Check if the number of translations and orientations match the number of instances for each asset
+    for i, asset_cfg in enumerate(cfg.assets_cfg):
+        if len(translation[i]) != cfg.num_assets[i]:
+            raise RuntimeError(
+                f"Number of translations for asset {i} ({len(translation[i])}) must match the number of instances ({cfg.num_assets[i]})."
+            )
+        if len(orientation[i]) != cfg.num_assets[i]:
+            raise RuntimeError(
+                f"Number of orientations for asset {i} ({len(orientation[i])}) must match the number of instances ({cfg.num_assets[i]})."
+            )
+
+    # resolve: {SPAWN_NS}/AssetName
+    # note: this assumes that the spawn namespace already exists in the stage
+    root_path, asset_path = prim_path.rsplit("/", 1)
+    # check if input is a regex expression
+    # note: a valid prim path can only contain alphanumeric characters, underscores, and forward slashes
+    is_regex_expression = re.match(r"^[a-zA-Z0-9/_]+$", root_path) is None
+
+    # resolve matching prims for source prim path expression
+    if is_regex_expression and root_path != "":
+        source_prim_paths = sim_utils.find_matching_prim_paths(root_path)
+        # if no matching prims are found, raise an error
+        if len(source_prim_paths) == 0:
+            raise RuntimeError(
+                f"Unable to find source prim path: '{root_path}'. Please create the prim before spawning."
+            )
+    else:
+        source_prim_paths = [root_path]
+
+    # find a free prim path to hold all the template prims
+    template_prim_path = stage_utils.get_next_free_path("/World/Template")
+    prim_utils.create_prim(template_prim_path, "Scope")
+
+    # spawn everything first in a "Dataset" prim
+    proto_prim_paths = list()
+    for index, asset_cfg in enumerate(cfg.assets_cfg):
+        # append semantic tags if specified
+        if cfg.semantic_tags is not None:
+            if asset_cfg.semantic_tags is None:
+                asset_cfg.semantic_tags = cfg.semantic_tags
+            else:
+                asset_cfg.semantic_tags += cfg.semantic_tags
+        # override settings for properties
+        attr_names = ["mass_props", "rigid_props", "collision_props", "activate_contact_sensors", "deformable_props"]
+        for attr_name in attr_names:
+            attr_value = getattr(cfg, attr_name)
+            if hasattr(asset_cfg, attr_name) and attr_value is not None:
+                setattr(asset_cfg, attr_name, attr_value)
+        # spawn single instance
+        proto_prim_path = f"{template_prim_path}/Asset_{index:04d}"
+        asset_cfg.func(
+            proto_prim_path, asset_cfg, translation=translation[index][0], orientation=orientation[index][0]
+        )
+        # append to proto prim paths
+        proto_prim_paths.append(proto_prim_path)
+
+    # resolve prim paths for spawning and cloning
+    prim_paths = [f"{source_prim_path}/{asset_path}" for source_prim_path in source_prim_paths]
+
+    # acquire stage
+    stage = stage_utils.get_current_stage()
+
+    # manually clone prims if the source prim path is a regex expression
+    # note: unlike in the cloner API from Isaac Sim, we do not "reset" xforms on the copied prims.
+    #   This is because the "spawn" calls during the creation of the proto prims already handles this operation.
+    with Sdf.ChangeBlock():
+        for index, prim_path in enumerate(prim_paths):
+            # spawn single instance
+            # randomly select an asset configuration
+            for proto_index, proto_prim_path in enumerate(proto_prim_paths):
+                for i in range(cfg.num_assets[proto_index]):
+                    env_spec = Sdf.CreatePrimInLayer(stage.GetRootLayer(), f"{prim_path}_{proto_index}_{i}")
+                    # proto_path = random.choice(f"{proto_prim_paths}/_{i}")
+                    proto_path = proto_prim_paths[proto_index]
+                    # copy the proto prim
+                    Sdf.CopySpec(
+                        env_spec.layer,
+                        Sdf.Path(proto_path),
+                        env_spec.layer,
+                        Sdf.Path(f"{prim_path}_{proto_index}_{i}"),
+                    )
+                    translate_spec = env_spec.GetAttributeAtPath(
+                        f"{prim_path}_{proto_index}_{i}" + ".xformOp:translate"
+                    )
+                    translate_spec.default = Gf.Vec3f(*translation[proto_index][i])
+                    orient_spec = env_spec.GetAttributeAtPath(f"{prim_path}_{proto_index}_{i}" + ".xformOp:orient")
+                    orient_spec.default = Gf.Quatd(*orientation[proto_index][i])
+
+    # delete the dataset prim after spawning
+    prim_utils.delete_prim(template_prim_path)
+
+    # set carb setting to indicate Isaac Lab's environments that different prims have been spawned
+    # at varying prim paths. In this case, PhysX parser shouldn't optimize the stage parsing.
+    # the flag is mainly used to inform the user that they should disable `InteractiveScene.replicate_physics`
+    carb_settings_iface = carb.settings.get_settings()
+    carb_settings_iface.set_bool("/isaaclab/spawn/multi_assets", True)
+
+    # return the prim
+    return prim_utils.get_prim_at_path(prim_paths[0])
