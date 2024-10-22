@@ -1,7 +1,7 @@
 from omni.isaac.lab.utils import configclass
 from dataclasses import MISSING
 
-from omni.isaac.lab_assets.leatherback import LEATHERBACK_CFG  # isort: skip
+from omni.isaac.lab_assets import LEATHERBACK_CFG  # isort: skip
 from omni.isaac.lab.assets import ArticulationCfg
 from .robot_core_cfg import RobotCoreCfg
 
@@ -29,4 +29,4 @@ class LeatherbackRobotCfg(RobotCoreCfg):
     rew_joint_accel_scale = -2.5e-6
 
     steering_scale = math.pi / 4.0  # [rad]
-    throttle_scale = 20.0  # [rad/s]
+    throttle_scale = 60.0  # [rad/s] (Wheel radius is 0.06m)

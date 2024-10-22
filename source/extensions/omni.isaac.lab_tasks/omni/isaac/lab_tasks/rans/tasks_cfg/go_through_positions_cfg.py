@@ -31,28 +31,31 @@ class GoThroughPositionsCfg(TaskCoreCfg):
     # Goal spawn
     max_distance_from_origin: float = 0.0
     """Maximal distance from the origin of the environment. Defaults to 0.0."""
-    max_num_goals: int = 1
+    max_num_goals: int = 10
     """Maximal number of goals. Defaults to 1."""
 
     # Observation
-    num_subsequent_goals: int = 1
+    num_subsequent_goals: int = 2
     """Number of subsequent goals available in the observation. Defaults to 1."""
     loop: bool = True
 
     # Tolerance
     position_tolerance: float = 0.10
     """Tolerance for the position of the robot. Defaults to 1cm."""
-    maximum_robot_distance: float = 10.0
+    maximum_robot_distance: float = 30.0
     """Maximal distance between the robot and the target position. Defaults to 10 m."""
 
     # Reward Would be good to have a config for each reward type
-    position_exponential_reward_coeff: float = 0.25
+    position_heading_exponential_reward_coeff: float = 0.25
+    position_heading_weight: float = 0.05
     linear_velocity_min_value: float = 0.5
     linear_velocity_max_value: float = 2.0
     angular_velocity_min_value: float = 0.5
     angular_velocity_max_value: float = 20.0
     boundary_exponential_reward_coeff: float = 1.0
-    position_weight: float = 1.0
-    linear_velocity_weight: float = -0.05
+    linear_velocity_weight: float = -0.00
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
+    time_penalty: float = -0.0
+    reached_bonus: float = 10.0
+    progress_weight: float = 1.0

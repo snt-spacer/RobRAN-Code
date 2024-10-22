@@ -15,10 +15,10 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 # Configuration
 ##
 
-LEATHERBACK_CFG = ArticulationCfg(
+LEATHERBACK_FULL_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         # usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Leatherback/leatherback.usd",
-        usd_path=f"/home/antoine/Documents/IsaacLab/leatherback_simple_better.usd",
+        usd_path=f"/home/antoine/Documents/IsaacLab/leatherback.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             rigid_body_enabled=True,
             max_linear_velocity=1000.0,

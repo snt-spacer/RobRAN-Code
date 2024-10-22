@@ -117,7 +117,6 @@ class TaskCore:
 
         # Resets the goal reached flag
         self._goal_reached[env_ids] = 0
-        self.update_task_visualization()
 
         # Resets the logs
         self.reset_logs(env_ids)

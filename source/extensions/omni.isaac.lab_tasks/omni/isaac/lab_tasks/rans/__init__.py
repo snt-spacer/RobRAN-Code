@@ -4,6 +4,7 @@ from .tasks_cfg import (
     GoToPositionCfg,
     TrackVelocityCfg,
     GoThroughPositionsCfg,
+    GoThroughPosesCfg,
 )  # noqa: F401, F403
 from .tasks import (
     TaskCore,
@@ -11,6 +12,7 @@ from .tasks import (
     GoToPositionTask,
     TrackVelocityTask,
     GoThroughPositionsTask,
+    GoThroughPosesTask,
 )  # noqa: F401, F403
 from .robots_cfg import RobotCoreCfg, LeatherbackRobotCfg  # noqa: F401, F403
 from .robots import RobotCore, LeatherbackRobot  # noqa: F401, F403
