@@ -16,7 +16,7 @@ EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 class GoThroughPositionsTask(TaskCore):
     """
-    Implements the GoThroughPosition task. The robot has to reach a target position.
+    Implements the GoThroughPositions task. The robot has to reach one or a sequence of target positions.
     """
 
     def __init__(
@@ -28,7 +28,7 @@ class GoThroughPositionsTask(TaskCore):
         env_ids: torch.Tensor | None = None,
     ) -> None:
         """
-        Initializes the GoThroughPosition task.
+        Initializes the GoThroughPositions task.
 
         Args:
             task_cfg: The configuration of the task.
@@ -47,7 +47,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = 3 + 3 * self._task_cfg.num_subsequent_goals
-        self._dim_env_act = 4  # spawn distance, spawn_cone, linear velocity, angular velocity
+        self._dim_env_act = 5  # spawn distance, spawn_cone, linear velocity, angular velocity
 
         # Buffers
         self.initialize_buffers()
@@ -59,6 +59,9 @@ class GoThroughPositionsTask(TaskCore):
         self._previous_position_dist = torch.zeros((self._num_envs,), device=self._device, dtype=torch.float32)
         self._target_positions = torch.zeros(
             (self._num_envs, self._task_cfg.max_num_goals, 2), device=self._device, dtype=torch.float32
+        )
+        self._target_headings = torch.zeros(
+            (self._num_envs, self._task_cfg.max_num_goals), device=self._device, dtype=torch.float32
         )
         self._target_index = torch.zeros((self._num_envs,), device=self._device, dtype=torch.long)
         self._trajectory_completed = torch.zeros((self._num_envs,), device=self._device, dtype=torch.bool)
@@ -99,7 +102,7 @@ class GoThroughPositionsTask(TaskCore):
             self._target_positions[self._ALL_INDICES, self._target_index]
             - self.robot.data.root_pos_w[self._env_ids, :2]
         )
-        self._position_dist = torch.norm(self._position_error, dim=-1)
+        self._position_dist = torch.linalg.norm(self._position_error, dim=-1)
 
         # position error expressed as distance and angular error (to the position)
         heading = self.robot.data.heading_w[self._env_ids]
@@ -122,11 +125,11 @@ class GoThroughPositionsTask(TaskCore):
         # We compute the observations of the subsequent goals in the robot frame as the goals are not oriented.
         for i in range(self._task_cfg.num_subsequent_goals - 1):
             # Check if the index is looking beyond the number of goals
-            overflowing = (self._target_index + i + 1 >= self._task_cfg.max_num_goals).int()
+            overflowing = (self._target_index + i + 1) >= self._num_goals
             # If it is, then set the next index to 0 (Loop around)
-            indices = self._target_index + (i + 1) * (1 - overflowing)
+            indices = (self._target_index + i + 1) * torch.logical_not(overflowing)
             # Compute the distance between the nth goal, and the robot
-            goal_distance = torch.norm(
+            goal_distance = torch.linalg.norm(
                 self.robot.data.root_pos_w[self._env_ids, :2] - self._target_positions[self._ALL_INDICES, indices],
                 dim=-1,
             )
@@ -139,9 +142,9 @@ class GoThroughPositionsTask(TaskCore):
                 torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading)
             )
             # If the task is not set to loop, we set the next goal to be 0.
-            if ~self._task_cfg.loop:
-                goal_distance = goal_distance * (1 - overflowing)
-                target_heading_error = target_heading_error * (1 - overflowing)
+            if not self._task_cfg.loop:
+                goal_distance = goal_distance * torch.logical_not(overflowing)
+                target_heading_error = target_heading_error * torch.logical_not(overflowing)
             # Add to buffer
             self._task_data[:, 6 + 3 * i] = goal_distance
             self._task_data[:, 7 + 3 * i] = torch.cos(target_heading_error)
@@ -151,11 +154,6 @@ class GoThroughPositionsTask(TaskCore):
     def compute_rewards(self) -> torch.Tensor:
         """
         Computes the reward for the current state of the robot.
-
-        Args:
-            current_state (torch.Tensor): The current state of the robot.
-            actions (torch.Tensor): The actions taken by the robot.
-            step (int, optional): The current step. Defaults to 0.
 
         Returns:
             torch.Tensor: The reward for the current state of the robot."""
@@ -175,7 +173,7 @@ class GoThroughPositionsTask(TaskCore):
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
         # normed linear velocity
-        linear_velocity = torch.norm(self.robot.data.root_vel_w[self._env_ids, :2], dim=-1)
+        linear_velocity = torch.linalg.norm(self.robot.data.root_vel_w[self._env_ids, :2], dim=-1)
         # normed angular velocity
         angular_velocity = torch.abs(self.robot.data.root_vel_w[self._env_ids, -1])
         # progress
@@ -207,12 +205,15 @@ class GoThroughPositionsTask(TaskCore):
         boundary_rew = torch.exp(-boundary_dist / self._task_cfg.boundary_exponential_reward_coeff)
 
         # Checks if the goal is reached
-        goal_reached = (self._position_dist < self._task_cfg.position_tolerance).int()
+        goal_reached = self._position_dist < self._task_cfg.position_tolerance
         reached_ids = goal_reached.nonzero(as_tuple=False).squeeze(-1)
         # if the goal is reached, the target index is updated
         self._target_index = self._target_index + goal_reached
-        self._trajectory_completed = self._target_index >= self._task_cfg.max_num_goals
+        # Check if the trajectory is completed
+        self._trajectory_completed = self._target_index > self._num_goals
         # To avoid out of bounds errors, set the target index to 0 if the trajectory is completed
+        # If the task loops, then the target index is set to 0 which will make the robot go back to the first goal
+        # The episode termination is handled in the get_dones method (looping or not)
         self._target_index = self._target_index * (~self._trajectory_completed)
 
         # If goal is reached make next progress null
@@ -237,16 +238,21 @@ class GoThroughPositionsTask(TaskCore):
         )
 
     def reset(self, task_actions: torch.Tensor, env_seeds: torch.Tensor, env_ids: torch.Tensor) -> None:
+        """
+        Resets the task to its initial state."""
+
         super().reset(task_actions, env_seeds, env_ids)
+
         # Reset the target index and trajectory completed
         self._target_index[env_ids] = 0
         self._trajectory_completed[env_ids] = False
+
         # Make sure the position error and position dist are up to date after the reset
         self._position_error[env_ids] = (
             self._target_positions[env_ids, self._target_index[env_ids]]
             - self.robot.data.root_pos_w[self._env_ids, :2][env_ids]
         )
-        self._position_dist[env_ids] = torch.norm(self._position_error[env_ids], dim=-1)
+        self._position_dist[env_ids] = torch.linalg.norm(self._position_error[env_ids], dim=-1)
         self._previous_position_dist[env_ids] = self._position_dist[env_ids].clone()
 
     def get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -256,18 +262,21 @@ class GoThroughPositionsTask(TaskCore):
         Returns:
             torch.Tensor: Wether the platforms should be killed or not."""
 
+        # Kill robots that would stray too far from the target.
         self._position_error = (
             self._target_positions[self._ALL_INDICES, self._target_index]
             - self.robot.data.root_pos_w[self._env_ids, :2]
         )
         self._previous_position_dist = self._position_dist.clone()
-        self._position_dist = torch.norm(self._position_error, dim=-1)
+        self._position_dist = torch.linalg.norm(self._position_error, dim=-1)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
         task_failed = torch.zeros_like(self._goal_reached, dtype=torch.long)
         task_failed = torch.where(self._position_dist > self._task_cfg.maximum_robot_distance, ones, task_failed)
 
         task_completed = torch.zeros_like(self._goal_reached, dtype=torch.long)
-        task_completed = torch.where(self._trajectory_completed > 0, ones, task_completed)
+        # If the task is set to loop, don't terminate the episode early.
+        if not self._task_cfg.loop:
+            task_completed = torch.where(self._trajectory_completed > 0, ones, task_completed)
         return task_failed, task_completed
 
     def set_goals(self, env_ids: torch.Tensor):
@@ -282,9 +291,15 @@ class GoThroughPositionsTask(TaskCore):
             Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations."""
 
         num_goals = len(env_ids)
-        # We are solving this problem in a local frame so it should not matter where the goal is.
-        # Yet, we can also move the goal position, and we are going to do it, because why not!
 
+        # Select how many random goals we want to generate.
+        self._num_goals[env_ids] = torch.randint(
+            self._task_cfg.min_num_goals, self._task_cfg.max_num_goals, (num_goals,), device=self._device
+        )
+
+        # Since we are using tensor operations, we cannot have different number of goals per environment: the
+        # tensor containing the target positions must have the same number of goals for all environments.
+        # Hence, we will duplicate the last goals for the environments that have less goals.
         for i in range(self._task_cfg.max_num_goals):
             if i == 0:
                 self._target_positions[env_ids, i] = (
@@ -292,6 +307,7 @@ class GoThroughPositionsTask(TaskCore):
                     - self._task_cfg.max_distance_from_origin
                 ) + self._env_origins[env_ids, :2]
             else:
+                # Pick a random goal
                 r = (
                     self._env_actions[env_ids, 0]
                     * (self._task_cfg.maximal_spawn_distance - self._task_cfg.minimal_spawn_distance)
@@ -303,6 +319,14 @@ class GoThroughPositionsTask(TaskCore):
                 )
                 self._target_positions[env_ids, i, 1] = (
                     r * torch.sin(theta) + self._target_positions[env_ids, i - 1, 1]
+                )
+
+                # Check if the number of goals is less than the current index
+                # If it is, then set the ith goal to the num_goal - 1
+                self._target_positions[env_ids, i] = torch.where(
+                    self._num_goals[env_ids].repeat_interleave(2).reshape(-1, 2) < i,
+                    self._target_positions[env_ids, self._num_goals[env_ids]],
+                    self._target_positions[env_ids, i],
                 )
 
     def set_initial_conditions(self, env_ids: torch.Tensor) -> None:
@@ -398,8 +422,9 @@ class GoThroughPositionsTask(TaskCore):
         passed_goals_list = []
         next_goals_list = []
         for i in range(self._task_cfg.max_num_goals):
-            next_goals = self._target_index < i
-            passed_goals = self._target_index > i
+            ok_goals = self._num_goals >= i
+            next_goals = torch.logical_and(self._target_index < i, ok_goals)
+            passed_goals = torch.logical_and(self._target_index > i, ok_goals)
             passed_goals_list.append(self._target_positions[passed_goals, i])
             next_goals_list.append(self._target_positions[next_goals, i])
         passed_goals = torch.cat(passed_goals_list, dim=0)

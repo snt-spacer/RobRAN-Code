@@ -33,6 +33,7 @@ class GoThroughPositionsCfg(TaskCoreCfg):
     """Maximal distance from the origin of the environment. Defaults to 0.0."""
     max_num_goals: int = 10
     """Maximal number of goals. Defaults to 1."""
+    min_num_goals: int = 6
 
     # Observation
     num_subsequent_goals: int = 2
