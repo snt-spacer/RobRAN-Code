@@ -542,6 +542,25 @@ def yaw_quat(quat: torch.Tensor) -> torch.Tensor:
 
 
 @torch.jit.script
+def get_yaw_from_quat(quat: torch.Tensor) -> torch.Tensor:
+    """Extract the yaw component of a quaternion.
+
+    Args:
+        quat: The orientation in (w, x, y, z). Shape is (..., 4)
+
+    Returns:
+        The yaw.
+    """
+    shape = quat.shape
+    quat_yaw = quat.clone().view(-1, 4)
+    qw = quat_yaw[:, 0]
+    qx = quat_yaw[:, 1]
+    qy = quat_yaw[:, 2]
+    qz = quat_yaw[:, 3]
+    return torch.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
+
+
+@torch.jit.script
 def quat_apply(quat: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
     """Apply a quaternion rotation to a vector.
 
@@ -1282,6 +1301,20 @@ def random_yaw_orientation(num: int, device: str) -> torch.Tensor:
     yaw = 2 * torch.pi * torch.rand(num, dtype=torch.float, device=device)
 
     return quat_from_euler_xyz(roll, pitch, yaw)
+
+
+def sample_random_sign(size: int | tuple[int, ...], device: str) -> torch.Tensor:
+    """Sample random sign tensor.
+
+    Args:
+        size: The shape of the tensor.
+        device: Device to create tensor on.
+
+    Returns:
+        Sampled tensor. Shape is based on :attr:`size`.
+    """
+
+    return 2 * torch.rand(size, device=device) - 0.5
 
 
 def sample_triangle(lower: float, upper: float, size: int | tuple[int, ...], device: str) -> torch.Tensor:

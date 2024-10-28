@@ -7,29 +7,38 @@ import math
 
 
 @configclass
-class TrackVelocityCfg(TaskCoreCfg):
+class TrackVelocitiesCfg(TaskCoreCfg):
     """Configuration for the TrackVelocityTask task."""
 
     # Initial conditions
-    minimal_spawn_linear_velocity: float = 0.0
+    spawn_min_lin_vel: float = 0.0
     """Minimal linear velocity at spawn pose in m/s. Defaults to 0.0 m/s."""
-    maximal_spawn_linear_velocity: float = 0.0
+    spawn_max_lin_vel: float = 0.0
     """Maximal linear velocity at spawn pose in m/s. Defaults to 0.0 m/s."""
-    minimal_spawn_angular_velocity: float = 0.0
+    spawn_min_ang_vel: float = 0.0
     """Minimal angular velocity at spawn in rad/s. Defaults to 0.0 rad/s."""
-    maximal_spawn_angular_velocity: float = 0.0
+    spawn_max_ang_vel: float = 0.0
     """Maximal angular velocity at spawn in rad/s. Defaults to 0.0 rad/s."""
 
     # Goal spawn
-    enable_linear_velocity: bool = True  # A random sign is added
-    minimal_linear_velocity: float = 0.0
-    maximal_linear_velocity: float = 1.0
-    enable_lateral_velocity: bool = False  # A random sign is added
-    minimal_lateral_velocity: float = 0.0
-    maximal_lateral_velocity: float = 0.0
-    enable_angular_velocity: bool = True  # A random sign is added
-    minimal_angular_velocity: float = 0.0
-    maximal_angular_velocity: float = 0.4
+    enable_linear_velocity: bool = True
+    """Enable linear velocity goal. Defaults to True."""
+    goal_min_lin_vel: float = 0.0
+    """Minimal linear velocity goal in m/s. Defaults to 0.0 m/s. (a random sign is added)"""
+    goal_max_lin_vel: float = 2.0
+    """Maximal linear velocity goal in m/s. Defaults to 2.0 m/s. (a random sign is added)"""
+    enable_lateral_velocity: bool = False
+    """Enable lateral velocity goal. Defaults to False."""
+    goal_min_lat_vel: float = 0.0
+    """Minimal lateral velocity goal in m/s. Defaults to 0.0 m/s. (a random sign is added)"""
+    goal_max_lat_vel: float = 0.0
+    """Maximal lateral velocity goal in m/s. Defaults to 0.0 m/s. (a random sign is added)"""
+    enable_angular_velocity: bool = True
+    """Enable angular velocity goal. Defaults to True."""
+    goal_min_ang_vel: float = 0.0
+    """Minimal angular velocity goal in rad/s. Defaults to 0.0 rad/s. (a random sign is added)"""
+    goal_max_ang_vel: float = 0.4
+    """Maximal angular velocity goal in rad/s. Defaults to 0.4 rad/s. (a random sign is added)"""
 
     # Settings
     resample_at_regular_interval: bool = True

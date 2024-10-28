@@ -6,29 +6,29 @@ import math
 
 from omni.isaac.lab.assets import ArticulationData, Articulation
 from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers import PIN_SPHERE_CFG, BICOLOR_DIAMOND_CFG
+from omni.isaac.lab.markers import PIN_ARROW_CFG, BICOLOR_DIAMOND_CFG
 from omni.isaac.lab.utils.math import sample_uniform, sample_gaussian, sample_random_sign
-from omni.isaac.lab_tasks.rans import GoThroughPositionsCfg
+from omni.isaac.lab_tasks.rans import GoThroughPosesCfg
 from .task_core import TaskCore
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class GoThroughPositionsTask(TaskCore):
+class GoThroughPosesTask(TaskCore):
     """
-    Implements the GoThroughPositions task. The robot has to reach one or a sequence of target positions.
+    Implements the GoThroughPosition task. The robot has to reach a target position.
     """
 
     def __init__(
         self,
-        task_cfg: GoThroughPositionsCfg,
+        task_cfg: GoThroughPosesCfg,
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
         env_ids: torch.Tensor | None = None,
     ) -> None:
         """
-        Initializes the GoThroughPositions task.
+        Initializes the GoThroughPoses task.
 
         Args:
             task_cfg: The configuration of the task.
@@ -38,16 +38,14 @@ class GoThroughPositionsTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super(GoThroughPositionsTask, self).__init__(
-            task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids
-        )
+        super(GoThroughPosesTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
 
         # Defines the observation and actions space sizes for this task
-        self._dim_task_obs = 3 + 3 * self._task_cfg.num_subsequent_goals
-        self._dim_env_act = 6  # spawn distance, spawn_cone, linear velocity, angular velocity
+        self._dim_task_obs = 5 + 5 * self._task_cfg.num_subsequent_goals
+        self._dim_env_act = 11  # spawn distance, spawn_cone, linear velocity, angular velocity
 
         # Buffers
         self.initialize_buffers()
@@ -66,7 +64,7 @@ class GoThroughPositionsTask(TaskCore):
         self._target_positions = torch.zeros(
             (self._num_envs, self._task_cfg.max_num_goals, 2), device=self._device, dtype=torch.float32
         )
-        self._target_headings = torch.zeros(
+        self._target_heading = torch.zeros(
             (self._num_envs, self._task_cfg.max_num_goals), device=self._device, dtype=torch.float32
         )
         self._target_index = torch.zeros((self._num_envs,), device=self._device, dtype=torch.long)
@@ -78,7 +76,7 @@ class GoThroughPositionsTask(TaskCore):
         """
         Creates a dictionary to store the training statistics for the task."""
 
-        super(GoThroughPositionsTask, self).create_logs()
+        super(GoThroughPosesTask, self).create_logs()
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
@@ -248,12 +246,17 @@ class GoThroughPositionsTask(TaskCore):
         Resets the task to its initial state.
 
         The environment actions for this task are the following all belong to the [0,1] range:
-        - env_actions[0]: The lower bound of the range used to sample the distance between the goals.
-        - env_actions[1]: The range used to sample the distance between the goals.
-        - env_actions[2]: The value used to sample the distance between the spawn position and the first goal.
-        - env_actions[3]: The value used to sample the angle between the spawn heading and the heading required to be looking at the first goal.
-        - env_actions[4]: The value used to sample the linear velocity of the robot at spawn.
-        - env_actions[5]: The value used to sample the angular velocity of the robot at spawn.
+        - env_actions[0]: The lower bound of the range used to sample the difference in heading between the goals.
+        - env_actions[1]: The range used to sample the difference in heading between the goals.
+        - env_actions[2]: The lower bound of the range used to sample the distance between the goals.
+        - env_actions[3]: The range used to sample the distance between the goals.
+        - env_actions[4]: The lower bound of the range used to sample the spread of the cone in which the goals are.
+        - env_actions[5]: The range used to sample the spread of the cone in which the goals are.
+        - env_actions[6]: The value used to sample the distance between the spawn position and the first goal.
+        - env_actions[7]: The value used to sample the angle between the spawn position and the first goal.
+        - env_actions[8]: The value used to sample the angle between the spawn heading and the first goal's heading.
+        - env_actions[9]: The value used to sample the linear velocity of the robot at spawn.
+        - env_actions[10]: The value used to sample the angular velocity of the robot at spawn.
 
         Args:
             task_actions (torch.Tensor): The actions for the task.
@@ -274,12 +277,18 @@ class GoThroughPositionsTask(TaskCore):
         self._position_dist[env_ids] = torch.linalg.norm(self._position_error[env_ids], dim=-1)
         self._previous_position_dist[env_ids] = self._position_dist[env_ids].clone()
 
-        # The first 2 env actions define ranges, we need to make sure they don't exceed the [0,1] range.
+        # The first 6 env actions define ranges, we need to make sure they don't exceed the [0,1] range.
         # They are given as [min, delta] we will convert them to [min, max] that is max = min + delta
         # Note that they are defined as [min, delta] to make sure the min is the min and the max is the max. This
         # is always true as they are strictly positive.
         self._env_actions[env_ids, 1] = torch.clip(
-            self._env_actions[env_ids, 0] + self._env_actions[env_ids, 1], max=1.0
+            self._env_actions[env_ids, 0] + self._env_actions[env_ids, 1], max=1
+        )
+        self._env_actions[env_ids, 3] = torch.clip(
+            self._env_actions[env_ids, 2] + self._env_actions[env_ids, 3], max=1
+        )
+        self._env_actions[env_ids, 5] = torch.clip(
+            self._env_actions[env_ids, 4] + self._env_actions[env_ids, 5], max=1
         )
 
     def get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -308,7 +317,7 @@ class GoThroughPositionsTask(TaskCore):
 
     def set_goals(self, env_ids: torch.Tensor):
         """
-        Generates a random goal for the task.
+        Generates a random sequence of oriented goals for the task.
         These goals are generated in a way allowing to precisely control the difficulty of the task through the
         environment action. This is done by randomizing ranges within which they can be generated. More information
         below:
@@ -316,13 +325,19 @@ class GoThroughPositionsTask(TaskCore):
         - The first goal is picked randomly in a square centered on the origin. Its orientation is picked randomly. This
             goal is the starting point of the trajectory and it cannot be changed through the environment action. We
             recommend setting that square to be 0. This way, the trajectory will always start at the origin.
-        - The next goals are picked randomly in a disk centered on the previous goal. We want to randomize at a given
-            distance from the previous goal. The environment action selects the distance between the goals. The formula
-            is the following:
-            radius = U[env_action[0],env_action[1]] * (maximal_goal_radius - minimal_goal_radius) + minimal_spawn_radius
-            theta = U[-pi, pi]
-            position_x = radius * cos(spawn_angle_delta + previous_goal_heading) + previous_goal_x
-            position_y = radius * sin(spawn_angle_delta + previous_goal_heading) + previous_goal_y
+        - The next goals are picked randomly in a cone originating from the previous goal.
+            - For the heading, the environment action selects the range within which the goal will be picked for
+                the whole trajectory. The new heading is picked randomly in a cone aligned with the direction to the
+                previous goal. It uses the parameters `minimal_heading_distance` and `maximal_heading_distance`,
+                and env_action[0], env_action[1] to set the range. The formula is the following:
+                delta_heading = (U[env_action[0],env_action[1]] * (maximal_heading_distance - minimal_heading_distance) + minimal_heading_distance) * rand_sign()
+            - For the position, we want to randomize at a given distance from the previous goal, and within a cone aligned
+                with the direction to the previous goal. The environment action selects both the distance and the spread of
+                the cone. The formula is the following:
+                radius = U[env_action[2],env_action[3]] * (maximal_goal_radius - minimal_goal_radius) + minimal_spawn_radius
+                spawn_angle_delta = (U[env_action[4],env_action[5]] * (maximal_cone_spread - minimal_cone_spread) + minimal_cone_spread) * rand_sign()
+                position_x = radius * cos(spawn_angle_delta + previous_goal_heading) + previous_goal_x
+                position_y = radius * sin(spawn_angle_delta + previous_goal_heading) + previous_goal_y
 
         Args:
             env_ids (torch.Tensor): The ids of the environments.
@@ -334,7 +349,7 @@ class GoThroughPositionsTask(TaskCore):
         num_goals = len(env_ids)
 
         # Select how many random goals we want to generate.
-        self._num_goals[env_ids] = torch.randint(
+        self._num_goals[env_ids] = sample_uniform(
             self._task_cfg.min_num_goals, self._task_cfg.max_num_goals, (num_goals,), device=self._device
         )
 
@@ -354,17 +369,41 @@ class GoThroughPositionsTask(TaskCore):
                     )
                     + self._env_origins[env_ids, :2]
                 )
+                # The orientation is picked randomly
+                self._target_heading[env_ids, i] = sample_uniform(-math.pi, math.pi, (num_goals,), device=self._device)
             else:
                 # If needed, randomize the next goals
+                # The orientation is picked in a cone aligned with the direction to the previous goal
+                self._target_heading[env_ids, i] = self._target_heading[env_ids, i - 1] + (
+                    sample_uniform(
+                        self._env_actions[env_ids, 0],
+                        self._env_actions[env_ids, 1],
+                        (num_goals,),
+                        device=self._device,
+                    )
+                    * (self._task_cfg.goal_max_heading_dist - self._task_cfg.goal_min_heading_dist)
+                    + self._task_cfg.goal_min_heading_dist
+                ) * sample_random_sign((num_goals,), device=self._device)
+                # The position is picked randomly in a cone oriented towards the previous goal.
+                # The environment action decides the randomization range of the radius and the spread of the cone.
                 r = (
                     sample_uniform(
-                        self._env_actions[env_ids, 0], self._env_actions[env_ids, 1], (num_goals,), device=self._device
+                        self._env_actions[env_ids, 2], self._env_actions[env_ids, 3], (num_goals,), device=self._device
                     )
                     * (self._task_cfg.goal_max_dist - self._task_cfg.goal_min_dist)
                     + self._task_cfg.goal_min_dist
                 )
-                # Theta is taken at random
-                theta = torch.rand((num_goals,), dtype=torch.float32, device=self._device) * math.pi
+                theta = self._target_heading[env_ids, i - 1] + (
+                    sample_uniform(
+                        self._env_actions[env_ids, 4],
+                        self._env_actions[env_ids, 5],
+                        (num_goals,),
+                        device=self._device,
+                    )
+                    * (self._task_cfg.goal_max_cone_spread - self._task_cfg.goal_min_cone_spread)
+                    + self._task_cfg.goal_min_cone_spread
+                ) * sample_random_sign((num_goals,), device=self._device)
+
                 self._target_positions[env_ids, i, 0] = (
                     r * torch.cos(theta) + self._target_positions[env_ids, i - 1, 0]
                 )
@@ -400,32 +439,36 @@ class GoThroughPositionsTask(TaskCore):
         # Randomizes the initial pose of the platform
         initial_pose = torch.zeros((num_resets, 7), device=self._device, dtype=torch.float32)
 
-        # Postion
+        # Postion, the position is picked in a cone behind the first target.
         r = (
-            self._env_actions[env_ids, 2] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
+            self._env_actions[env_ids, 6] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
             + self._task_cfg.spawn_min_dist
         )
-        theta = sample_uniform(-math.pi, math.pi, (num_resets,), device=self._device)
+        # We add pi to make sure the robot is behind the first target
+        # if the env_action is 0, then the robot is perfectly aligned with the target
+        theta = (
+            (
+                self._env_actions[env_ids, 7]
+                * (self._task_cfg.spawn_max_cone_spread - self._task_cfg.spawn_min_cone_spread)
+                + self._task_cfg.spawn_min_cone_spread
+            )
+            * sample_random_sign((num_resets,), device=self._device)
+            + self._target_heading[env_ids, 0]
+            + math.pi
+        )
         initial_pose[:, 0] = r * torch.cos(theta) + self._target_positions[env_ids, 0, 0]
         initial_pose[:, 1] = r * torch.sin(theta) + self._target_positions[env_ids, 0, 1]
         initial_pose[:, 2] = self._robot_origins[env_ids, 2]
 
         # Orientation
-        # Compute the heading to the target from the sampled position
-        target_heading = torch.arctan2(
-            self._target_positions[env_ids, 0, 1] - initial_pose[:, 1],
-            self._target_positions[env_ids, 0, 0] - initial_pose[:, 0],
-        )
-        # Randomizes the heading of the platform
         delta_heading = (
             (
-                self._env_actions[env_ids, 3]
+                self._env_actions[env_ids, 8]
                 * (self._task_cfg.spawn_max_heading_dist - self._task_cfg.spawn_min_heading_dist)
             )
-            + self._task_cfg.spawn_max_heading_dist
+            + self._task_cfg.spawn_min_heading_dist
         ) * sample_random_sign((num_resets,), device=self._device)
-        # The spawn heading is the delta heading + the target heading
-        theta = delta_heading + target_heading
+        theta = delta_heading + self._target_heading[env_ids, 0]
         initial_pose[:, 3] = torch.cos(theta * 0.5)
         initial_pose[:, 6] = torch.sin(theta * 0.5)
 
@@ -434,7 +477,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Linear velocity
         velocity_norm = (
-            self._env_actions[env_ids, 4] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
+            self._env_actions[env_ids, 9] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
             + self._task_cfg.spawn_min_lin_vel
         )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
@@ -443,7 +486,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Angular velocity of the platform
         angular_velocity = (
-            self._env_actions[env_ids, 5] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
+            self._env_actions[env_ids, 10] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
             + self._task_cfg.spawn_min_ang_vel
         )
         initial_velocity[:, 5] = angular_velocity
@@ -455,24 +498,24 @@ class GoThroughPositionsTask(TaskCore):
     def create_task_visualization(self) -> None:
         """Adds the visual marker to the scene.
 
-        There are 3 types of makers for the goals:
+        There are 3 makers for the goals:
         - The next goal is marked in red.
         - The passed goals are marked in grey.
         - The current goals are marked in green.
 
-        They are represented by a pin with an sphere on top of it. The pin is here to precisely visualize the position
-        of the goal.
+        They are represented by a pin with an arrow on top of it. The arrow's orientation is the same as the goal's.
+        The pin is here to precisely visualize the position of the goal.
 
         The robot is represented by a diamond with two colors. The colors are used to represent the orientation of the
         robot. The green color represents the front of the robot, and the red color represents the back of the robot.
         """
 
         # Define the visual markers and edit their properties
-        goal_marker_cfg_green = PIN_SPHERE_CFG.copy()
+        goal_marker_cfg_green = PIN_ARROW_CFG.copy()
         goal_marker_cfg_green.markers["pin_sphere"].visual_material.diffuse_color = (0.0, 1.0, 0.0)
-        goal_marker_cfg_grey = PIN_SPHERE_CFG.copy()
+        goal_marker_cfg_grey = PIN_ARROW_CFG.copy()
         goal_marker_cfg_grey.markers["pin_sphere"].visual_material.diffuse_color = (0.5, 0.5, 0.5)
-        goal_marker_cfg_red = PIN_SPHERE_CFG.copy()
+        goal_marker_cfg_red = PIN_ARROW_CFG.copy()
         robot_marker_cfg = BICOLOR_DIAMOND_CFG.copy()
         goal_marker_cfg_red.prim_path = f"/Visuals/Command/task_{self._task_uid}/next_goal"
         goal_marker_cfg_grey.prim_path = f"/Visuals/Command/task_{self._task_uid}/passed_goals"

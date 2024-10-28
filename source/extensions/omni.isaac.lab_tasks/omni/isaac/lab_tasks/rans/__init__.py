@@ -2,7 +2,7 @@ from .tasks_cfg import (
     TaskCoreCfg,
     GoToPoseCfg,
     GoToPositionCfg,
-    TrackVelocityCfg,
+    TrackVelocitiesCfg,
     GoThroughPositionsCfg,
     GoThroughPosesCfg,
 )  # noqa: F401, F403
@@ -10,7 +10,7 @@ from .tasks import (
     TaskCore,
     GoToPoseTask,
     GoToPositionTask,
-    TrackVelocityTask,
+    TrackVelocitiesTask,
     GoThroughPositionsTask,
     GoThroughPosesTask,
 )  # noqa: F401, F403

@@ -8,28 +8,28 @@ from omni.isaac.lab.assets import ArticulationData, Articulation
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.markers import ARROW_CFG
 import omni.isaac.lab.sim as sim_utils
-
-from omni.isaac.lab_tasks.rans import TrackVelocityCfg
+from omni.isaac.lab.utils.math import sample_uniform, sample_gaussian, sample_random_sign
+from omni.isaac.lab_tasks.rans import TrackVelocitiesCfg
 from .task_core import TaskCore
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class TrackVelocityTask(TaskCore):
+class TrackVelocitiesTask(TaskCore):
     """
     Implements the TrackVelocity task. The robot has to reach a target velocity.
     """
 
     def __init__(
         self,
-        task_cfg: TrackVelocityCfg,
+        task_cfg: TrackVelocitiesCfg,
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
         env_ids: torch.Tensor | None = None,
     ) -> None:
         """
-        Initializes the TrackVelocity task.
+        Initializes the TrackVelocities task.
 
         Args:
             task_cfg: The configuration of the task.
@@ -39,7 +39,7 @@ class TrackVelocityTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task.
         """
-        super(TrackVelocityTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
+        super(TrackVelocitiesTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
@@ -56,9 +56,9 @@ class TrackVelocityTask(TaskCore):
         Creates a dictionary to store the training statistics for the task.
 
         Returns:
-            dict: The dictionary containing the statistics.
-        """
-        super(TrackVelocityTask, self).create_logs()
+            dict: The dictionary containing the statistics."""
+
+        super(TrackVelocitiesTask, self).create_logs()
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
@@ -73,8 +73,14 @@ class TrackVelocityTask(TaskCore):
         self._logs["reward"]["lateral_velocity"] = torch_zeros()
         self._logs["reward"]["angular_velocity"] = torch_zeros()
 
-    def initialiaze_buffers(self):
-        super(TrackVelocityTask, self).initialize_buffers()
+    def initialiaze_buffers(self, env_ids: torch.Tensor | None = None) -> None:
+        """
+        Initializes the buffers used by the task.
+
+        Args:
+            env_ids: The ids of the environments used by this task."""
+
+        super(TrackVelocitiesTask, self).initialize_buffers(env_ids)
         # Target velocities
         self._linear_velocity_target = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
         self._lateral_velocity_target = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
@@ -93,8 +99,7 @@ class TrackVelocityTask(TaskCore):
         Computes the observation tensor from the current state of the robot.
 
         Returns:
-            torch.Tensor: The observation tensor.
-        """
+            torch.Tensor: The observation tensor."""
 
         # linear velocity error
         err_lin_vel = self._linear_velocity_target - self.robot.data.root_lin_vel_b[:, 0]
@@ -121,8 +126,7 @@ class TrackVelocityTask(TaskCore):
         Computes the reward for the current state of the robot.
 
         Returns:
-            torch.Tensor: The reward for the current state of the robot.
-        """
+            torch.Tensor: The reward for the current state of the robot."""
 
         # Linear velocity error
         linear_velocity_distance = torch.abs(self._linear_velocity_target - self.robot.data.root_lin_vel_b[:, 0])
@@ -195,6 +199,21 @@ class TrackVelocityTask(TaskCore):
         )
 
     def reset(self, task_actions: torch.Tensor, env_seeds: torch.Tensor, env_ids: torch.Tensor) -> None:
+        """
+        Resets the task to its initial state.
+
+        The environment actions for this task are the following all belong to the [0,1] range:
+        - env_actions[0]: The value used to sample the target linear velocity.
+        - env_actions[1]: The value used to sample the target lateral velocity.
+        - env_actions[2]: The value used to sample the target angular velocity.
+        - env_actions[4]: The value used to sample the linear velocity of the robot at spawn.
+        - env_actions[5]: The value used to sample the angular velocity of the robot at spawn.
+
+        Args:
+            task_actions (torch.Tensor): The actions for the task.
+            env_seeds (torch.Tensor): The seeds for the environments.
+            env_ids (torch.Tensor): The ids of the environments."""
+
         super().reset(task_actions, env_seeds, env_ids)
 
         self._num_steps[env_ids] = 0
@@ -205,8 +224,7 @@ class TrackVelocityTask(TaskCore):
         Updates if the platforms should be killed or not.
 
         Returns:
-            torch.Tensor: Wether the platforms should be killed or not.
-        """
+            torch.Tensor: Wether the platforms should be killed or not."""
 
         # Kill the robot if it goes too far, but don't count it as an early termination.
         position_distance = torch.norm(
@@ -223,34 +241,40 @@ class TrackVelocityTask(TaskCore):
     def set_goals(self, env_ids: torch.Tensor) -> None:
         """
         Generates a random goal for the task.
+        These goals are generated in a way allowing to precisely control the difficulty of the task through the
+        environment action. In this task, the environment actions control 3 different elements:
+        - env_actions[0]: The value used to sample the target linear velocity.
+        - env_actions[1]: The value used to sample the target lateral velocity.
+        - env_actions[2]: The value used to sample the target angular velocity.
+
+        In this tasks goals are constantly updated. The target velocities are updated at regular intervals, and
+        an EMA is used to generate target velocities that smoothly change over time. The EMA rate and the interval
+        at which the goals are updated are controlled by the task configuration and randomly sampled.
+        These cannot be controlled through environment actions.
 
         Args:
-            env_ids (torch.Tensor): The ids of the environments.
-        """
+            env_ids (torch.Tensor): The ids of the environments."""
 
         num_goals = len(env_ids)
 
         # Set velocity targets
         if self._task_cfg.enable_linear_velocity:
             self._linear_velocity_target[env_ids] = (
-                self._env_actions[env_ids, 0]
-                * (self._task_cfg.maximal_linear_velocity - self._task_cfg.minimal_linear_velocity)
-                + self._task_cfg.minimal_linear_velocity
-            ) * torch.sign(torch.rand((num_goals,), device=self._device) - 0.5)
+                self._env_actions[env_ids, 0] * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
+                + self._task_cfg.goal_min_lin_vel
+            ) * sample_random_sign(num_goals, device=self._device)
             self._linear_velocity_desired[env_ids] = self._linear_velocity_target.clone()
         if self._task_cfg.enable_lateral_velocity:
             self._lateral_velocity_target[env_ids] = (
-                self._env_actions[env_ids, 1]
-                * (self._task_cfg.maximal_lateral_velocity - self._task_cfg.minimal_lateral_velocity)
-                + self._task_cfg.minimal_lateral_velocity
-            ) * torch.sign(torch.rand((num_goals,), device=self._device) - 0.5)
+                self._env_actions[env_ids, 1] * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
+                + self._task_cfg.goal_min_lat_vel
+            ) * sample_random_sign(num_goals, device=self._device)
             self._lateral_velocity_desired[env_ids] = self._lateral_velocity_target.clone()
         if self._task_cfg.enable_angular_velocity:
             self._angular_velocity_target[env_ids] = (
-                self._env_actions[env_ids, 2]
-                * (self._task_cfg.maximal_angular_velocity - self._task_cfg.minimal_angular_velocity)
-                + self._task_cfg.minimal_angular_velocity
-            ) * torch.sign(torch.rand((num_goals,), device=self._device) - 0.5)
+                self._env_actions[env_ids, 2] * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
+                + self._task_cfg.goal_min_ang_vel
+            ) * sample_random_sign(num_goals, device=self._device)
             self._angular_velocity_desired[env_ids] = self._angular_velocity_target.clone()
 
         # Pick a random smoothing factor
@@ -270,8 +294,7 @@ class TrackVelocityTask(TaskCore):
 
     def update_goals(self) -> None:
         """
-        Updates the goals for the task.
-        """
+        Updates the goals for the task."""
 
         # Update the number of steps
         self._num_steps += 1
@@ -301,20 +324,20 @@ class TrackVelocityTask(TaskCore):
             if self._task_cfg.enable_linear_velocity:
                 self._linear_velocity_desired[idx_to_update] = (
                     self._env_actions[idx_to_update, 0]
-                    * (self._task_cfg.maximal_linear_velocity - self._task_cfg.minimal_linear_velocity)
-                    + self._task_cfg.minimal_linear_velocity
+                    * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
+                    + self._task_cfg.goal_min_lin_vel
                 ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
             if self._task_cfg.enable_lateral_velocity:
                 self._lateral_velocity_desired[idx_to_update] = (
                     self._env_actions[idx_to_update, 1]
-                    * (self._task_cfg.maximal_lateral_velocity - self._task_cfg.minimal_lateral_velocity)
-                    + self._task_cfg.minimal_lateral_velocity
+                    * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
+                    + self._task_cfg.goal_min_lat_vel
                 ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
             if self._task_cfg.enable_angular_velocity:
                 self._angular_velocity_desired[idx_to_update] = (
                     self._env_actions[idx_to_update, 2]
-                    * (self._task_cfg.maximal_angular_velocity - self._task_cfg.minimal_angular_velocity)
-                    + self._task_cfg.minimal_angular_velocity
+                    * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
+                    + self._task_cfg.goal_min_ang_vel
                 ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
             # Pick a random smoothing factor
             self._smoothing_factor[idx_to_update] = (
@@ -354,9 +377,8 @@ class TrackVelocityTask(TaskCore):
 
         # Linear velocity
         velocity_norm = (
-            self._env_actions[env_ids, 3]
-            * (self._task_cfg.maximal_spawn_linear_velocity - self._task_cfg.minimal_spawn_linear_velocity)
-            + self._task_cfg.minimal_spawn_linear_velocity
+            self._env_actions[env_ids, 3] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
+            + self._task_cfg.spawn_min_lin_vel
         )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         initial_velocity[:, 0] = velocity_norm * torch.cos(theta)
@@ -364,9 +386,8 @@ class TrackVelocityTask(TaskCore):
 
         # Angular velocity of the platform
         angular_velocity = (
-            self._env_actions[env_ids, 4]
-            * (self._task_cfg.maximal_spawn_angular_velocity - self._task_cfg.minimal_spawn_angular_velocity)
-            + self._task_cfg.minimal_spawn_angular_velocity
+            self._env_actions[env_ids, 4] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
+            + self._task_cfg.spawn_min_ang_vel
         )
         initial_velocity[:, 5] = angular_velocity
 
@@ -375,7 +396,16 @@ class TrackVelocityTask(TaskCore):
         self.robot.write_root_velocity_to_sim(initial_velocity, env_ids)
 
     def create_task_visualization(self) -> None:
-        """Adds the visual marker to the scene."""
+        """Adds the visual marker to the scene.
+
+        There are four markers in the scene:
+        - The target linear velocity. It is represented by a red arrow.
+        - The target angular velocity. It is represented by a green arrow.
+        - The robot linear velocity. It is represented by a purple arrow.
+        - The robot angular velocity. It is represented by a cyan arrow.
+
+        These arrows are used to visually assess the performance of the robot with regard to its velocity tracking
+        task."""
 
         # Linear velocity goal
         marker_cfg = ARROW_CFG.copy()

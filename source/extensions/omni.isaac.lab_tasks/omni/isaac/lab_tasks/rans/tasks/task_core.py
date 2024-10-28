@@ -40,8 +40,6 @@ class TaskCore:
         # Robot
         self._robot: Articulation = MISSING
 
-        # Buffers
-
         # Logs
         self._logs = {}
         self.create_logs()
@@ -63,6 +61,12 @@ class TaskCore:
         self._logs["reward"] = {}
 
     def initialize_buffers(self, env_ids: torch.Tensor | None = None) -> None:
+        """
+        Initializes the buffers used by the task.
+
+        Args:
+            env_ids: The ids of the environments used by this task."""
+
         # Buffers
         if env_ids is None:
             self._env_ids = torch.arange(self._num_envs, device=self._device, dtype=torch.int32)
@@ -81,8 +85,8 @@ class TaskCore:
 
         Args:
             env_origins (torch.Tensor): The origins of the environments.
-            robot_origins (torch.Tensor): The origins of the robot.
-        """
+            robot_origins (torch.Tensor): The origins of the robot."""
+
         self.robot = robot
         self._env_origins = envs_origin.clone()
 
@@ -104,8 +108,8 @@ class TaskCore:
         Args:
             env_ids (torch.Tensor): The ids of the environments.
             task_actions (torch.Tensor): The actions to be taken to generate the env.
-            env_seed (torch.Tensor): The seed to used in each environment.
-        """
+            env_seed (torch.Tensor): The seed to used in each environment."""
+
         # Updates the task actions
         self._env_actions[env_ids] = task_actions
         # Updates the seed
@@ -121,14 +125,14 @@ class TaskCore:
         # Resets the logs
         self.reset_logs(env_ids)
 
-    def set_goals(self, env_ids: torch.Tensor):
+    def set_goals(self, env_ids: torch.Tensor) -> None:
         raise NotImplementedError
 
-    def set_initial_conditions(self, env_ids: torch.Tensor):
+    def set_initial_conditions(self, env_ids: torch.Tensor) -> None:
         raise NotImplementedError
 
-    def create_task_visualization(self):
+    def create_task_visualization(self) -> None:
         raise NotImplementedError
 
-    def update_task_visualization(self):
+    def update_task_visualization(self) -> None:
         raise NotImplementedError

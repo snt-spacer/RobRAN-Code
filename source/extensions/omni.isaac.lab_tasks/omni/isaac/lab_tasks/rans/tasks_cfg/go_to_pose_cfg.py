@@ -11,29 +11,43 @@ class GoToPoseCfg(TaskCoreCfg):
     """Configuration for the GoToPose task."""
 
     # Initial conditions
-    minimal_spawn_distance: float = 0.5
+    spawn_min_dist: float = 0.5
     """Minimal distance between the spawn pose and the target pose in m. Defaults to 0.5 m."""
-    maximal_spawn_distance: float = 5.0
+    spawn_max_dist: float = 5.0
     """Maximal distance between the spawn pose and the target pose in m. Defaults to 5.0 m."""
-    minimal_spawn_cone: float = 0.0
-    """Minimal angle between the spawn pose and the target pose in rad. Defaults to 0.0 rad."""
-    maximal_spawn_cone: float = math.pi
-    """Maximal angle between the spawn pose and the target pose in rad. Defaults to pi rad."""
-    minimal_spawn_heading_distance: float = 0.0
-    """Minimal distance between the spawn heading and the target heading in rad. Defaults to 0.0 rad."""
-    maximal_spawn_heading_distance: float = math.pi
-    """Maximal distance between the spawn heading and the target heading in rad. Defaults to pi rad."""
-    minimal_spawn_linear_velocity: float = 0.0
+    spawn_min_cone_spread: float = 0.0
+    """When generating an initial position, the robot is spawned in a cone behind (+pi) the target's orientation.
+    This parameter defines the minimal angle that cone can have. Defaults to 0.0 rad.
+    Spawn formula:
+    dx = target_x - robot_x
+    dy = target_y - robot_y
+    heading_to_target = atan2(dy, dx)
+    theta = random(spawn_min_cone_spread, spawn_max_cone_spread) * random_sign() + heading_to_target + pi
+    px = d * cos(theta)"""
+    spawn_max_cone_spread: float = math.pi
+    """When generating an initial position, the robot is spawned in a cone behind (+pi) the target's orientation.
+    This parameter defines the maximal angle that cone can have. Defaults to pi rad.
+    Spawn formula:
+    dx = target_x - robot_x
+    dy = target_y - robot_y
+    heading_to_target = atan2(dy, dx)
+    theta = random(spawn_min_cone_spread, spawn_max_cone_spread) * random_sign() + heading_to_target + pi
+    px = d * cos(theta)"""
+    spawn_min_heading_dist: float = 0.0
+    """Minimal angle between the spawn orientation and the target orientation in rad. Defaults to 0.0 rad."""
+    spawn_max_heading_dist: float = math.pi
+    """Maximal angle between the spawn orientation and the target orientation in rad. Defaults to pi rad."""
+    spawn_min_lin_vel: float = 0.0
     """Minimal linear velocity at spawn pose in m/s. Defaults to 0.0 m/s."""
-    maximal_spawn_linear_velocity: float = 0.0
+    spawn_max_lin_vel: float = 0.0
     """Maximal linear velocity at spawn pose in m/s. Defaults to 0.0 m/s."""
-    minimal_spawn_angular_velocity: float = 0.0
+    spawn_min_ang_vel: float = 0.0
     """Minimal angular velocity at spawn in rad/s. Defaults to 0.0 rad/s."""
-    maximal_spawn_angular_velocity: float = 0.0
+    spawn_max_ang_vel: float = 0.0
     """Maximal angular velocity at spawn in rad/s. Defaults to 0.0 rad/s."""
 
     # Goal spawn
-    max_distance_from_origin: float = 0.0
+    goal_max_dist_from_origin: float = 0.0
     """Maximal distance from the origin of the environment. Defaults to 0.0."""
 
     # Tolerance
