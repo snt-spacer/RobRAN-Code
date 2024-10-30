@@ -35,7 +35,7 @@ class TaskCore:
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = MISSING
-        self._dim_env_act = MISSING
+        self._dim_gen_act = MISSING
 
         # Robot
         self._robot: Articulation = MISSING
@@ -49,8 +49,8 @@ class TaskCore:
         return self._dim_task_obs
 
     @property
-    def num_actions(self) -> int:
-        return self._dim_env_act
+    def num_gen_actions(self) -> int:
+        return self._dim_gen_act
 
     @property
     def logs(self) -> dict:
@@ -76,7 +76,7 @@ class TaskCore:
         self._robot_origins = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self._seeds = torch.arange(self._num_envs, device=self._device, dtype=torch.int32)
         self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
-        self._env_actions = torch.zeros((self._num_envs, self._dim_env_act), device=self._device, dtype=torch.float32)
+        self._gen_actions = torch.zeros((self._num_envs, self._dim_gen_act), device=self._device, dtype=torch.float32)
         self._task_data = torch.zeros((self._num_envs, self._dim_task_obs), device=self._device, dtype=torch.float32)
 
     def run_setup(self, robot: Articulation, envs_origin: torch.Tensor) -> None:
@@ -103,17 +103,31 @@ class TaskCore:
         for key in self._logs:
             self._logs[key][env_ids] = 0
 
-    def reset(self, task_actions: torch.Tensor, env_seeds: torch.Tensor, env_ids: torch.Tensor) -> None:
+    def reset(
+        self, env_ids: torch.Tensor, gen_actions: torch.Tensor | None = None, env_seeds: torch.Tensor | None = None
+    ) -> None:
         """
+        Resets the task to its initial state.
+
+        If gen_actions is None, then the environment is generated at random. This is the default mode.
+        If env_seeds is None, then the seed is generated at random. This is the default mode.
+
         Args:
-            env_ids (torch.Tensor): The ids of the environments.
-            task_actions (torch.Tensor): The actions to be taken to generate the env.
-            env_seed (torch.Tensor): The seed to used in each environment."""
+            task_actions (torch.Tensor | None): The actions to be taken to generate the env.
+            env_seed (torch.Tensor | None): The seed to used in each environment.
+            env_ids (torch.Tensor): The ids of the environments."""
 
         # Updates the task actions
-        self._env_actions[env_ids] = task_actions
+        if gen_actions is None:
+            self._gen_actions[env_ids] = torch.rand((len(env_ids), self.num_gen_actions), device=self._device)
+        else:
+            self._gen_actions[env_ids] = gen_actions
+
         # Updates the seed
-        self._seeds[env_ids] = env_seeds
+        if env_seeds is None:
+            self._seeds[env_ids] = torch.randint(0, 100000, (len(env_ids),), dtype=torch.int32, device=self._device)
+        else:
+            self._seeds[env_ids] = env_seeds
 
         # Randomizes goals and initial conditions
         self.set_goals(env_ids)

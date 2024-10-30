@@ -51,8 +51,6 @@ class GoThroughPositionsCfg(TaskCoreCfg):
     # Tolerance
     position_tolerance: float = 0.10
     """Tolerance for the position of the robot. Defaults to 1cm."""
-    heading_tolerance: float = 5.0 / math.pi
-    """Tolerance for the heading of the robot. Defaults to 5 degrees."""
     maximum_robot_distance: float = 30.0
     """Maximal distance between the robot and the target position. Defaults to 10 m."""
 

@@ -37,8 +37,8 @@ class TrackVelocitiesTask(TaskCore):
             num_envs: The number of environments.
             device: The device on which the tensors are stored.
             task_id: The id of the task.
-            env_ids: The ids of the environments used by this task.
-        """
+            env_ids: The ids of the environments used by this task."""
+
         super(TrackVelocitiesTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
@@ -46,7 +46,7 @@ class TrackVelocitiesTask(TaskCore):
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = 6
-        self._dim_env_act = 5
+        self._dim_gen_act = 5
 
         # Buffers
         self.initialiaze_buffers()
@@ -63,9 +63,9 @@ class TrackVelocitiesTask(TaskCore):
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
         )
-        self._logs["state"]["linear_velocity"] = torch_zeros()
-        self._logs["state"]["lateral_velocity"] = torch_zeros()
-        self._logs["state"]["angular_velocity"] = torch_zeros()
+        self._logs["state"]["absolute_linear_velocity"] = torch_zeros()
+        self._logs["state"]["absolute_lateral_velocity"] = torch_zeros()
+        self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
         self._logs["state"]["linear_velocity_distance"] = torch_zeros()
         self._logs["state"]["lateral_velocity_distance"] = torch_zeros()
         self._logs["state"]["angular_velocity_distance"] = torch_zeros()
@@ -81,6 +81,7 @@ class TrackVelocitiesTask(TaskCore):
             env_ids: The ids of the environments used by this task."""
 
         super(TrackVelocitiesTask, self).initialize_buffers(env_ids)
+
         # Target velocities
         self._linear_velocity_target = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
         self._lateral_velocity_target = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
@@ -97,6 +98,24 @@ class TrackVelocitiesTask(TaskCore):
     def get_observations(self) -> torch.Tensor:
         """
         Computes the observation tensor from the current state of the robot.
+
+        The observation tensor is given in robot's frame. The task provides 5 elements.
+        - The linear velocity error in the robot's frame.
+        - The lateral velocity error in the robot's frame.
+        - The angular velocity error in the robot's frame.
+        - The linear velocity of the robot in the robot's frame.
+        - The angular velocity of the robot in the robot's frame.
+
+        The observation tensor is composed of the following elements:
+        - task_data[:, 0]: The linear velocity error in the robot's frame.
+        - task_data[:, 1]: The lateral velocity error in the robot's frame.
+        - task_data[:, 2]: The angular velocity error in the robot's frame.
+        - task_data[:, 3]: The linear velocity of the robot along the x axis.
+        - task_data[:, 4]: The lateral velocity of the robot along the y axis.
+        - task_data[:, 5]: The angular velocity of the robot.
+
+        Note: Depending on the task configuration, some of these elements might be disabled, e.g. the lateral velocity
+        tracking. Disabling an element will set the corresponding value to 0.
 
         Returns:
             torch.Tensor: The observation tensor."""
@@ -116,9 +135,9 @@ class TrackVelocitiesTask(TaskCore):
         self._task_data[:, 5] = self.robot.data.root_ang_vel_b[self._env_ids, -1]
 
         # Update logs
-        self._logs["state"]["absolute_linear_velocity"] = torch.abs(self.robot.data.root_lin_vel_b[:, 0])
-        self._logs["state"]["absolute_lateral_velocity"] = torch.abs(self.robot.data.root_lin_vel_b[:, 1])
-        self._logs["state"]["absolute_angular_velocity"] = torch.abs(self.robot.data.root_ang_vel_b[:, 2])
+        self._logs["state"]["absolute_linear_velocity"] += torch.abs(self.robot.data.root_lin_vel_b[:, 0])
+        self._logs["state"]["absolute_lateral_velocity"] += torch.abs(self.robot.data.root_lin_vel_b[:, 1])
+        self._logs["state"]["absolute_angular_velocity"] += torch.abs(self.robot.data.root_ang_vel_b[:, 2])
         return self._task_data
 
     def compute_rewards(self) -> torch.Tensor:
@@ -198,23 +217,25 @@ class TrackVelocitiesTask(TaskCore):
             + angular_velocity_rew * self._task_cfg.angular_velocity_weight
         )
 
-    def reset(self, task_actions: torch.Tensor, env_seeds: torch.Tensor, env_ids: torch.Tensor) -> None:
+    def reset(
+        self, env_ids: torch.Tensor, gen_actions: torch.Tensor | None = None, env_seeds: torch.Tensor | None = None
+    ) -> None:
         """
         Resets the task to its initial state.
 
         The environment actions for this task are the following all belong to the [0,1] range:
-        - env_actions[0]: The value used to sample the target linear velocity.
-        - env_actions[1]: The value used to sample the target lateral velocity.
-        - env_actions[2]: The value used to sample the target angular velocity.
-        - env_actions[4]: The value used to sample the linear velocity of the robot at spawn.
-        - env_actions[5]: The value used to sample the angular velocity of the robot at spawn.
+        - gen_actions[0]: The value used to sample the target linear velocity.
+        - gen_actions[1]: The value used to sample the target lateral velocity.
+        - gen_actions[2]: The value used to sample the target angular velocity.
+        - gen_actions[4]: The value used to sample the linear velocity of the robot at spawn.
+        - gen_actions[5]: The value used to sample the angular velocity of the robot at spawn.
 
         Args:
             task_actions (torch.Tensor): The actions for the task.
             env_seeds (torch.Tensor): The seeds for the environments.
             env_ids (torch.Tensor): The ids of the environments."""
 
-        super().reset(task_actions, env_seeds, env_ids)
+        super().reset(env_ids, gen_actions=gen_actions, env_seeds=env_seeds)
 
         self._num_steps[env_ids] = 0
         self.update_goals()
@@ -260,19 +281,19 @@ class TrackVelocitiesTask(TaskCore):
         # Set velocity targets
         if self._task_cfg.enable_linear_velocity:
             self._linear_velocity_target[env_ids] = (
-                self._env_actions[env_ids, 0] * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
+                self._gen_actions[env_ids, 0] * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
                 + self._task_cfg.goal_min_lin_vel
             ) * sample_random_sign(num_goals, device=self._device)
             self._linear_velocity_desired[env_ids] = self._linear_velocity_target.clone()
         if self._task_cfg.enable_lateral_velocity:
             self._lateral_velocity_target[env_ids] = (
-                self._env_actions[env_ids, 1] * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
+                self._gen_actions[env_ids, 1] * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
                 + self._task_cfg.goal_min_lat_vel
             ) * sample_random_sign(num_goals, device=self._device)
             self._lateral_velocity_desired[env_ids] = self._lateral_velocity_target.clone()
         if self._task_cfg.enable_angular_velocity:
             self._angular_velocity_target[env_ids] = (
-                self._env_actions[env_ids, 2] * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
+                self._gen_actions[env_ids, 2] * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
                 + self._task_cfg.goal_min_ang_vel
             ) * sample_random_sign(num_goals, device=self._device)
             self._angular_velocity_desired[env_ids] = self._angular_velocity_target.clone()
@@ -323,19 +344,19 @@ class TrackVelocitiesTask(TaskCore):
             # Update the desired velocities
             if self._task_cfg.enable_linear_velocity:
                 self._linear_velocity_desired[idx_to_update] = (
-                    self._env_actions[idx_to_update, 0]
+                    self._gen_actions[idx_to_update, 0]
                     * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
                     + self._task_cfg.goal_min_lin_vel
                 ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
             if self._task_cfg.enable_lateral_velocity:
                 self._lateral_velocity_desired[idx_to_update] = (
-                    self._env_actions[idx_to_update, 1]
+                    self._gen_actions[idx_to_update, 1]
                     * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
                     + self._task_cfg.goal_min_lat_vel
                 ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
             if self._task_cfg.enable_angular_velocity:
                 self._angular_velocity_desired[idx_to_update] = (
-                    self._env_actions[idx_to_update, 2]
+                    self._gen_actions[idx_to_update, 2]
                     * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
                     + self._task_cfg.goal_min_ang_vel
                 ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
@@ -377,7 +398,7 @@ class TrackVelocitiesTask(TaskCore):
 
         # Linear velocity
         velocity_norm = (
-            self._env_actions[env_ids, 3] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
+            self._gen_actions[env_ids, 3] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
             + self._task_cfg.spawn_min_lin_vel
         )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
@@ -386,7 +407,7 @@ class TrackVelocitiesTask(TaskCore):
 
         # Angular velocity of the platform
         angular_velocity = (
-            self._env_actions[env_ids, 4] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
+            self._gen_actions[env_ids, 4] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
             + self._task_cfg.spawn_min_ang_vel
         )
         initial_velocity[:, 5] = angular_velocity

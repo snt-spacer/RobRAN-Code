@@ -47,7 +47,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = 3 + 3 * self._task_cfg.num_subsequent_goals
-        self._dim_env_act = 6  # spawn distance, spawn_cone, linear velocity, angular velocity
+        self._dim_gen_act = 6
 
         # Buffers
         self.initialize_buffers()
@@ -98,7 +98,30 @@ class GoThroughPositionsTask(TaskCore):
 
     def get_observations(self) -> torch.Tensor:
         """
-        Computes the observation tensor from the current state of the robot.
+        Computes the observation tensor from the current state of the robot. The observation tensor is composed of the
+        following elements:
+        - The linear velocity of the robot.
+        - The angular velocity of the robot.
+        - The distance between the robot and the target position.
+        - The angle between the robot heading and the target position.
+        - The distance between the robot and the subsequent goals.
+        - Depending on the task configuration, a number of subsequent positions are added to the observation. For each
+            of them, the following elements are added:
+            - The distance between the robot and the subsequent goal.
+            - The angle between the robot heading and the subsequent goal.
+
+        Angle measurements are converted to a cosine and a sine to avoid discontinuities in 0 and 2pi.
+        This provides a continuous representation of the angle.
+
+        self._task_data[:, 0] = The linear velocity of the robot along the x-axis.
+        self._task_data[:, 1] = The linear velocity of the robot along the y-axis.
+        self._task_data[:, 2] = The angular velocity of the robot.
+        self._task_data[:, 3] = The distance between the robot and the target position.
+        self._task_data[:, 4] = The cosine of the angle between the robot heading and the target position.
+        self._task_data[:, 5] = The sine of the angle between the robot heading and the target position.
+        self._task_data[:, 6 + i*3] = The distance between the robot and the ith subsequent goal.
+        self._task_data[:, 7 + i*3] = The cosine of the angle between the robot heading and the ith subsequent goal.
+        self._task_data[:, 8 + i*3] = The sine of the angle between the robot heading and the ith subsequent goal.
 
         Returns:
             torch.Tensor: The observation tensor."""
@@ -243,24 +266,26 @@ class GoThroughPositionsTask(TaskCore):
             + self._task_cfg.reached_bonus * goal_reached
         )
 
-    def reset(self, task_actions: torch.Tensor, env_seeds: torch.Tensor, env_ids: torch.Tensor) -> None:
+    def reset(
+        self, env_ids: torch.Tensor, gen_actions: torch.Tensor | None = None, env_seeds: torch.Tensor | None = None
+    ) -> None:
         """
         Resets the task to its initial state.
 
         The environment actions for this task are the following all belong to the [0,1] range:
-        - env_actions[0]: The lower bound of the range used to sample the distance between the goals.
-        - env_actions[1]: The range used to sample the distance between the goals.
-        - env_actions[2]: The value used to sample the distance between the spawn position and the first goal.
-        - env_actions[3]: The value used to sample the angle between the spawn heading and the heading required to be looking at the first goal.
-        - env_actions[4]: The value used to sample the linear velocity of the robot at spawn.
-        - env_actions[5]: The value used to sample the angular velocity of the robot at spawn.
+        - gen_actions[0]: The lower bound of the range used to sample the distance between the goals.
+        - gen_actions[1]: The range used to sample the distance between the goals.
+        - gen_actions[2]: The value used to sample the distance between the spawn position and the first goal.
+        - gen_actions[3]: The value used to sample the angle between the spawn heading and the heading required to be looking at the first goal.
+        - gen_actions[4]: The value used to sample the linear velocity of the robot at spawn.
+        - gen_actions[5]: The value used to sample the angular velocity of the robot at spawn.
 
         Args:
-            task_actions (torch.Tensor): The actions for the task.
-            env_seeds (torch.Tensor): The seeds for the environments.
-            env_ids (torch.Tensor): The ids of the environments."""
+            env_ids (torch.Tensor): The ids of the environments.
+            task_actions (torch.Tensor | None): The actions for the task. Defaults to None.
+            env_seeds (torch.Tensor | None): The seeds for the environments. Defaults to None."""
 
-        super().reset(task_actions, env_seeds, env_ids)
+        super().reset(env_ids, gen_actions=gen_actions, env_seeds=env_seeds)
 
         # Reset the target index and trajectory completed
         self._target_index[env_ids] = 0
@@ -278,8 +303,8 @@ class GoThroughPositionsTask(TaskCore):
         # They are given as [min, delta] we will convert them to [min, max] that is max = min + delta
         # Note that they are defined as [min, delta] to make sure the min is the min and the max is the max. This
         # is always true as they are strictly positive.
-        self._env_actions[env_ids, 1] = torch.clip(
-            self._env_actions[env_ids, 0] + self._env_actions[env_ids, 1], max=1.0
+        self._gen_actions[env_ids, 1] = torch.clip(
+            self._gen_actions[env_ids, 0] + self._gen_actions[env_ids, 1], max=1.0
         )
 
     def get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -358,7 +383,7 @@ class GoThroughPositionsTask(TaskCore):
                 # If needed, randomize the next goals
                 r = (
                     sample_uniform(
-                        self._env_actions[env_ids, 0], self._env_actions[env_ids, 1], (num_goals,), device=self._device
+                        self._gen_actions[env_ids, 0], self._gen_actions[env_ids, 1], (num_goals,), device=self._device
                     )
                     * (self._task_cfg.goal_max_dist - self._task_cfg.goal_min_dist)
                     + self._task_cfg.goal_min_dist
@@ -402,7 +427,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Postion
         r = (
-            self._env_actions[env_ids, 2] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
+            self._gen_actions[env_ids, 2] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
             + self._task_cfg.spawn_min_dist
         )
         theta = sample_uniform(-math.pi, math.pi, (num_resets,), device=self._device)
@@ -419,7 +444,7 @@ class GoThroughPositionsTask(TaskCore):
         # Randomizes the heading of the platform
         delta_heading = (
             (
-                self._env_actions[env_ids, 3]
+                self._gen_actions[env_ids, 3]
                 * (self._task_cfg.spawn_max_heading_dist - self._task_cfg.spawn_min_heading_dist)
             )
             + self._task_cfg.spawn_max_heading_dist
@@ -434,7 +459,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Linear velocity
         velocity_norm = (
-            self._env_actions[env_ids, 4] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
+            self._gen_actions[env_ids, 4] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
             + self._task_cfg.spawn_min_lin_vel
         )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
@@ -443,7 +468,7 @@ class GoThroughPositionsTask(TaskCore):
 
         # Angular velocity of the platform
         angular_velocity = (
-            self._env_actions[env_ids, 5] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
+            self._gen_actions[env_ids, 5] * (self._task_cfg.spawn_max_ang_vel - self._task_cfg.spawn_min_ang_vel)
             + self._task_cfg.spawn_min_ang_vel
         )
         initial_velocity[:, 5] = angular_velocity
