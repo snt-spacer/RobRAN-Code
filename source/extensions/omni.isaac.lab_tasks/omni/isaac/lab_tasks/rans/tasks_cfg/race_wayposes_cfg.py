@@ -7,8 +7,8 @@ import math
 
 
 @configclass
-class GoThroughPosesCfg(TaskCoreCfg):
-    """Configuration for the GoThroughPosition task."""
+class RaceWayposesCfg(TaskCoreCfg):
+    """Configuration for the RaceWayposes task."""
 
     # Initial conditions
     spawn_min_dist: float = 0.5
@@ -47,26 +47,21 @@ class GoThroughPosesCfg(TaskCoreCfg):
     """Maximal angular velocity when spawned in rad/s. Defaults to 0.0 rad/s."""
 
     # Goal spawn
-    goal_max_dist_from_origin: float = 0.0
-    """Maximal distance from the origin of the environment. Defaults to 0.0."""
-    goal_min_dist: float = 1.0
-    """Minimal distance between the goals. Defaults to 1.0 m."""
-    goal_max_dist: float = 5.0
-    """Maximal distance between the goals. Defaults to 5.0 m."""
-    goal_min_heading_dist: float = 0.0
-    """Minimal heading distance between the goals. Defaults to 0.0 rad."""
-    goal_max_heading_dist: float = math.pi
-    """Maximal heading distance between the goals. Defaults to pi rad."""
-    goal_min_cone_spread: float = 0.0
-    """Minimal cone spread between the goals. Defaults to 0.0 rad."""
-    goal_max_cone_spread: float = math.pi
-    """Maximal cone spread between the goals. Defaults to pi rad."""
-    max_num_goals: int = 10
-    """Maximal number of goals. Defaults to 10."""
-    min_num_goals: int = 6
-    """Minimal number of goals. Defaults to 6."""
+    max_num_corners: int = 13
+    """Maximal number of corners. Defaults to 13."""
+    min_num_corners: int = 9
+    """Minimal number of corners. Defaults to 9."""
+    track_rejection_angle: float = (12.5 / 180.0) * math.pi
+    """Angle in radians to reject tracks that have too sharp corners. Defaults to 12.5 degrees.
+    sharp corners can lead to self-intersecting tracks."""
+    scale: float = 15.0
+    """Scale of the track. Defaults to 20.0."""
+    rad: float = 0.2
+    """A coefficient that affects the smoothness of the track. Defaults to 0.2."""
+    edgy: float = 0.0
+    """A coefficient that affects the edginess of the track. Defaults to 0.0."""
     loop: bool = True
-    """Whether the goals should loop or not. Defaults to True."""
+    """Whether the track should loop or not. Defaults to True."""
 
     # Observation
     num_subsequent_goals: int = 2
@@ -82,9 +77,9 @@ class GoThroughPosesCfg(TaskCoreCfg):
 
     # Reward Would be good to have a config for each reward type
     position_heading_exponential_reward_coeff: float = 0.25
-    position_heading_weight: float = 0.1
+    position_heading_weight: float = 0.05
     linear_velocity_min_value: float = 0.5
-    linear_velocity_max_value: float = 2.0
+    linear_velocity_max_value: float = 5.0
     angular_velocity_min_value: float = 0.5
     angular_velocity_max_value: float = 20.0
     boundary_exponential_reward_coeff: float = 1.0
@@ -92,5 +87,5 @@ class GoThroughPosesCfg(TaskCoreCfg):
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
     time_penalty: float = -0.0
-    reached_bonus: float = 10.0
-    progress_weight: float = 1.0
+    reached_bonus: float = 20.0
+    progress_weight: float = 2.0

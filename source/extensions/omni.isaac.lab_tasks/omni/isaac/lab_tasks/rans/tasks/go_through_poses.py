@@ -155,7 +155,7 @@ class GoThroughPosesTask(TaskCore):
 
         # Store in buffer
         self._task_data[:, 0:2] = self.robot.data.root_lin_vel_b[self._env_ids, :2]
-        self._task_data[:, 2] = self.robot.data.root_ang_vel_b[self._env_ids, -1]
+        self._task_data[:, 2] = self.robot.data.root_ang_vel_w[self._env_ids, -1]
         self._task_data[:, 3] = self._position_dist
         self._task_data[:, 4] = torch.cos(target_heading_error)
         self._task_data[:, 5] = torch.sin(target_heading_error)
@@ -223,6 +223,18 @@ class GoThroughPosesTask(TaskCore):
             torch.cos(self._target_heading[self._ALL_INDICES, self._target_index] - heading),
         )
         heading_dist = torch.abs(heading_error)
+
+        # position error expressed as distance and angular error (to the position)
+        target_heading_w = torch.atan2(
+            self._target_positions[self._ALL_INDICES, self._target_index, 1]
+            - self.robot.data.root_pos_w[self._env_ids, 1],
+            self._target_positions[self._ALL_INDICES, self._target_index, 0]
+            - self.robot.data.root_pos_w[self._env_ids, 0],
+        )
+        target_heading_error = torch.atan2(
+            torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading)
+        )
+        target_heading_dist = torch.abs(target_heading_error)
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
         # normed linear velocity
@@ -240,6 +252,9 @@ class GoThroughPosesTask(TaskCore):
 
         # heading reward (encourages the robot to face the target)
         heading_rew = torch.exp(-heading_dist / self._task_cfg.position_heading_exponential_reward_coeff)
+
+        # target heading reward (encourages the robot to face the target)
+        target_heading_rew = torch.exp(-target_heading_dist / self._task_cfg.position_heading_exponential_reward_coeff)
 
         # linear velocity reward
         linear_velocity_rew = linear_velocity - self._task_cfg.linear_velocity_min_value
@@ -285,6 +300,7 @@ class GoThroughPosesTask(TaskCore):
         return (
             progress_rew * self._task_cfg.progress_weight
             + heading_rew * self._task_cfg.position_heading_weight
+            + target_heading_rew * self._task_cfg.position_heading_weight
             + linear_velocity_rew * self._task_cfg.linear_velocity_weight
             + angular_velocity_rew * self._task_cfg.angular_velocity_weight
             + boundary_rew * self._task_cfg.boundary_weight

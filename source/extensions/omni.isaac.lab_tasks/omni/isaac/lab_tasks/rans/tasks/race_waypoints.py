@@ -8,27 +8,28 @@ from omni.isaac.lab.assets import ArticulationData, Articulation
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.markers import PIN_SPHERE_CFG, BICOLOR_DIAMOND_CFG
 from omni.isaac.lab.utils.math import sample_uniform, sample_gaussian, sample_random_sign
-from omni.isaac.lab_tasks.rans import GoThroughPositionsCfg
+from omni.isaac.lab_tasks.rans.utils import TrackGenerator
+from omni.isaac.lab_tasks.rans import RaceWaypointsCfg
 from .task_core import TaskCore
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class GoThroughPositionsTask(TaskCore):
+class RaceWaypointsTask(TaskCore):
     """
-    Implements the GoThroughPositions task. The robot has to reach one or a sequence of target positions.
+    Implements the RaceWaypoints task. The robot has to loop through a sequence of target positions.
     """
 
     def __init__(
         self,
-        task_cfg: GoThroughPositionsCfg,
+        task_cfg: RaceWaypointsCfg,
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
         env_ids: torch.Tensor | None = None,
     ) -> None:
         """
-        Initializes the GoThroughPositions task.
+        Initializes the RaceWaypoints task.
 
         Args:
             task_cfg: The configuration of the task.
@@ -38,12 +39,19 @@ class GoThroughPositionsTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super(GoThroughPositionsTask, self).__init__(
-            task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids
-        )
+        super(RaceWaypointsTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
+
+        # Instantiate the track generator
+        self._track_generator = TrackGenerator(
+            scale=self._task_cfg.scale,
+            rad=self._task_cfg.rad,
+            edgy=self._task_cfg.edgy,
+            max_num_points=self._task_cfg.max_num_corners,
+            min_num_points=self._task_cfg.min_num_corners,
+        )
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = 3 + 3 * self._task_cfg.num_subsequent_goals
@@ -64,10 +72,10 @@ class GoThroughPositionsTask(TaskCore):
         self._position_dist = torch.zeros((self._num_envs,), device=self._device, dtype=torch.float32)
         self._previous_position_dist = torch.zeros((self._num_envs,), device=self._device, dtype=torch.float32)
         self._target_positions = torch.zeros(
-            (self._num_envs, self._task_cfg.max_num_goals, 2), device=self._device, dtype=torch.float32
+            (self._num_envs, self._task_cfg.max_num_corners, 2), device=self._device, dtype=torch.float32
         )
         self._target_headings = torch.zeros(
-            (self._num_envs, self._task_cfg.max_num_goals), device=self._device, dtype=torch.float32
+            (self._num_envs, self._task_cfg.max_num_corners), device=self._device, dtype=torch.float32
         )
         self._target_index = torch.zeros((self._num_envs,), device=self._device, dtype=torch.long)
         self._trajectory_completed = torch.zeros((self._num_envs,), device=self._device, dtype=torch.bool)
@@ -78,7 +86,7 @@ class GoThroughPositionsTask(TaskCore):
         """
         Creates a dictionary to store the training statistics for the task."""
 
-        super(GoThroughPositionsTask, self).create_logs()
+        super(RaceWaypointsTask, self).create_logs()
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
@@ -358,52 +366,11 @@ class GoThroughPositionsTask(TaskCore):
 
         num_goals = len(env_ids)
 
-        # Select how many random goals we want to generate.
-        self._num_goals[env_ids] = torch.randint(
-            self._task_cfg.min_num_goals, self._task_cfg.max_num_goals, (num_goals,), device=self._device
-        )
+        points, _, num_goals = self._track_generator.generate_tracks_points_non_fixed_points(num_goals)
 
-        # Since we are using tensor operations, we cannot have different number of goals per environment: the
-        # tensor containing the target positions must have the same number of goals for all environments.
-        # Hence, we will duplicate the last goals for the environments that have less goals.
-        for i in range(self._task_cfg.max_num_goals):
-            if i == 0:
-                # Randomize the first goal
-                # The position is picked randomly in a square centered on the origin
-                self._target_positions[env_ids, i] = (
-                    sample_uniform(
-                        -self._task_cfg.goal_max_dist_from_origin,
-                        self._task_cfg.goal_max_dist_from_origin,
-                        (num_goals, 2),
-                        device=self._device,
-                    )
-                    + self._env_origins[env_ids, :2]
-                )
-            else:
-                # If needed, randomize the next goals
-                r = (
-                    sample_uniform(
-                        self._gen_actions[env_ids, 0], self._gen_actions[env_ids, 1], (num_goals,), device=self._device
-                    )
-                    * (self._task_cfg.goal_max_dist - self._task_cfg.goal_min_dist)
-                    + self._task_cfg.goal_min_dist
-                )
-                # Theta is taken at random
-                theta = torch.rand((num_goals,), dtype=torch.float32, device=self._device) * math.pi
-                self._target_positions[env_ids, i, 0] = (
-                    r * torch.cos(theta) + self._target_positions[env_ids, i - 1, 0]
-                )
-                self._target_positions[env_ids, i, 1] = (
-                    r * torch.sin(theta) + self._target_positions[env_ids, i - 1, 1]
-                )
-
-                # Check if the number of goals is less than the current index
-                # If it is, then set the ith goal to the num_goal - 1
-                self._target_positions[env_ids, i] = torch.where(
-                    self._num_goals[env_ids].repeat_interleave(2).reshape(-1, 2) < i,
-                    self._target_positions[env_ids, self._num_goals[env_ids]],
-                    self._target_positions[env_ids, i],
-                )
+        # Set the goals' positions:
+        self._target_positions[env_ids] = points + self._env_origins[env_ids, :2].unsqueeze(1)
+        self._num_goals[env_ids] = num_goals - 1
 
     def set_initial_conditions(self, env_ids: torch.Tensor) -> None:
         """
@@ -523,7 +490,7 @@ class GoThroughPositionsTask(TaskCore):
         # The update time scales linearly with the number of goals.
         passed_goals_list = []
         next_goals_list = []
-        for i in range(self._task_cfg.max_num_goals):
+        for i in range(self._task_cfg.max_num_corners):
             ok_goals = self._num_goals >= i
             next_goals = torch.logical_and(self._target_index < i, ok_goals)
             passed_goals = torch.logical_and(self._target_index > i, ok_goals)

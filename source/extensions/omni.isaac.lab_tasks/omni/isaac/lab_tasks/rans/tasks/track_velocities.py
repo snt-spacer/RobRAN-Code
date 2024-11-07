@@ -125,19 +125,19 @@ class TrackVelocitiesTask(TaskCore):
         # lateral velocity error
         err_lat_vel = self._lateral_velocity_target - self.robot.data.root_lin_vel_b[:, 1]
         # Angular velocity error
-        err_ang_vel = self._angular_velocity_target - self.robot.data.root_ang_vel_b[:, 2]
+        err_ang_vel = self._angular_velocity_target - self.robot.data.root_ang_vel_w[:, 2]
 
         # Store in buffer
         self._task_data[:, 0] = err_lin_vel * self._task_cfg.enable_linear_velocity
         self._task_data[:, 1] = err_lat_vel * self._task_cfg.enable_lateral_velocity
         self._task_data[:, 2] = err_ang_vel * self._task_cfg.enable_angular_velocity
         self._task_data[:, 3:5] = self.robot.data.root_lin_vel_b[self._env_ids, :2]
-        self._task_data[:, 5] = self.robot.data.root_ang_vel_b[self._env_ids, -1]
+        self._task_data[:, 5] = self.robot.data.root_ang_vel_w[self._env_ids, -1]
 
         # Update logs
         self._logs["state"]["absolute_linear_velocity"] += torch.abs(self.robot.data.root_lin_vel_b[:, 0])
         self._logs["state"]["absolute_lateral_velocity"] += torch.abs(self.robot.data.root_lin_vel_b[:, 1])
-        self._logs["state"]["absolute_angular_velocity"] += torch.abs(self.robot.data.root_ang_vel_b[:, 2])
+        self._logs["state"]["absolute_angular_velocity"] += torch.abs(self.robot.data.root_ang_vel_w[:, 2])
         return self._task_data
 
     def compute_rewards(self) -> torch.Tensor:
@@ -152,7 +152,7 @@ class TrackVelocitiesTask(TaskCore):
         # Lateral velocity error
         lateral_velocity_distance = torch.abs(self._lateral_velocity_target - self.robot.data.root_lin_vel_b[:, 1])
         # Angular velocity error
-        angular_velocity_distance = torch.abs(self._angular_velocity_target - self.robot.data.root_ang_vel_b[:, 2])
+        angular_velocity_distance = torch.abs(self._angular_velocity_target - self.robot.data.root_ang_vel_w[:, 2])
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
         self._logs["state"]["linear_velocity_distance"] = (
@@ -500,6 +500,6 @@ class TrackVelocitiesTask(TaskCore):
         marker_orientation[:, 0] = torch.cos(marker_heading * 0.5)
         marker_orientation[:, 3] = torch.sin(marker_heading * 0.5)
         marker_scale[:, 0] = (
-            self.robot.data.root_ang_vel_b[:, -1] * self._task_cfg.visualization_angular_velocity_scale
+            self.robot.data.root_ang_vel_w[:, -1] * self._task_cfg.visualization_angular_velocity_scale
         )
         self.robot_angvel_visualizer.visualize(marker_pos, marker_orientation, marker_scale)
