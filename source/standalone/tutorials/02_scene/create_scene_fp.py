@@ -36,7 +36,7 @@ simulation_app = app_launcher.app
 import torch
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg
 from omni.isaac.lab.scene import InteractiveScene, InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationContext
 from omni.isaac.lab.utils import configclass
@@ -67,7 +67,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     """Runs the simulation loop."""
     # Extract scene entities
     # note: we only do this here for readability.
-    robot = scene["cartpole"]
+    robot: Articulation = scene["cartpole"]
     # Define simulation stepping
     sim_dt = sim.get_physics_dt()
     count = 0
@@ -83,6 +83,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             # if this is not done, then the robots will be spawned at the (0, 0, 0) of the simulation world
             root_state = robot.data.default_root_state.clone()
             root_state[:, :3] += scene.env_origins
+            root_state[:, 2] = 2.0
             robot.write_root_state_to_sim(root_state)
             # set joint positions with some noise
             joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
@@ -93,10 +94,12 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             print("[INFO]: Resetting robot state...")
         # Apply random action
         # -- generate random joint efforts
-        efforts = torch.randn_like(robot.data.joint_pos) * 5.0
+        # efforts = torch.randn_like(robot.data.joint_pos) * 5.0
         # -- apply action to the robot
-        robot.set_joint_effort_target(efforts)
+        # robot.set_joint_effort_target(efforts)
         # -- write data to sim
+        # robot.set_external_force_and_torque()
+
         scene.write_data_to_sim()
         # Perform step
         sim.step()

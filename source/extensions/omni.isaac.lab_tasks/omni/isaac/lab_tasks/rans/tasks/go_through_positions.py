@@ -45,9 +45,7 @@ class GoThroughPositionsTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super().__init__(
-            task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids
-        )
+        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
