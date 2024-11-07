@@ -15,11 +15,12 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 # Configuration
 ##
 
-LEATHERBACK_CFG = ArticulationCfg(
+FLOATING_PLATFORM_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         # usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Leatherback/leatherback.usd",
-        usd_path=f"/home/matteo/Projects/IsaacLab_RANS/leatherback_simple_better.usd",
+        usd_path=f"/home/matteo/Projects/IsaacLab_RANS/floating_platform.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
+            disable_gravity=True,
             rigid_body_enabled=True,
             max_linear_velocity=1000.0,
             max_angular_velocity=1000.0,
@@ -35,31 +36,8 @@ LEATHERBACK_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.2),
-        joint_pos={
-            "Wheel__Knuckle__Front_Left": 0.0,
-            "Wheel__Knuckle__Front_Right": 0.0,
-            "Wheel__Upright__Rear_Right": 0.0,
-            "Wheel__Upright__Rear_Left": 0.0,
-            "Knuckle__Upright__Front_Right": 0.0,
-            "Knuckle__Upright__Front_Left": 0.0,
-        },
+        pos=(0.0, 0.0, 0.1),
+        joint_pos={".*": 0.0,},
     ),
-    actuators={
-        "throttle": ImplicitActuatorCfg(
-            joint_names_expr=["Wheel.*"],
-            effort_limit=40000.0,
-            velocity_limit=100.0,
-            stiffness=0.0,
-            damping=100000.0,
-        ),
-        "steering": ImplicitActuatorCfg(
-            joint_names_expr=["Knuckle__Upright__Front.*"],
-            effort_limit=40000.0,
-            velocity_limit=100.0,
-            stiffness=1000.0,
-            damping=0.0,
-        ),
-    },
 )
-"""Configuration for a simple ackermann robot."""
+"""Configuration for a simple floating platform robot."""
