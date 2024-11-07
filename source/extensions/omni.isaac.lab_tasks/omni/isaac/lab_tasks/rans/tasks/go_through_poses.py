@@ -1,14 +1,21 @@
-from typing import Tuple
-import numpy as np
-import wandb
-import torch
-import math
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
-from omni.isaac.lab.assets import ArticulationData, Articulation
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers import PIN_ARROW_CFG, BICOLOR_DIAMOND_CFG
-from omni.isaac.lab.utils.math import sample_uniform, sample_gaussian, sample_random_sign
+import math
+import numpy as np
+import torch
+from typing import Tuple
+
+import wandb
+
+from omni.isaac.lab.assets import Articulation, ArticulationData
+from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
+from omni.isaac.lab.utils.math import sample_gaussian, sample_random_sign, sample_uniform
+
 from omni.isaac.lab_tasks.rans import GoThroughPosesCfg
+
 from .task_core import TaskCore
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
@@ -38,7 +45,7 @@ class GoThroughPosesTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super(GoThroughPosesTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
+        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
@@ -76,11 +83,9 @@ class GoThroughPosesTask(TaskCore):
         """
         Creates a dictionary to store the training statistics for the task."""
 
-        super(GoThroughPosesTask, self).create_logs()
+        super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
-        )
+        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
         self._logs["state"]["normed_linear_velocity"] = torch_zeros()
         self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
         self._logs["state"]["position_distance"] = torch_zeros()
@@ -145,9 +150,7 @@ class GoThroughPosesTask(TaskCore):
             self._target_positions[self._ALL_INDICES, self._target_index, 0]
             - self.robot.data.root_pos_w[self._env_ids, 0],
         )
-        target_heading_error = torch.atan2(
-            torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading)
-        )
+        target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
         heading_error = torch.atan2(
             torch.sin(self._target_heading[self._ALL_INDICES, self._target_index] - heading),
             torch.cos(self._target_heading[self._ALL_INDICES, self._target_index] - heading),
@@ -231,9 +234,7 @@ class GoThroughPosesTask(TaskCore):
             self._target_positions[self._ALL_INDICES, self._target_index, 0]
             - self.robot.data.root_pos_w[self._env_ids, 0],
         )
-        target_heading_error = torch.atan2(
-            torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading)
-        )
+        target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
         target_heading_dist = torch.abs(target_heading_error)
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
@@ -354,15 +355,9 @@ class GoThroughPosesTask(TaskCore):
         # They are given as [min, delta] we will convert them to [min, max] that is max = min + delta
         # Note that they are defined as [min, delta] to make sure the min is the min and the max is the max. This
         # is always true as they are strictly positive.
-        self._gen_actions[env_ids, 1] = torch.clip(
-            self._gen_actions[env_ids, 0] + self._gen_actions[env_ids, 1], max=1
-        )
-        self._gen_actions[env_ids, 3] = torch.clip(
-            self._gen_actions[env_ids, 2] + self._gen_actions[env_ids, 3], max=1
-        )
-        self._gen_actions[env_ids, 5] = torch.clip(
-            self._gen_actions[env_ids, 4] + self._gen_actions[env_ids, 5], max=1
-        )
+        self._gen_actions[env_ids, 1] = torch.clip(self._gen_actions[env_ids, 0] + self._gen_actions[env_ids, 1], max=1)
+        self._gen_actions[env_ids, 3] = torch.clip(self._gen_actions[env_ids, 2] + self._gen_actions[env_ids, 3], max=1)
+        self._gen_actions[env_ids, 5] = torch.clip(self._gen_actions[env_ids, 4] + self._gen_actions[env_ids, 5], max=1)
 
     def get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -477,12 +472,8 @@ class GoThroughPosesTask(TaskCore):
                     + self._task_cfg.goal_min_cone_spread
                 ) * sample_random_sign((num_goals,), device=self._device)
 
-                self._target_positions[env_ids, i, 0] = (
-                    r * torch.cos(theta) + self._target_positions[env_ids, i - 1, 0]
-                )
-                self._target_positions[env_ids, i, 1] = (
-                    r * torch.sin(theta) + self._target_positions[env_ids, i - 1, 1]
-                )
+                self._target_positions[env_ids, i, 0] = r * torch.cos(theta) + self._target_positions[env_ids, i - 1, 0]
+                self._target_positions[env_ids, i, 1] = r * torch.sin(theta) + self._target_positions[env_ids, i - 1, 1]
 
                 # Check if the number of goals is less than the current index
                 # If it is, then set the ith goal to the num_goal - 1

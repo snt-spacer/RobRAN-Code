@@ -6,8 +6,18 @@
 from __future__ import annotations
 
 import math
+import numpy as np
 import torch
 from collections.abc import Sequence
+
+import omni
+from pxr import Gf, PhysxSchema, UsdGeom, UsdPhysics
+from usdrt import PhysxSchema as PhysxSchemaRT
+from usdrt import Sdf as SdfRT
+from usdrt import Usd as UsdRT
+from usdrt import UsdGeom as UsdGeomRT
+from usdrt import UsdPhysics as UsdPhysicsRT
+from usdrt import Vt as VtRT
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, ArticulationCfg
@@ -15,33 +25,22 @@ from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
+from omni.isaac.lab.static_colliders import StaticCollidersRT, StaticCollidersRTCfg
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import sample_uniform, get_yaw_from_quat, quat_from_angle_axis
+from omni.isaac.lab.utils.math import get_yaw_from_quat, quat_from_angle_axis, sample_uniform
+
 from omni.isaac.lab_tasks.rans import (
-    LeatherbackRobotCfg,
+    GoThroughPositionsCfg,
+    GoThroughPositionsTask,
     GoToPoseCfg,
-    LeatherbackRobot,
     GoToPoseTask,
     GoToPositionCfg,
     GoToPositionTask,
+    LeatherbackRobot,
+    LeatherbackRobotCfg,
     TrackVelocityCfg,
     TrackVelocityTask,
-    GoThroughPositionsCfg,
-    GoThroughPositionsTask,
 )
-
-import omni
-import numpy as np
-from usdrt import Usd as UsdRT
-from usdrt import UsdGeom as UsdGeomRT
-from usdrt import Sdf as SdfRT
-from usdrt import UsdPhysics as UsdPhysicsRT
-from usdrt import PhysxSchema as PhysxSchemaRT
-from usdrt import Vt as VtRT
-from pxr import UsdGeom, UsdPhysics, PhysxSchema, Gf
-
-
-from omni.isaac.lab.static_colliders import StaticCollidersRTCfg, StaticCollidersRT
 
 
 @configclass

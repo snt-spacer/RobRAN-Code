@@ -1,7 +1,12 @@
-from scipy.special import binom
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+import math
 import numpy as np
 import torch
-import math
+from scipy.special import binom
 
 bernstein = lambda n, k, t: binom(n, k) * t**k * (1.0 - t) ** (n - k)
 torch.manual_seed(0)

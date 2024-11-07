@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2024, Antoine Richard
 # All rights reserved.
 #
@@ -94,13 +99,13 @@ class BiColorDiamondCfg(NavigationShapeCfg):
     """
     front_material: materials.VisualMaterialCfg | None = None
     """Back material properties.
-    
+
     Note:
         If None, then no visual material will be added.
     """
     back_material: materials.VisualMaterialCfg | None = None
     """Back material properties.
-    
+
     Note:
         If None, then no visual material will be added.
     """
@@ -215,7 +220,7 @@ class PositionMarker3DCfg(NavigationShapeCfg):
 
     z_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
-    
+
     Note:
         If None, then no visual material will be added.
     """
@@ -271,7 +276,7 @@ class PoseMarker3DCfg(NavigationShapeCfg):
 
     z_material: materials.VisualMaterialCfg | None = None
     """Visual material properties.
-    
+
     Note:
         If None, then no visual material will be added.
     """

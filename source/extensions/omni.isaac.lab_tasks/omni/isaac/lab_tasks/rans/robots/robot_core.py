@@ -1,7 +1,13 @@
-from omni.isaac.lab.assets import ArticulationData, Articulation
-from omni.isaac.lab_tasks.rans import RobotCoreCfg
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 import torch
+
+from omni.isaac.lab.assets import Articulation, ArticulationData
+
+from omni.isaac.lab_tasks.rans import RobotCoreCfg
 
 
 class RobotCore:

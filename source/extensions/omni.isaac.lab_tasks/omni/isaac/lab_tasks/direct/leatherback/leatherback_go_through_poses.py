@@ -16,13 +16,9 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import sample_uniform, get_yaw_from_quat, quat_from_angle_axis
-from omni.isaac.lab_tasks.rans import (
-    LeatherbackRobotCfg,
-    LeatherbackRobot,
-    GoThroughPosesCfg,
-    GoThroughPosesTask,
-)
+from omni.isaac.lab.utils.math import get_yaw_from_quat, quat_from_angle_axis, sample_uniform
+
+from omni.isaac.lab_tasks.rans import GoThroughPosesCfg, GoThroughPosesTask, LeatherbackRobot, LeatherbackRobotCfg
 
 
 @configclass

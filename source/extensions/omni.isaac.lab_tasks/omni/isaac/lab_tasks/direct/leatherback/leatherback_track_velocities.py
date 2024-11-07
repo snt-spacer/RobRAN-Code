@@ -16,12 +16,8 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab_tasks.rans import (
-    LeatherbackRobotCfg,
-    LeatherbackRobot,
-    TrackVelocitiesCfg,
-    TrackVelocitiesTask,
-)
+
+from omni.isaac.lab_tasks.rans import LeatherbackRobot, LeatherbackRobotCfg, TrackVelocitiesCfg, TrackVelocitiesTask
 
 
 @configclass

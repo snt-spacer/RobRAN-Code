@@ -6,45 +6,52 @@
 from __future__ import annotations
 
 import math
+import numpy as np
+import os
 import torch
 from collections.abc import Sequence
 
-from omni.isaac.lab_assets.leatherback import LEATHERBACK_CFG  # isort: skip
-from omni.isaac.lab.markers import (
-    PIN_SPHERE_CFG,
-    PIN_DIAMOND_CFG,
-    DIAMOND_CFG,
-    BICOLOR_DIAMOND_CFG,
-    PIN_ARROW_CFG,
-    ARROW_CFG,
-    POSITION_MARKER_3D_CFG,
-    POSE_MARKER_3D_CFG,
-    GATE_3D_CFG,
-    GATE_2D_CFG,
-    GATE_PYLONS_CFG,
-)  # isort: skip
-
-from omni.isaac.lab.sim.spawners.racing_shapes.racing_shapes_cfg import Gate3DCfg, Gate2DCfg  # isort: skip
+import logger
+import omni.isaac.core.utils.stage as stage_utils
+from pxr import Gf, Usd, UsdGeom, Vt
+from usdrt import Gf as GfRT
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg
-from omni.isaac.lab.assets import StaticColliderObject, StaticColliderObjectCfg
-from omni.isaac.lab.assets import RigidObject, RigidObjectCfg
+from omni.isaac.lab.assets import (
+    Articulation,
+    ArticulationCfg,
+    RigidObject,
+    RigidObjectCfg,
+    StaticColliderObject,
+    StaticColliderObjectCfg,
+)
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
-from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.markers import VisualizationMarkers  # , StaticColliders
+from omni.isaac.lab.markers import (  # isort: skip
+    ARROW_CFG,
+    BICOLOR_DIAMOND_CFG,
+    DIAMOND_CFG,
+    GATE_2D_CFG,
+    GATE_3D_CFG,
+    GATE_PYLONS_CFG,
+    PIN_ARROW_CFG,
+    PIN_DIAMOND_CFG,
+    PIN_SPHERE_CFG,
+    POSE_MARKER_3D_CFG,
+    POSITION_MARKER_3D_CFG,
+)
+from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import sample_uniform, get_yaw_from_quat, quat_from_angle_axis
+from omni.isaac.lab.utils.math import get_yaw_from_quat, quat_from_angle_axis, sample_uniform
 
-import omni.isaac.core.utils.stage as stage_utils
-import numpy as np
-import os
-import logger
-from pxr import Usd, UsdGeom, Vt, Gf
-from usdrt import Gf as GfRT
+from omni.isaac.lab_assets.leatherback import LEATHERBACK_CFG  # isort: skip
+
+from omni.isaac.lab.sim.spawners.racing_shapes.racing_shapes_cfg import Gate3DCfg, Gate2DCfg  # isort: skip
+
+
 
 
 @configclass

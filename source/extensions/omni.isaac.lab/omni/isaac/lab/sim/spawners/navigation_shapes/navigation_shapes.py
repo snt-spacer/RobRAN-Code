@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2024, Antoine Richard
 # All rights reserved.
 #
@@ -5,11 +10,11 @@
 
 from __future__ import annotations
 
+import numpy as np
 from typing import TYPE_CHECKING
 
 import omni.isaac.core.utils.prims as prim_utils
 from pxr import Usd
-import numpy as np
 
 from omni.isaac.lab.sim import schemas
 from omni.isaac.lab.sim.utils import bind_physics_material, bind_visual_material, clone
@@ -500,34 +505,30 @@ def make_diamond(
     Raises:
         ValueError: If a prim already exists at the given paths.
     """
-    vertices = np.array(
-        [
-            [0, 0, 0],  # Bottom (0)
-            [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
-            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
-            [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
-            [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
-            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
-            [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
-            [0.0, 0.0, 1.0],  # Top (7)
-        ]
-    )
-    faces = np.array(
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-            [7, 1, 2],
-            [7, 2, 3],
-            [7, 3, 4],
-            [7, 4, 5],
-            [7, 5, 6],
-            [7, 6, 1],
-        ]
-    )
+    vertices = np.array([
+        [0, 0, 0],  # Bottom (0)
+        [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+        [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+        [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+        [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+        [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+        [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+        [0.0, 0.0, 1.0],  # Top (7)
+    ])
+    faces = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+        [0, 3, 4],
+        [0, 4, 5],
+        [0, 5, 6],
+        [0, 6, 1],
+        [7, 1, 2],
+        [7, 2, 3],
+        [7, 3, 4],
+        [7, 4, 5],
+        [7, 5, 6],
+        [7, 6, 1],
+    ])
 
     mesh_prim = prim_utils.create_prim(
         mesh_prim_path,
@@ -639,62 +640,54 @@ def make_bicolor_diamond(
     Raises:
         ValueError: If a prim already exists at the given paths.
     """
-    vertices_1 = np.array(
-        [
-            [0, 0, 0],  # Bottom (0)
-            [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
-            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
-            [0.0, 0.25, 0.5],  # Hexagon Vertex 3 (3)
-            [0.0, -0.25, 0.5],  # Hexagon Vertex 4 (4)
-            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
-            [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
-            [0.0, 0.0, 1.0],  # Top (7)
-        ]
-    )
-    faces_1 = np.array(
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-            [7, 1, 2],
-            [7, 2, 3],
-            [7, 3, 4],
-            [7, 4, 5],
-            [7, 5, 6],
-            [7, 6, 1],
-        ]
-    )
-    vertices_2 = np.array(
-        [
-            [0, 0, 0],  # Bottom (0)
-            [0.0, 0.25, 0.5],  # Hexagon Vertex 1 (1)
-            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
-            [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
-            [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
-            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
-            [0.0, -0.25, 0.5],  # Hexagon Vertex 6 (6)
-            [0.0, 0.0, 1.0],  # Top (7)
-        ]
-    )
-    faces_2 = np.array(
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-            [7, 1, 2],
-            [7, 2, 3],
-            [7, 3, 4],
-            [7, 4, 5],
-            [7, 5, 6],
-            [7, 6, 1],
-        ]
-    )
+    vertices_1 = np.array([
+        [0, 0, 0],  # Bottom (0)
+        [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+        [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+        [0.0, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+        [0.0, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+        [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+        [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+        [0.0, 0.0, 1.0],  # Top (7)
+    ])
+    faces_1 = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+        [0, 3, 4],
+        [0, 4, 5],
+        [0, 5, 6],
+        [0, 6, 1],
+        [7, 1, 2],
+        [7, 2, 3],
+        [7, 3, 4],
+        [7, 4, 5],
+        [7, 5, 6],
+        [7, 6, 1],
+    ])
+    vertices_2 = np.array([
+        [0, 0, 0],  # Bottom (0)
+        [0.0, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+        [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+        [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+        [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+        [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+        [0.0, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+        [0.0, 0.0, 1.0],  # Top (7)
+    ])
+    faces_2 = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+        [0, 3, 4],
+        [0, 4, 5],
+        [0, 5, 6],
+        [0, 6, 1],
+        [7, 1, 2],
+        [7, 2, 3],
+        [7, 3, 4],
+        [7, 4, 5],
+        [7, 5, 6],
+        [7, 6, 1],
+    ])
     mesh_front = prim_utils.create_prim(
         front_mesh_prim_path,
         prim_type="Mesh",

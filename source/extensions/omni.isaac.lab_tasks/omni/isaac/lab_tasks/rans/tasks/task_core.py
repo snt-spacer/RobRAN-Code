@@ -1,9 +1,14 @@
-from omni.isaac.lab_tasks.rans import TaskCoreCfg
-from omni.isaac.lab.assets import Articulation
-
-from dataclasses import MISSING
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 import torch
+from dataclasses import MISSING
+
+from omni.isaac.lab.assets import Articulation
+
+from omni.isaac.lab_tasks.rans import TaskCoreCfg
 
 
 class TaskCore:

@@ -1,14 +1,20 @@
-from omni.isaac.lab.assets import ArticulationData, Articulation
-
-from omni.isaac.lab_tasks.rans import LeatherbackRobotCfg
-from .robot_core import RobotCore
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 import torch
+
+from omni.isaac.lab.assets import Articulation, ArticulationData
+
+from omni.isaac.lab_tasks.rans import LeatherbackRobotCfg
+
+from .robot_core import RobotCore
 
 
 class LeatherbackRobot(RobotCore):
     def __init__(self, robot_cfg: LeatherbackRobotCfg, robot_uid: int = 0, num_envs: int = 1, device: str = "cuda"):
-        super(LeatherbackRobot, self).__init__(robot_cfg, robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(robot_cfg, robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
         self._dim_robot_obs = 2
         self._dim_robot_act = 2
@@ -24,10 +30,8 @@ class LeatherbackRobot(RobotCore):
         self._steering_dof_idx, _ = articulation.find_joints(self._robot_cfg.steering_dof_name)
 
     def create_logs(self):
-        super(LeatherbackRobot, self).create_logs()
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
-        )
+        super().create_logs()
+        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
         self._logs["state"]["throttle"] = torch_zeros()
         self._logs["state"]["steering"] = torch_zeros()
         self._logs["state"]["action_rate"] = torch_zeros()

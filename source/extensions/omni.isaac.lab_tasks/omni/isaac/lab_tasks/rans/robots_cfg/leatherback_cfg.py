@@ -1,11 +1,18 @@
-from omni.isaac.lab.utils import configclass
-from dataclasses import MISSING
-
-from omni.isaac.lab_assets import LEATHERBACK_CFG  # isort: skip
-from omni.isaac.lab.assets import ArticulationCfg
-from .robot_core_cfg import RobotCoreCfg
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 import math
+from dataclasses import MISSING
+
+from omni.isaac.lab.assets import ArticulationCfg
+from omni.isaac.lab.utils import configclass
+
+from .robot_core_cfg import RobotCoreCfg
+
+from omni.isaac.lab_assets import LEATHERBACK_CFG  # isort: skip
+
 
 
 @configclass

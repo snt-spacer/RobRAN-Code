@@ -1,15 +1,22 @@
-from typing import Tuple
-import numpy as np
-import wandb
-import torch
-import math
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
-from omni.isaac.lab.assets import ArticulationData, Articulation
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers import ARROW_CFG
+import math
+import numpy as np
+import torch
+from typing import Tuple
+
+import wandb
+
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.utils.math import sample_uniform, sample_gaussian, sample_random_sign
+from omni.isaac.lab.assets import Articulation, ArticulationData
+from omni.isaac.lab.markers import ARROW_CFG, VisualizationMarkers
+from omni.isaac.lab.utils.math import sample_gaussian, sample_random_sign, sample_uniform
+
 from omni.isaac.lab_tasks.rans import TrackVelocitiesCfg
+
 from .task_core import TaskCore
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
@@ -39,7 +46,7 @@ class TrackVelocitiesTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super(TrackVelocitiesTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
+        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
@@ -58,11 +65,9 @@ class TrackVelocitiesTask(TaskCore):
         Returns:
             dict: The dictionary containing the statistics."""
 
-        super(TrackVelocitiesTask, self).create_logs()
+        super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
-        )
+        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
         self._logs["state"]["absolute_linear_velocity"] = torch_zeros()
         self._logs["state"]["absolute_lateral_velocity"] = torch_zeros()
         self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
@@ -80,7 +85,7 @@ class TrackVelocitiesTask(TaskCore):
         Args:
             env_ids: The ids of the environments used by this task."""
 
-        super(TrackVelocitiesTask, self).initialize_buffers(env_ids)
+        super().initialize_buffers(env_ids)
 
         # Target velocities
         self._linear_velocity_target = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
@@ -248,9 +253,7 @@ class TrackVelocitiesTask(TaskCore):
             torch.Tensor: Wether the platforms should be killed or not."""
 
         # Kill the robot if it goes too far, but don't count it as an early termination.
-        position_distance = torch.norm(
-            self._env_origins[:, :2] - self.robot.data.root_pos_w[self._env_ids, :2], dim=-1
-        )
+        position_distance = torch.norm(self._env_origins[:, :2] - self.robot.data.root_pos_w[self._env_ids, :2], dim=-1)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
         task_completed = torch.zeros_like(self._goal_reached, dtype=torch.long)
         task_completed = torch.where(position_distance > self._task_cfg.maximum_robot_distance, ones, task_completed)
@@ -499,7 +502,5 @@ class TrackVelocitiesTask(TaskCore):
         marker_heading = self.robot.data.heading_w + math.pi / 2.0
         marker_orientation[:, 0] = torch.cos(marker_heading * 0.5)
         marker_orientation[:, 3] = torch.sin(marker_heading * 0.5)
-        marker_scale[:, 0] = (
-            self.robot.data.root_ang_vel_w[:, -1] * self._task_cfg.visualization_angular_velocity_scale
-        )
+        marker_scale[:, 0] = self.robot.data.root_ang_vel_w[:, -1] * self._task_cfg.visualization_angular_velocity_scale
         self.robot_angvel_visualizer.visualize(marker_pos, marker_orientation, marker_scale)

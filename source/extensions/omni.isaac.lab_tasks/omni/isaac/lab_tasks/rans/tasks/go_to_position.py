@@ -1,14 +1,21 @@
-from typing import Tuple
-import numpy as np
-import wandb
-import torch
-import math
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
-from omni.isaac.lab.assets import ArticulationData, Articulation
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers import PIN_SPHERE_CFG, BICOLOR_DIAMOND_CFG
-from omni.isaac.lab.utils.math import sample_uniform, sample_gaussian, sample_random_sign
+import math
+import numpy as np
+import torch
+from typing import Tuple
+
+import wandb
+
+from omni.isaac.lab.assets import Articulation, ArticulationData
+from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_SPHERE_CFG, VisualizationMarkers
+from omni.isaac.lab.utils.math import sample_gaussian, sample_random_sign, sample_uniform
+
 from omni.isaac.lab_tasks.rans import GoToPositionCfg
+
 from .task_core import TaskCore
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
@@ -38,7 +45,7 @@ class GoToPositionTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super(GoToPositionTask, self).__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
+        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
@@ -67,11 +74,9 @@ class GoToPositionTask(TaskCore):
         """
         Creates a dictionary to store the training statistics for the task."""
 
-        super(GoToPositionTask, self).create_logs()
+        super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
-        )
+        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
         self._logs["state"]["normed_linear_velocity"] = torch_zeros()
         self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
         self._logs["state"]["position_distance"] = torch_zeros()
@@ -100,9 +105,7 @@ class GoToPositionTask(TaskCore):
             self._target_positions[:, 1] - self.robot.data.root_pos_w[self._env_ids, 1],
             self._target_positions[:, 0] - self.robot.data.root_pos_w[self._env_ids, 0],
         )
-        target_heading_error = torch.atan2(
-            torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading)
-        )
+        target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
 
         # Store in buffer
         self._task_data[:, 0] = self._position_dist
