@@ -9,7 +9,7 @@
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.actuators import ImplicitActuatorCfg
 from omni.isaac.lab.assets import ArticulationCfg
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+from omni.isaac.lab.utils.assets import REPO_ROOT_PATH
 
 ##
 # Configuration
@@ -18,7 +18,7 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 FLOATING_PLATFORM_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         # usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Leatherback/leatherback.usd",
-        usd_path=f"/home/matteo/Projects/IsaacLab_RANS/floating_platform.usd",
+        usd_path=f"{REPO_ROOT_PATH}/floating_platform.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=True,
             rigid_body_enabled=True,
@@ -37,7 +37,9 @@ FLOATING_PLATFORM_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.1),
-        joint_pos={".*": 0.0,},
+        joint_pos={
+            ".*": 0.0,
+        },
     ),
 )
 """Configuration for a simple floating platform robot."""
