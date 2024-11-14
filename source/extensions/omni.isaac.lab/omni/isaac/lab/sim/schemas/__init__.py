@@ -34,6 +34,7 @@ Locally, the schemas are defined in the following files:
 
 from .schemas import (
     activate_contact_sensors,
+    createJoint,
     define_articulation_root_properties,
     define_collision_properties,
     define_deformable_body_properties,
