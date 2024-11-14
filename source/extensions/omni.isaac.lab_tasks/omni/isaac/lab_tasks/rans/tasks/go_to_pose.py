@@ -4,15 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
-import numpy as np
 import torch
-from typing import Tuple
 
-import wandb
-
-from omni.isaac.lab.assets import Articulation, ArticulationData
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_gaussian, sample_random_sign, sample_uniform
+from omni.isaac.lab.utils.math import sample_random_sign, sample_uniform
 
 from omni.isaac.lab_tasks.rans import GoToPoseCfg
 
@@ -79,7 +74,12 @@ class GoToPoseTask(TaskCore):
 
         super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
+        torch_zeros = lambda: torch.zeros(
+            self._num_envs,
+            dtype=torch.float32,
+            device=self._device,
+            requires_grad=False,
+        )
         self._logs["state"]["normed_linear_velocity"] = torch_zeros()
         self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
         self._logs["state"]["position_distance"] = torch_zeros()
@@ -120,19 +120,20 @@ class GoToPoseTask(TaskCore):
             torch.Tensor: The observation tensor."""
 
         # position error
-        self._position_error = self._target_positions[:, :2] - self.robot.data.root_pos_w[self._env_ids, :2]
+        self._position_error = self._target_positions[:, :2] - self._robot.root_pos_w[self._env_ids, :2]
         self._position_dist = torch.norm(self._position_error, dim=-1)
         # position error expressed as distance and angular error (to the position)
-        heading = self.robot.data.heading_w[self._env_ids]
+        heading = self._robot.heading_w[self._env_ids]
         target_heading_w = torch.atan2(
-            self._target_positions[:, 1] - self.robot.data.root_pos_w[self._env_ids, 1],
-            self._target_positions[:, 0] - self.robot.data.root_pos_w[self._env_ids, 0],
+            self._target_positions[:, 1] - self._robot.root_pos_w[self._env_ids, 1],
+            self._target_positions[:, 0] - self._robot.root_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
 
         # heading error (to the target heading)
         self._heading_error = torch.arctan2(
-            torch.sin(self._target_headings - heading), torch.cos(self._target_headings - heading)
+            torch.sin(self._target_headings - heading),
+            torch.cos(self._target_headings - heading),
         )
 
         # Store in buffer
@@ -141,10 +142,11 @@ class GoToPoseTask(TaskCore):
         self._task_data[:, 2] = torch.sin(target_heading_error)
         self._task_data[:, 3] = torch.cos(self._heading_error)
         self._task_data[:, 4] = torch.sin(self._heading_error)
-        self._task_data[:, 5:7] = self.robot.data.root_lin_vel_b[self._env_ids, :2]
-        self._task_data[:, 7] = self.robot.data.root_ang_vel_w[self._env_ids, -1]
+        self._task_data[:, 5:7] = self._robot.root_lin_vel_b[self._env_ids, :2]
+        self._task_data[:, 7] = self._robot.root_ang_vel_w[self._env_ids, -1]
 
-        return self._task_data
+        # Concatenate the task observations with the robot observations
+        return torch.concat((self._task_data, self._robot.get_observations()), dim=-1)
 
     def compute_rewards(self) -> torch.Tensor:
         """
@@ -163,9 +165,9 @@ class GoToPoseTask(TaskCore):
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
         # normed linear velocity
-        linear_velocity = torch.norm(self.robot.data.root_vel_w[self._env_ids, :2], dim=-1)
+        linear_velocity = torch.norm(self._robot.root_vel_w[self._env_ids, :2], dim=-1)
         # normed angular velocity
-        angular_velocity = torch.abs(self.robot.data.root_vel_w[self._env_ids, -1])
+        angular_velocity = torch.abs(self._robot.root_vel_w[self._env_ids, -1])
         # progress
         progress = self._previous_position_dist - self._position_dist
 
@@ -239,16 +241,20 @@ class GoToPoseTask(TaskCore):
             boundary_rew * (1 - self._task_cfg.ema_coeff) + self._logs["reward"]["boundary"] * self._task_cfg.ema_coeff
         )
 
+        # Return the reward by combining the different components and adding the robot rewards
         return (
             (position_rew) * (heading_rew) * self._task_cfg.pose_weight
             + linear_velocity_rew * self._task_cfg.linear_velocity_weight
             + angular_velocity_rew * self._task_cfg.angular_velocity_weight
             + boundary_rew * self._task_cfg.boundary_weight
             + progress_rew * self._task_cfg.progress_weight
-        )
+        ) + self._robot.compute_rewards()
 
     def reset(
-        self, env_ids: torch.Tensor, gen_actions: torch.Tensor | None = None, env_seeds: torch.Tensor | None = None
+        self,
+        env_ids: torch.Tensor,
+        gen_actions: torch.Tensor | None = None,
+        env_seeds: torch.Tensor | None = None,
     ) -> None:
         """
         Resets the task to its initial state.
@@ -266,13 +272,14 @@ class GoToPoseTask(TaskCore):
         Args:
             env_ids (torch.Tensor): The ids of the environments.
             task_actions (torch.Tensor | None): The actions for the task. Defaults to None.
-            env_seeds (torch.Tensor | None): The seeds for the environments. Defaults to None."""
+            env_seeds (torch.Tensor | None): The seeds for the environments. Defaults to None.
+        """
 
         super().reset(env_ids, gen_actions=gen_actions, env_seeds=env_seeds)
 
         # Make sure the position error and position dist are up to date after the reset
         self._position_error[env_ids] = (
-            self._target_positions[env_ids, :2] - self.robot.data.root_pos_w[self._env_ids, :2][env_ids]
+            self._target_positions[env_ids, :2] - self._robot.root_pos_w[self._env_ids, :2][env_ids]
         )
         self._position_dist[env_ids] = torch.linalg.norm(self._position_error[env_ids], dim=-1)
         self._previous_position_dist[env_ids] = self._position_dist[env_ids].clone()
@@ -282,18 +289,24 @@ class GoToPoseTask(TaskCore):
         Updates if the platforms should be killed or not.
 
         Returns:
-            torch.Tensor: Wether the platforms should be killed or not."""
+            torch.Tensor: Whether the platforms should be killed or not."""
 
-        self._position_error = self._target_positions[:, :2] - self.robot.data.root_pos_w[self._env_ids, :2]
+        self._position_error = self._target_positions[:, :2] - self._robot.root_pos_w[self._env_ids, :2]
         self._previous_position_dist = self._position_dist.clone()
         self._position_dist = torch.norm(self._position_error, dim=-1)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
         task_failed = torch.zeros_like(self._goal_reached, dtype=torch.long)
-        task_failed = torch.where(self._position_dist > self._task_cfg.maximum_robot_distance, ones, task_failed)
+        task_failed = torch.where(
+            self._position_dist > self._task_cfg.maximum_robot_distance,
+            ones,
+            task_failed,
+        )
 
         task_completed = torch.zeros_like(self._goal_reached, dtype=torch.long)
         task_completed = torch.where(
-            self._goal_reached > self._task_cfg.reset_after_n_steps_in_tolerance, ones, task_completed
+            self._goal_reached > self._task_cfg.reset_after_n_steps_in_tolerance,
+            ones,
+            task_completed,
         )
         return task_failed, task_completed
 
@@ -347,7 +360,7 @@ class GoToPoseTask(TaskCore):
         # Randomizes the initial pose of the platform
         initial_pose = torch.zeros((num_resets, 7), device=self._device, dtype=torch.float32)
 
-        # Postion
+        # Position
         r = (
             self._gen_actions[env_ids, 0] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
             + self._task_cfg.spawn_min_dist
@@ -396,8 +409,8 @@ class GoToPoseTask(TaskCore):
         initial_velocity[:, 5] = angular_velocity
 
         # Apply to articulation
-        self.robot.write_root_pose_to_sim(initial_pose, env_ids)  # That's going to break
-        self.robot.write_root_velocity_to_sim(initial_velocity, env_ids)
+        self._robot.set_pose(initial_pose, env_ids)
+        self._robot.set_velocity(initial_velocity, env_ids)
 
     def create_task_visualization(self) -> None:
         """Adds the visual marker to the scene.
@@ -424,4 +437,4 @@ class GoToPoseTask(TaskCore):
         """Updates the visual marker to the scene."""
 
         self.goal_pos_visualizer.visualize(self._markers_pos, self._markers_quat)
-        self.robot_pos_visualizer.visualize(self.robot.data.root_pos_w, self.robot.data.root_quat_w)
+        self.robot_pos_visualizer.visualize(self._robot.root_pos_w, self._robot.root_quat_w)

@@ -14,7 +14,6 @@ from .robot_core_cfg import RobotCoreCfg
 from omni.isaac.lab_assets import LEATHERBACK_CFG  # isort: skip
 
 
-
 @configclass
 class LeatherbackRobotCfg(RobotCoreCfg):
     """Core configuration for a RANS task."""

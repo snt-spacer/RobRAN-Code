@@ -3,5 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .leatherback_cfg import LeatherbackRobotCfg
-from .robot_core_cfg import RobotCoreCfg
+# isort: off
+from .robot_core_cfg import RobotCoreCfg  # noqa: F401, F403
+
+# isort: on
+from .leatherback_cfg import LeatherbackRobotCfg  # noqa: F401, F403

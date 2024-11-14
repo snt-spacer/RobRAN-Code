@@ -3,18 +3,14 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+# isort: off
+from .robots_cfg import (
+    LeatherbackRobotCfg,
+    RobotCoreCfg,
+)  # noqa: F401, F403
+
 from .robots import LeatherbackRobot, RobotCore  # noqa: F401, F403
-from .robots_cfg import LeatherbackRobotCfg, RobotCoreCfg  # noqa: F401, F403
-from .tasks import (  # noqa: F401, F403
-    GoThroughPosesTask,
-    GoThroughPositionsTask,
-    GoToPoseTask,
-    GoToPositionTask,
-    RaceWaypointsTask,
-    RaceWayposesTask,
-    TaskCore,
-    TrackVelocitiesTask,
-)
+
 from .tasks_cfg import (  # noqa: F401, F403
     GoThroughPosesCfg,
     GoThroughPositionsCfg,
@@ -25,3 +21,16 @@ from .tasks_cfg import (  # noqa: F401, F403
     TaskCoreCfg,
     TrackVelocitiesCfg,
 )
+
+from .tasks import (  # noqa: F401, F403
+    GoThroughPosesTask,
+    GoThroughPositionsTask,
+    GoToPoseTask,
+    GoToPositionTask,
+    RaceWaypointsTask,
+    RaceWayposesTask,
+    TaskCore,
+    TrackVelocitiesTask,
+)
+
+# isort: on

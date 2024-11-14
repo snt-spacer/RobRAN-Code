@@ -3,11 +3,14 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .go_through_poses_cfg import GoThroughPosesCfg
-from .go_through_positions_cfg import GoThroughPositionsCfg
-from .go_to_pose_cfg import GoToPoseCfg
-from .go_to_position_cfg import GoToPositionCfg
-from .race_waypoints_cfg import RaceWaypointsCfg
-from .race_wayposes_cfg import RaceWayposesCfg
-from .task_core_cfg import TaskCoreCfg
-from .track_velocities_cfg import TrackVelocitiesCfg
+# isort: off
+from .task_core_cfg import TaskCoreCfg  # noqa: F401, F403
+
+# isort: on
+from .go_through_poses_cfg import GoThroughPosesCfg  # noqa: F401, F403
+from .go_through_positions_cfg import GoThroughPositionsCfg  # noqa: F401, F403
+from .go_to_pose_cfg import GoToPoseCfg  # noqa: F401, F403
+from .go_to_position_cfg import GoToPositionCfg  # noqa: F401, F403
+from .race_waypoints_cfg import RaceWaypointsCfg  # noqa: F401, F403
+from .race_wayposes_cfg import RaceWayposesCfg  # noqa: F401, F403
+from .track_velocities_cfg import TrackVelocitiesCfg  # noqa: F401, F403
