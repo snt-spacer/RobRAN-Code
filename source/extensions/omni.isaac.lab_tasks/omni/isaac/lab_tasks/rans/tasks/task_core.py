@@ -1,9 +1,12 @@
-from omni.isaac.lab_tasks.rans import TaskCoreCfg
-from omni.isaac.lab.assets import Articulation
-
-from dataclasses import MISSING
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 import torch
+from dataclasses import MISSING
+
+from omni.isaac.lab_tasks.rans import RobotCore
 
 
 class TaskCore:
@@ -34,11 +37,11 @@ class TaskCore:
         self._device = device
 
         # Defines the observation and actions space sizes for this task
-        self._dim_task_obs = MISSING
-        self._dim_gen_act = MISSING
+        self._dim_task_obs: int = MISSING
+        self._dim_gen_act: int = MISSING
 
         # Robot
-        self._robot: Articulation = MISSING
+        self._robot: RobotCore = MISSING
 
         # Logs
         self._logs = {}
@@ -76,10 +79,18 @@ class TaskCore:
         self._robot_origins = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self._seeds = torch.arange(self._num_envs, device=self._device, dtype=torch.int32)
         self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
-        self._gen_actions = torch.zeros((self._num_envs, self._dim_gen_act), device=self._device, dtype=torch.float32)
-        self._task_data = torch.zeros((self._num_envs, self._dim_task_obs), device=self._device, dtype=torch.float32)
+        self._gen_actions = torch.zeros(
+            (self._num_envs, self._dim_gen_act),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._task_data = torch.zeros(
+            (self._num_envs, self._dim_task_obs),
+            device=self._device,
+            dtype=torch.float32,
+        )
 
-    def run_setup(self, robot: Articulation, envs_origin: torch.Tensor) -> None:
+    def run_setup(self, robot: RobotCore, envs_origin: torch.Tensor) -> None:
         """
         Sets the default origins of the environments and the robot.
 
@@ -87,8 +98,9 @@ class TaskCore:
             env_origins (torch.Tensor): The origins of the environments.
             robot_origins (torch.Tensor): The origins of the robot."""
 
-        self.robot = robot
+        self._robot = robot
         self._env_origins = envs_origin.clone()
+        self._robot_origins = self._robot._robot.data.default_root_state[:, :3].clone()
 
     def get_observations(self) -> torch.Tensor:
         raise NotImplementedError
@@ -104,7 +116,10 @@ class TaskCore:
             self._logs[key][env_ids] = 0
 
     def reset(
-        self, env_ids: torch.Tensor, gen_actions: torch.Tensor | None = None, env_seeds: torch.Tensor | None = None
+        self,
+        env_ids: torch.Tensor,
+        gen_actions: torch.Tensor | None = None,
+        env_seeds: torch.Tensor | None = None,
     ) -> None:
         """
         Resets the task to its initial state.
@@ -116,6 +131,9 @@ class TaskCore:
             task_actions (torch.Tensor | None): The actions to be taken to generate the env.
             env_seed (torch.Tensor | None): The seed to used in each environment.
             env_ids (torch.Tensor): The ids of the environments."""
+
+        # Reset the robot
+        self._robot.reset(env_ids)
 
         # Updates the task actions
         if gen_actions is None:

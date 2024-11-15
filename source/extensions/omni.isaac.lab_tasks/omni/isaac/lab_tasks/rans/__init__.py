@@ -1,22 +1,37 @@
-from .tasks_cfg import (
-    TaskCoreCfg,
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# isort: off
+from .robots_cfg import (
+    LeatherbackRobotCfg,
+    RobotCoreCfg,
+)  # noqa: F401, F403
+
+from .robots import LeatherbackRobot, RobotCore
+
+from .tasks_cfg import (  # noqa: F401, F403
+    GoThroughPosesCfg,
+    GoThroughPositionsCfg,
     GoToPoseCfg,
     GoToPositionCfg,
-    TrackVelocitiesCfg,
-    GoThroughPositionsCfg,
-    GoThroughPosesCfg,
     RaceWaypointsCfg,
     RaceWayposesCfg,
-)  # noqa: F401, F403
-from .tasks import (
-    TaskCore,
+    TaskCoreCfg,
+    TrackVelocitiesCfg,
+)
+
+from .tasks import (  # noqa: F401, F403
+    GoThroughPosesTask,
+    GoThroughPositionsTask,
     GoToPoseTask,
     GoToPositionTask,
-    TrackVelocitiesTask,
-    GoThroughPositionsTask,
-    GoThroughPosesTask,
     RaceWaypointsTask,
     RaceWayposesTask,
-)  # noqa: F401, F403
+    TaskCore,
+    TrackVelocitiesTask,
+)
+
 from .robots_cfg import RobotCoreCfg, LeatherbackRobotCfg, FloatingPlatformRobotCfg  # noqa: F401, F403
 from .robots import RobotCore, LeatherbackRobot, FloatingPlatformRobot # noqa: F401, F403

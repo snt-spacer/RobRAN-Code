@@ -1,9 +1,14 @@
-from omni.isaac.lab.utils import configclass
-from dataclasses import MISSING
-
-from .task_core_cfg import TaskCoreCfg
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 import math
+from dataclasses import MISSING
+
+from omni.isaac.lab.utils import configclass
+
+from .task_core_cfg import TaskCoreCfg
 
 
 @configclass

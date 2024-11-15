@@ -15,11 +15,12 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
+
 from omni.isaac.lab_tasks.rans import (
-    LeatherbackRobotCfg,
-    LeatherbackRobot,
     GoThroughPositionsCfg,
     GoThroughPositionsTask,
+    LeatherbackRobot,
+    LeatherbackRobotCfg,
 )
 
 
@@ -46,7 +47,7 @@ class LeatherbackGoThroughPositionsEnvCfg(DirectRLEnvCfg):
 class LeatherbackGoThroughPositionsEnv(DirectRLEnv):
     # Workflow: Step
     #   - self._pre_physics_step
-    #   - (Loop over N skiped steps)
+    #   - (Loop over N skipped steps)
     #       - self._apply_actions
     #       - self.scene.write_data_to_sim()
     #       - self.sim.step(render=False)
@@ -67,11 +68,16 @@ class LeatherbackGoThroughPositionsEnv(DirectRLEnv):
 
     cfg: LeatherbackGoThroughPositionsEnvCfg
 
-    def __init__(self, cfg: LeatherbackGoThroughPositionsEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(
+        self,
+        cfg: LeatherbackGoThroughPositionsEnvCfg,
+        render_mode: str | None = None,
+        **kwargs,
+    ):
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
-        self.task_api.run_setup(self.robot, self.scene.env_origins)
+        self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
 
     def _setup_scene(self):
@@ -96,26 +102,15 @@ class LeatherbackGoThroughPositionsEnv(DirectRLEnv):
         self.robot_api.process_actions(actions)
 
     def _apply_action(self) -> None:
-        self.robot_api.apply_actions(self.robot)
+        self.robot_api.apply_actions()
 
     def _get_observations(self) -> dict:
-        robot_obs = self.robot_api.get_observations(self.robot.data)
         task_obs = self.task_api.get_observations()
-
-        obs = torch.cat(
-            (
-                robot_obs,
-                task_obs,
-            ),
-            dim=-1,
-        )
-        observations = {"policy": obs}
+        observations = {"policy": task_obs}
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        task_rewards = self.task_api.compute_rewards()
-        robot_rewards = self.robot_api.compute_rewards(self.robot.data)
-        return task_rewards + robot_rewards
+        return self.task_api.compute_rewards()
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         robot_early_termination, robot_clean_termination = self.robot_api.get_dones()
@@ -131,7 +126,6 @@ class LeatherbackGoThroughPositionsEnv(DirectRLEnv):
             env_ids = self.robot._ALL_INDICES
         super()._reset_idx(env_ids)
 
-        self.robot_api.reset(None, self.env_seeds[env_ids], self.robot, env_ids)
         self.task_api.reset(env_ids)
 
     def _set_debug_vis_impl(self, debug_vis: bool) -> None:

@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2024, Antoine Richard
 # All rights reserved.
 #
@@ -5,14 +10,14 @@
 
 from __future__ import annotations
 
+import numpy as np
 from typing import TYPE_CHECKING
 
 import omni.isaac.core.utils.prims as prim_utils
 from pxr import Usd
-import numpy as np
 
 from omni.isaac.lab.sim import schemas
-from omni.isaac.lab.sim.utils import bind_physics_material, bind_visual_material, clone
+from omni.isaac.lab.sim.utils import bind_visual_material, clone
 
 if TYPE_CHECKING:
     from . import navigation_shapes_cfg
@@ -66,7 +71,7 @@ def spawn_pin_with_diamond(
     """Create a USDGeom-based pin prim with a diamond on top using the given attributes.
 
     It uses a combination of cylinder and a custom mesh to create a shape where a crystal looking object
-    stands ontop of a pin. This is meant to be used as a navigation helper. The slender pin body allows to visually
+    stands on top of a pin. This is meant to be used as a navigation helper. The slender pin body allows to visually
     evaluate the accuracy of the policy while the crystal on top is used to quickly spot it in the scene.
 
     .. note::
@@ -288,7 +293,7 @@ def spawn_pin_with_arrow(
 ) -> Usd.Prim:
     """Create a USDGeom-based pin prim with an arrow on top using the given attributes.
 
-    It uses a combination of cylinders and a cone to create a shape where an arrow stands ontop of a pin.
+    It uses a combination of cylinders and a cone to create a shape where an arrow stands on top of a pin.
     This is meant to be used as a navigation helper for pose goals: The slender pin body allows to
     visually evaluate the accuracy of the policy while the sphere on top is used to quickly spot it
     in the scene.
@@ -407,7 +412,7 @@ def make_diamond_prim(
     mesh_prim_path = geom_prim_path + "/mesh"
 
     scale = (cfg.diamond_width, cfg.diamond_width, cfg.diamond_height)
-    diamond = make_diamond(
+    make_diamond(
         mesh_prim_path,
         scale=scale,
     )
@@ -500,34 +505,30 @@ def make_diamond(
     Raises:
         ValueError: If a prim already exists at the given paths.
     """
-    vertices = np.array(
-        [
-            [0, 0, 0],  # Bottom (0)
-            [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
-            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
-            [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
-            [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
-            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
-            [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
-            [0.0, 0.0, 1.0],  # Top (7)
-        ]
-    )
-    faces = np.array(
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-            [7, 1, 2],
-            [7, 2, 3],
-            [7, 3, 4],
-            [7, 4, 5],
-            [7, 5, 6],
-            [7, 6, 1],
-        ]
-    )
+    vertices = np.array([
+        [0, 0, 0],  # Bottom (0)
+        [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+        [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+        [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+        [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+        [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+        [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+        [0.0, 0.0, 1.0],  # Top (7)
+    ])
+    faces = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+        [0, 3, 4],
+        [0, 4, 5],
+        [0, 5, 6],
+        [0, 6, 1],
+        [7, 1, 2],
+        [7, 2, 3],
+        [7, 3, 4],
+        [7, 4, 5],
+        [7, 5, 6],
+        [7, 6, 1],
+    ])
 
     mesh_prim = prim_utils.create_prim(
         mesh_prim_path,
@@ -576,7 +577,7 @@ def make_bicolor_diamond_prim(
     geom_prim_path = prim_path + "/geometry"
     mesh_prim_path = geom_prim_path + "/mesh"
 
-    container = prim_utils.create_prim(mesh_prim_path, "Xform")
+    prim_utils.create_prim(mesh_prim_path, "Xform")
 
     scale = (cfg.diamond_width, cfg.diamond_width, cfg.diamond_height)
     front, back = make_bicolor_diamond(
@@ -639,62 +640,54 @@ def make_bicolor_diamond(
     Raises:
         ValueError: If a prim already exists at the given paths.
     """
-    vertices_1 = np.array(
-        [
-            [0, 0, 0],  # Bottom (0)
-            [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
-            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
-            [0.0, 0.25, 0.5],  # Hexagon Vertex 3 (3)
-            [0.0, -0.25, 0.5],  # Hexagon Vertex 4 (4)
-            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
-            [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
-            [0.0, 0.0, 1.0],  # Top (7)
-        ]
-    )
-    faces_1 = np.array(
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-            [7, 1, 2],
-            [7, 2, 3],
-            [7, 3, 4],
-            [7, 4, 5],
-            [7, 5, 6],
-            [7, 6, 1],
-        ]
-    )
-    vertices_2 = np.array(
-        [
-            [0, 0, 0],  # Bottom (0)
-            [0.0, 0.25, 0.5],  # Hexagon Vertex 1 (1)
-            [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
-            [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
-            [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
-            [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
-            [0.0, -0.25, 0.5],  # Hexagon Vertex 6 (6)
-            [0.0, 0.0, 1.0],  # Top (7)
-        ]
-    )
-    faces_2 = np.array(
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-            [7, 1, 2],
-            [7, 2, 3],
-            [7, 3, 4],
-            [7, 4, 5],
-            [7, 5, 6],
-            [7, 6, 1],
-        ]
-    )
+    vertices_1 = np.array([
+        [0, 0, 0],  # Bottom (0)
+        [0.4330125, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+        [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+        [0.0, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+        [0.0, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+        [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+        [0.4330125, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+        [0.0, 0.0, 1.0],  # Top (7)
+    ])
+    faces_1 = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+        [0, 3, 4],
+        [0, 4, 5],
+        [0, 5, 6],
+        [0, 6, 1],
+        [7, 1, 2],
+        [7, 2, 3],
+        [7, 3, 4],
+        [7, 4, 5],
+        [7, 5, 6],
+        [7, 6, 1],
+    ])
+    vertices_2 = np.array([
+        [0, 0, 0],  # Bottom (0)
+        [0.0, 0.25, 0.5],  # Hexagon Vertex 1 (1)
+        [0.0, 0.5, 0.5],  # Hexagon Vertex 2 (2)
+        [-0.4330125, 0.25, 0.5],  # Hexagon Vertex 3 (3)
+        [-0.4330125, -0.25, 0.5],  # Hexagon Vertex 4 (4)
+        [0.0, -0.5, 0.5],  # Hexagon Vertex 5 (5)
+        [0.0, -0.25, 0.5],  # Hexagon Vertex 6 (6)
+        [0.0, 0.0, 1.0],  # Top (7)
+    ])
+    faces_2 = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+        [0, 3, 4],
+        [0, 4, 5],
+        [0, 5, 6],
+        [0, 6, 1],
+        [7, 1, 2],
+        [7, 2, 3],
+        [7, 3, 4],
+        [7, 4, 5],
+        [7, 5, 6],
+        [7, 6, 1],
+    ])
     mesh_front = prim_utils.create_prim(
         front_mesh_prim_path,
         prim_type="Mesh",
@@ -757,7 +750,11 @@ def make_arrow_prim(
 
     container = prim_utils.create_prim(mesh_prim_path, "Xform")
 
-    arrow_body_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "X"}
+    arrow_body_attributes = {
+        "radius": cfg.arrow_body_radius,
+        "height": cfg.arrow_body_length,
+        "axis": "X",
+    }
     arrow_body_translation = (cfg.arrow_body_length / 2.0, 0, 0)
     arrow_body = prim_utils.create_prim(
         str(container.GetPath().AppendChild("arrow_body")),
@@ -766,7 +763,11 @@ def make_arrow_prim(
         attributes=arrow_body_attributes,
     )
 
-    arrow_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "X"}
+    arrow_head_attributes = {
+        "radius": cfg.arrow_head_radius,
+        "height": cfg.arrow_head_length,
+        "axis": "X",
+    }
     arrow_head_translation = (cfg.arrow_body_length + cfg.arrow_head_length / 2.0, 0, 0)
     arrow_head = prim_utils.create_prim(
         str(container.GetPath().AppendChild("arrow_head")),
@@ -825,7 +826,11 @@ def make_pin_with_arrow_prim(
         attributes=pin_attributes,
     )
 
-    arrow_body_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "X"}
+    arrow_body_attributes = {
+        "radius": cfg.arrow_body_radius,
+        "height": cfg.arrow_body_length,
+        "axis": "X",
+    }
     arrow_body_translation = (cfg.arrow_body_length / 2.0, 0, cfg.pin_length)
     arrow_body = prim_utils.create_prim(
         str(container.GetPath().AppendChild("arrow_body")),
@@ -834,8 +839,16 @@ def make_pin_with_arrow_prim(
         attributes=arrow_body_attributes,
     )
 
-    arrow_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "X"}
-    arrow_head_translation = (cfg.arrow_body_length + cfg.arrow_head_length / 2.0, 0, cfg.pin_length)
+    arrow_head_attributes = {
+        "radius": cfg.arrow_head_radius,
+        "height": cfg.arrow_head_length,
+        "axis": "X",
+    }
+    arrow_head_translation = (
+        cfg.arrow_body_length + cfg.arrow_head_length / 2.0,
+        0,
+        cfg.pin_length,
+    )
     arrow_head = prim_utils.create_prim(
         str(container.GetPath().AppendChild("arrow_head")),
         "Cone",
@@ -878,7 +891,7 @@ def make_3d_position_marker_prim(
     if prim_utils.is_prim_path_valid(prim_path):
         raise ValueError(f"A prim already exists at path: '{prim_path}'.")
 
-    prim = prim_utils.create_prim(prim_path, "Xform", translation=translation, orientation=orientation)
+    prim_utils.create_prim(prim_path, "Xform", translation=translation, orientation=orientation)
 
     geom_prim_path = prim_path + "/geometry"
     mesh_prim_path = geom_prim_path + "/mesh"
@@ -1024,19 +1037,43 @@ def make_3d_pose_marker_prim(
     if prim_utils.is_prim_path_valid(prim_path):
         raise ValueError(f"A prim already exists at path: '{prim_path}'.")
 
-    prim = prim_utils.create_prim(prim_path, "Xform", translation=translation, orientation=orientation)
+    prim_utils.create_prim(prim_path, "Xform", translation=translation, orientation=orientation)
 
     geom_prim_path = prim_path + "/geometry"
     mesh_prim_path = geom_prim_path + "/mesh"
 
     container = prim_utils.create_prim(mesh_prim_path, "Xform")
 
-    x_pin_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "X"}
-    y_pin_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "Y"}
-    z_pin_attributes = {"radius": cfg.arrow_body_radius, "height": cfg.arrow_body_length, "axis": "Z"}
-    x_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "X"}
-    y_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "Y"}
-    z_head_attributes = {"radius": cfg.arrow_head_radius, "height": cfg.arrow_head_length, "axis": "Z"}
+    x_pin_attributes = {
+        "radius": cfg.arrow_body_radius,
+        "height": cfg.arrow_body_length,
+        "axis": "X",
+    }
+    y_pin_attributes = {
+        "radius": cfg.arrow_body_radius,
+        "height": cfg.arrow_body_length,
+        "axis": "Y",
+    }
+    z_pin_attributes = {
+        "radius": cfg.arrow_body_radius,
+        "height": cfg.arrow_body_length,
+        "axis": "Z",
+    }
+    x_head_attributes = {
+        "radius": cfg.arrow_head_radius,
+        "height": cfg.arrow_head_length,
+        "axis": "X",
+    }
+    y_head_attributes = {
+        "radius": cfg.arrow_head_radius,
+        "height": cfg.arrow_head_length,
+        "axis": "Y",
+    }
+    z_head_attributes = {
+        "radius": cfg.arrow_head_radius,
+        "height": cfg.arrow_head_length,
+        "axis": "Z",
+    }
 
     x_body_translation = (cfg.arrow_body_length / 2.0, 0, 0)
     x_head_translation = (cfg.arrow_body_length + cfg.arrow_head_length / 2.0, 0, 0)

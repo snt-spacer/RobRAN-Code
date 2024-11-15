@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import carb
 import omni.isaac.core.utils.prims as prim_utils
 import omni.isaac.core.utils.stage as stage_utils
-from pxr import Sdf, Usd, Gf
+from pxr import Gf, Sdf, Usd
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.sim.spawners.from_files import UsdFileCfg
@@ -200,7 +200,8 @@ def spawn_many_asset(
     # Check if the number of assets match the length of the list holding the number of instances.
     if len(cfg.num_assets) != len(cfg.assets_cfg):
         raise RuntimeError(
-            f"Number of assets ({len(cfg.assets_cfg)}) must match the length of the list holding the number of instances ({len(cfg.num_assets)})."
+            f"Number of assets ({len(cfg.assets_cfg)}) must match the length of the list holding the number of"
+            f" instances ({len(cfg.num_assets)})."
         )
 
     # Check if the number of translations and orientations match the number of assets
@@ -217,11 +218,13 @@ def spawn_many_asset(
     for i, asset_cfg in enumerate(cfg.assets_cfg):
         if len(translation[i]) != cfg.num_assets[i]:
             raise RuntimeError(
-                f"Number of translations for asset {i} ({len(translation[i])}) must match the number of instances ({cfg.num_assets[i]})."
+                f"Number of translations for asset {i} ({len(translation[i])}) must match the number of instances"
+                f" ({cfg.num_assets[i]})."
             )
         if len(orientation[i]) != cfg.num_assets[i]:
             raise RuntimeError(
-                f"Number of orientations for asset {i} ({len(orientation[i])}) must match the number of instances ({cfg.num_assets[i]})."
+                f"Number of orientations for asset {i} ({len(orientation[i])}) must match the number of instances"
+                f" ({cfg.num_assets[i]})."
             )
 
     # resolve: {SPAWN_NS}/AssetName
@@ -263,9 +266,7 @@ def spawn_many_asset(
                 setattr(asset_cfg, attr_name, attr_value)
         # spawn single instance
         proto_prim_path = f"{template_prim_path}/Asset_{index:04d}"
-        asset_cfg.func(
-            proto_prim_path, asset_cfg, translation=translation[index][0], orientation=orientation[index][0]
-        )
+        asset_cfg.func(proto_prim_path, asset_cfg, translation=translation[index][0], orientation=orientation[index][0])
         # append to proto prim paths
         proto_prim_paths.append(proto_prim_path)
 

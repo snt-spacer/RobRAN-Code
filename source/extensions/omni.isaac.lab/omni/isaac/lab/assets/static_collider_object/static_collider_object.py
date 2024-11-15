@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2024, AntoineRichard.
 # All rights reserved.
 #
@@ -15,7 +20,6 @@ from pxr import UsdPhysics
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
-import omni.isaac.lab.utils.string as string_utils
 
 from ..asset_base import AssetBase
 
@@ -120,7 +124,8 @@ class StaticColliderObject(AssetBase):
         # set into simulation
         self.root_physx_view.set_transforms(root_poses_xyzw, indices=physx_env_ids)
         self.root_physx_view.set_velocities(
-            torch.zeros((root_pose.shape[0], 6), device=self.device), indices=physx_env_ids
+            torch.zeros((root_pose.shape[0], 6), device=self.device),
+            indices=physx_env_ids,
         )
 
     """
@@ -140,7 +145,8 @@ class StaticColliderObject(AssetBase):
 
         # find rigid root prims
         root_prims = sim_utils.get_all_matching_child_prims(
-            template_prim_path, predicate=lambda prim: prim.HasAPI(UsdPhysics.RigidBodyAPI)
+            template_prim_path,
+            predicate=lambda prim: prim.HasAPI(UsdPhysics.RigidBodyAPI),
         )
         if len(root_prims) == 0:
             raise RuntimeError(

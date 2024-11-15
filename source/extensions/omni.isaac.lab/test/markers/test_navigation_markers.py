@@ -22,14 +22,14 @@ from omni.isaac.core.simulation_context import SimulationContext
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.markers.config import (
+    ARROW_CFG,
+    BICOLOR_DIAMOND_CFG,
+    DIAMOND_CFG,
     PIN_ARROW_CFG,
     PIN_DIAMOND_CFG,
     PIN_SPHERE_CFG,
-    ARROW_CFG,
-    DIAMOND_CFG,
-    BICOLOR_DIAMOND_CFG,
-    POSITION_MARKER_3D_CFG,
     POSE_MARKER_3D_CFG,
+    POSITION_MARKER_3D_CFG,
 )
 from omni.isaac.lab.utils.math import random_orientation
 from omni.isaac.lab.utils.timer import Timer
