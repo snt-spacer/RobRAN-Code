@@ -5,11 +5,12 @@
 
 # isort: off
 from .robots_cfg import (
+    FloatingPlatformRobotCfg,
     LeatherbackRobotCfg,
     RobotCoreCfg,
 )  # noqa: F401, F403
 
-from .robots import LeatherbackRobot, RobotCore
+from .robots import FloatingPlatformRobot, LeatherbackRobot, RobotCore
 
 from .tasks_cfg import (  # noqa: F401, F403
     GoThroughPosesCfg,
@@ -32,6 +33,3 @@ from .tasks import (  # noqa: F401, F403
     TaskCore,
     TrackVelocitiesTask,
 )
-
-from .robots_cfg import RobotCoreCfg, LeatherbackRobotCfg, FloatingPlatformRobotCfg  # noqa: F401, F403
-from .robots import RobotCore, LeatherbackRobot, FloatingPlatformRobot # noqa: F401, F403

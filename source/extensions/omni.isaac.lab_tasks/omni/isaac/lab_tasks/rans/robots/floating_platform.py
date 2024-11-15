@@ -1,14 +1,12 @@
-from matplotlib.pylab import f
-from numpy import where
 from omni.isaac.lab.assets import ArticulationData, Articulation
-
-from omni.isaac.lab_tasks.rans import FloatingPlatformRobotCfg
 from .robot_core import RobotCore
 
 import torch
 
 
 class FloatingPlatformRobot(RobotCore):
+    from omni.isaac.lab_tasks.rans import FloatingPlatformRobotCfg
+
     def __init__(self, robot_cfg: FloatingPlatformRobotCfg, robot_uid: int = 0, num_envs: int = 1, device: str = "cuda"):
         super(FloatingPlatformRobot, self).__init__(robot_cfg, robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg

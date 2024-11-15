@@ -72,7 +72,7 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
-        self.task_api.run_setup(self.robot, self.scene.env_origins) 
+        self.task_api.run_setup(self.robot_api, self.scene.env_origins) 
         self.set_debug_vis(self.cfg.debug_vis)
         # Expand the robot's action space dimension to include num_envs
         self.action_space = self.cfg.robot_cfg.action_space 
@@ -100,23 +100,12 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
         self.robot_api.apply_actions(self.robot)
 
     def _get_observations(self) -> dict:
-        robot_obs = self.robot_api.get_observations(self.robot.data)
         task_obs = self.task_api.get_observations()
-
-        obs = torch.cat(
-            (
-                robot_obs,
-                task_obs,
-            ),
-            dim=-1,
-        )
-        observations = {"policy": obs}
+        observations = {"policy": task_obs}
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        task_rewards = self.task_api.compute_rewards()
-        robot_rewards = self.robot_api.compute_rewards(self.robot.data)
-        return task_rewards + robot_rewards
+        return self.task_api.compute_rewards()
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         robot_early_termination, robot_clean_termination = self.robot_api.get_dones()
@@ -130,10 +119,8 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if (env_ids is None) or (len(env_ids) == self.num_envs):
             env_ids = self.robot._ALL_INDICES
-            self.task_api._robot_origins = XXX
         super()._reset_idx(env_ids)
 
-        self.robot_api.reset(None, self.env_seeds[env_ids], self.robot, env_ids)
         self.task_api.reset(env_ids)
 
     def _set_debug_vis_impl(self, debug_vis: bool) -> None:

@@ -6,6 +6,6 @@
 # isort: off
 from .robot_core_cfg import RobotCoreCfg  # noqa: F401, F403
 
-# isort: on
+# # isort: on
 from .leatherback_cfg import LeatherbackRobotCfg  # noqa: F401, F403
-from .floating_platform_cfg import FloatingPlatformRobotCfg
+from .floating_platform_cfg import FloatingPlatformRobotCfg  # noqa: F401, F403

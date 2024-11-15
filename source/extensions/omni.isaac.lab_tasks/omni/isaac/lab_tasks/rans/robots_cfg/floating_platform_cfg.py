@@ -5,7 +5,6 @@ from omni.isaac.lab.assets import ArticulationCfg
 from omni.isaac.lab_assets.floating_platform import FLOATING_PLATFORM_CFG
 from .robot_core_cfg import RobotCoreCfg
 
-import math
 from gymnasium import spaces
 
 
