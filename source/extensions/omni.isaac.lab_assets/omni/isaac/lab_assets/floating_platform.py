@@ -36,8 +36,9 @@ FLOATING_PLATFORM_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.1),
+        pos=(0.0, 0.0, 1.0),
         joint_pos={".*": 0.0,},
     ),
+    
 )
 """Configuration for a simple floating platform robot."""

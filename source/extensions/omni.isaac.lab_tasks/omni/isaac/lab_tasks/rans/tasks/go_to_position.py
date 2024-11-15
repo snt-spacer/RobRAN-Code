@@ -319,7 +319,7 @@ class GoToPositionTask(TaskCore):
         initial_pose[:, 0] = r * torch.cos(theta) + self._target_positions[env_ids, 0]
         initial_pose[:, 1] = r * torch.sin(theta) + self._target_positions[env_ids, 1]
         initial_pose[:, 2] = self._robot_origins[env_ids, 2]
-
+        print(f"Robot origins: {self._robot_origins}")
         # Orientation
         # Compute the heading to the target
         target_heading = torch.arctan2(
