@@ -104,7 +104,9 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # -- apply action to the robot
 
         robot.set_external_force_and_torque(thrusts, torques, body_ids=body_id, env_ids=None)
-    
+        
+        print(robot.data.body_state_w[0, 3, :3])
+
         #robot.set_external_force_and_torque(torch.tensor([[0,0,0]]), torch.tensor([[0,0,0]]), body_ids=[0], env_ids=None)
 
         #robot.set_joint_effort_target(efforts)

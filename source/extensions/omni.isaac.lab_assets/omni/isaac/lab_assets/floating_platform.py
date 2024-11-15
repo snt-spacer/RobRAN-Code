@@ -36,7 +36,7 @@ FLOATING_PLATFORM_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.1),
+        pos=(0.0, 0.0, 0.5),
         joint_pos={".*": 0.0,},
     ),
     
