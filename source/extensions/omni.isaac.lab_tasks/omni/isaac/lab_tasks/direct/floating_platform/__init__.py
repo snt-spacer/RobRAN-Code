@@ -11,6 +11,7 @@ import gymnasium as gym
 
 from . import agents
 from .floating_platform_go_to_position import FloatingPlatformGoToPositionEnv, FloatingPlatformGoToPositionEnvCfg
+
 # from .floating_platform_go_to_pose import FloatingPlatformGoToPoseEnv, FloatingPlatformGoToPoseEnvCfg
 # from .floating_platform_track_velocities import FloatingPlatformTrackVelocitiesEnv, FloatingPlatformTrackVelocitiesEnvCfg
 # from .floating_platform_go_through_positions import FloatingPlatformGoThroughPositionsEnv, FloatingPlatformGoThroughPositionsEnvCfg

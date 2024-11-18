@@ -5,23 +5,19 @@
 
 from __future__ import annotations
 
-import math
 import torch
 from collections.abc import Sequence
+from gymnasium import spaces, vector
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg
+from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab_tasks.rans import (
-    FloatingPlatformRobotCfg,
-    FloatingPlatformRobot,
-    GoToPositionCfg,
-    GoToPositionTask,
-)
+
+from omni.isaac.lab_tasks.rans import FloatingPlatformRobot, FloatingPlatformRobotCfg, GoToPositionCfg, GoToPositionTask
 
 
 @configclass
@@ -41,13 +37,14 @@ class FloatingPlatformGoToPositionEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 20.0
     num_actions = 8 if not robot_cfg.is_reaction_wheel else 9
-    num_observations = 8
+    num_observations = 14
     num_states = 0
+
 
 class FloatingPlatformGoToPositionEnv(DirectRLEnv):
     # Workflow: Step
     #   - self._pre_physics_step
-    #   - (Loop over N skiped steps)
+    #   - (Loop over N skipped steps)
     #       - self._apply_actions
     #       - self.scene.write_data_to_sim()
     #       - self.sim.step(render=False)
@@ -72,14 +69,42 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
-        self.task_api.run_setup(self.robot_api, self.scene.env_origins) 
+        self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
         # Expand the robot's action space dimension to include num_envs
-        self.action_space = self.cfg.robot_cfg.action_space 
-        
+
+    def _configure_gym_env_spaces(self):
+        """Configure the action and observation spaces for the Gym environment."""
+        # observation space (unbounded since we don't impose any limits)
+        super()._configure_gym_env_spaces()
+        # self.num_actions = self.cfg.num_actions
+        # self.num_observations = self.cfg.num_observations
+        # self.num_states = self.cfg.num_states
+
+        # # set up spaces
+        # self.single_observation_space = gym.spaces.Dict()
+        # self.single_observation_space["policy"] = gym.spaces.Box(
+        #     low=-np.inf, high=np.inf, shape=(self.num_observations,)
+        # )
+        # self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_actions,))
+
+        # # batch the spaces for vectorized environments
+        # self.observation_space = gym.vector.utils.batch_space(self.single_observation_space["policy"], self.num_envs)
+        # self.action_space = gym.vector.utils.batch_space(self.single_action_space, self.num_envs)
+
+        # # optional state space for asymmetric actor-critic architectures
+        # if self.num_states > 0:
+        #     self.single_observation_space["critic"] = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_states,))
+        #     self.state_space = gym.vector.utils.batch_space(self.single_observation_space["critic"], self.num_envs)
+
+        self.single_action_space = spaces.Tuple([spaces.Discrete(2)] * self.cfg.robot_cfg.num_thrusters)
+        self.action_space = vector.utils.batch_space(self.single_action_space, self.num_envs)
+
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
-        self.robot_api = FloatingPlatformRobot(self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device)
+        self.robot_api = FloatingPlatformRobot(
+            self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device
+        )
         self.task_api = GoToPositionTask(self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device)
 
         # add ground plane
@@ -95,6 +120,7 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
         self.robot_api.process_actions(actions)
+        # print(f"Robots position: {self.robot_api.body_pos_w[:3]}")
 
     def _apply_action(self) -> None:
         self.robot_api.apply_actions(self.robot)

@@ -154,16 +154,27 @@ class RlGamesVecEnvWrapper(IVecEnv):
         """Returns the :attr:`Env` :attr:`action_space`."""
         # note: rl-games only wants single action space
         action_space = self.unwrapped.single_action_space
-        if not isinstance(action_space, gymnasium.spaces.Box):
-            raise NotImplementedError(
-                f"The RL-Games wrapper does not currently support action space: '{type(action_space)}'."
-                f" If you need to support this, please modify the wrapper: {self.__class__.__name__},"
-                " and if you are nice, please send a merge-request."
-            )
+        # if not isinstance(action_space, gymnasium.spaces.Box):
+        #     raise NotImplementedError(
+        #         f"The RL-Games wrapper does not currently support action space: '{type(action_space)}'."
+        #         f" If you need to support this, please modify the wrapper: {self.__class__.__name__},"
+        #         " and if you are nice, please send a merge-request."
+        #     )
+        # Implement a switch to cover each action space type
+        if isinstance(action_space, gymnasium.spaces.Discrete):
+            return gym.spaces.Discrete(action_space.n)
+        elif isinstance(action_space, gymnasium.spaces.Tuple):
+            return gym.spaces.Tuple([gym.spaces.Discrete(n.n) for n in action_space.spaces])
+        elif isinstance(action_space, gymnasium.spaces.Box):
+            return gym.spaces.Box(-self._clip_actions, self._clip_actions, action_space.shape)
+        elif isinstance(action_space, gymnasium.spaces.MultiDiscrete):
+            raise NotImplementedError("MultiDiscrete action space is not supported. Use Tuple instead..")
+
         # return casted space in gym.spaces.Box (OpenAI Gym)
         # note: maybe should check if we are a sub-set of the actual space. don't do it right now since
         #   in ManagerBasedRLEnv we are setting action space as (-inf, inf).
-        return gym.spaces.Box(-self._clip_actions, self._clip_actions, action_space.shape)
+        # return gym.spaces.Box(-self._clip_actions, self._clip_actions, action_space.shape)
+        return action_space
 
     @classmethod
     def class_name(cls) -> str:

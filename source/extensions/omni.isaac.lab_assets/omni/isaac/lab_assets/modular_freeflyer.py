@@ -6,16 +6,17 @@
 """Configuration for a simple ackermann robot."""
 
 
-import omni.isaac.lab.sim as sim_utils
+import math
+
 import omni.isaac.core.utils.prims as prim_utils
-from omni.isaac.lab.sim import schemas
-from omni.isaac.lab.sim import schemas_cfg
+import omni.isaac.core.utils.stage as stage_utils
+import omni.physx.scripts.utils as physx_utils
+
+import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.actuators import ImplicitActuatorCfg
 from omni.isaac.lab.assets import ArticulationCfg
+from omni.isaac.lab.sim import schemas, schemas_cfg
 from omni.isaac.lab.utils import configclass
-import omni.physx.scripts.utils as physx_utils
-import omni.isaac.core.utils.stage as stage_utils
-import math
 
 
 @configclass
@@ -44,9 +45,7 @@ class ModularFreeFlyer2DProps:
         assert self.mass > 0, "The mass must be larger than 0."
         assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
         assert self.refinement > 0, "The refinement level must be larger than 0."
-        assert (
-            type(self.enable_collision) == bool
-        ), "The enable_collision must be a bool."
+        assert type(self.enable_collision) == bool, "The enable_collision must be a bool."
         self.refinement = int(self.refinement)
 
 
@@ -59,12 +58,8 @@ def generate_freeflyer(root_path: str, robot_cfg: ModularFreeFlyer2DProps) -> No
         enabled_self_collisions=False,
         fix_root_link=False,
     )
-    collider_props = schemas_cfg.CollisionPropertiesCfg(
-        collision_enabled=robot_cfg.enable_collision
-    )
-    mass_props = schemas_cfg.MassPropertiesCfg(
-        mass=robot_cfg.mass, center_of_mass=robot_cfg.CoM
-    )
+    collider_props = schemas_cfg.CollisionPropertiesCfg(collision_enabled=robot_cfg.enable_collision)
+    mass_props = schemas_cfg.MassPropertiesCfg(mass=robot_cfg.mass, center_of_mass=robot_cfg.CoM)
     no_mass_props = schemas_cfg.MassPropertiesCfg(mass=0.00001)
 
     # Create the root of the articulation

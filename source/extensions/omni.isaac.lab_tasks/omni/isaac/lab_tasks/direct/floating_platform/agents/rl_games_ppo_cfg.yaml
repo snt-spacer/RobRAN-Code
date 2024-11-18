@@ -9,17 +9,17 @@ params:
     clip_actions: 1.0
 
   algo:
-    name: a2c_continuous
+    name: a2c_discrete
 
   model:
-    name: continuous_a2c_logstd
+    name: multi_discrete_a2c
 
   # doesn't have this fine grained control but made it close
   network:
     name: actor_critic
     separate: True
     space:
-      continuous:
+      multi_discrete:
         mu_activation: None
         sigma_activation: None
 
@@ -43,7 +43,7 @@ params:
   load_path: '' # path to the checkpoint to load
 
   config:
-    name: leatherback_direct
+    name: floating_platform_direct
     env_name: rlgpu
     device: 'cuda:0'
     device_name: 'cuda:0'

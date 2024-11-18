@@ -48,18 +48,20 @@ def main():
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
     print(f"[INFO]: Gym action space: {env.action_space}")
-        
+
     # Retrieve robot configuration and determine action space structure
     robot_cfg = env_cfg.robot_cfg
-    num_thrusters = robot_cfg.num_thrusters #TODO: change to num_actions 
+    num_thrusters = robot_cfg.num_thrusters  # TODO: change to num_actions
     is_reaction_wheel = robot_cfg.is_reaction_wheel
-    
+
     # Reset the environment
     env.reset()
     while simulation_app.is_running():
         with torch.inference_mode():
             # Generate binary actions (0 or 1) for thrusters
-            thruster_actions = torch.randint(0, 2, (args_cli.num_envs, num_thrusters), device=env.unwrapped.device).float()
+            thruster_actions = torch.randint(
+                0, 2, (args_cli.num_envs, num_thrusters), device=env.unwrapped.device
+            ).float()
 
             # Generate continuous action for the reaction wheel if present
             if is_reaction_wheel:
@@ -67,7 +69,7 @@ def main():
                 actions = torch.cat((thruster_actions, reaction_wheel_action), dim=1)
             else:
                 actions = thruster_actions
-            
+
             # Apply actions to the environment
             env.step(actions)
 
