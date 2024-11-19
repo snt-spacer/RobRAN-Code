@@ -195,7 +195,11 @@ MODULAR_FREEFLYER_2D_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 1.0),
-        joint_pos={},
+        joint_pos={
+            "x_lock_joint": 0.0,
+            "y_lock_joint": 0.0,
+            "z_lock_joint": 0.0,
+        },
     ),
     actuators={},
 )
