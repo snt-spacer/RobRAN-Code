@@ -9,10 +9,7 @@ from collections.abc import Callable
 from dataclasses import MISSING
 
 from omni.isaac.lab.sim import schemas
-from omni.isaac.lab.sim.spawners.spawner_cfg import (
-    DeformableObjectSpawnerCfg,
-    RigidObjectSpawnerCfg,
-)
+from omni.isaac.lab.sim.spawners.spawner_cfg import DeformableObjectSpawnerCfg, RigidObjectSpawnerCfg
 from omni.isaac.lab.utils import configclass
 
 from . import robots_from_code

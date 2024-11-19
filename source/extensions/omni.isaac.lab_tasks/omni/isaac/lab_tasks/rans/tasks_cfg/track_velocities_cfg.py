@@ -3,9 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-import math
-from dataclasses import MISSING
-
 from omni.isaac.lab.utils import configclass
 
 from .task_core_cfg import TaskCoreCfg

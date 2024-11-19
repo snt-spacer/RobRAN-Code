@@ -3,8 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# isort: off
-from .robot_core import RobotCore  # noqa: F401, F403
-
-# isort: on
-from .leatherback import LeatherbackRobot  # noqa: F401, F403
+from .floating_platform import FloatingPlatformRobot
+from .leatherback import LeatherbackRobot
+from .robot_core import RobotCore

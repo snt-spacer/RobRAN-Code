@@ -114,7 +114,7 @@ class MultiObjectSceneCfg(InteractiveSceneCfg):
                     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.0, 1.0), metallic=0.2),
                 ),
             ],
-            random_choice=True,
+            random_choice=False,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 solver_position_iteration_count=4, solver_velocity_iteration_count=0
             ),
