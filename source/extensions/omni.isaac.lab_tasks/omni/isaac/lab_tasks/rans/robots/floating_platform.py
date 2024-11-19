@@ -117,6 +117,10 @@ class FloatingPlatformRobot(RobotCore):
         self._robot.set_external_force_and_torque(
             thrust_reset, thrust_reset, body_ids=self._thrusters_dof_idx, env_ids=env_ids
         )
+        locking_joints = torch.zeros((len(env_ids), 3), device=self._device)
+        self._robot.set_joint_velocity_target(locking_joints, env_ids=env_ids)
+        self._robot.set_joint_position_target(locking_joints, env_ids=env_ids)
+
         if self._robot_cfg.is_reaction_wheel:
             rw_reset = torch.zeros_like(self._reaction_wheel_action)
             self._robot.set_joint_velocity_target(rw_reset, joint_ids=self._reaction_wheel_dof_idx, env_ids=env_ids)
@@ -176,6 +180,22 @@ class FloatingPlatformRobot(RobotCore):
         )
         if self._robot_cfg.is_reaction_wheel:
             articulations.set_joint_effort_target(self._reaction_wheel_action, joint_ids=self._reaction_wheel_dof_idx)
+
+    # def set_pose(
+    #     self,
+    #     pose: torch.Tensor,
+    #     env_ids: torch.Tensor | None = None,
+    # ) -> None:
+    #     self._robot.write_root_pose_to_sim(pose, env_ids)
+
+    def set_velocity(
+        self,
+        velocity: torch.Tensor,
+        env_ids: torch.Tensor | None = None,
+    ) -> None:
+        velocity = torch.cat([velocity[:,:2], velocity[:,-1].unsqueeze(-1)], dim=1)
+        position = torch.zeros_like(velocity)
+        self._robot.write_joint_state_to_sim(position, velocity, env_ids=env_ids)
 
     @property
     def root_state_w(self):

@@ -26,6 +26,7 @@ class FloatingPlatformRobotCfg(RobotCoreCfg):
 
     max_thrust = 1.0  # [N]
     split_thrust = True  # Split max thrust force among thrusters
+    rew_action_rate_scale = 0.0
 
     if is_reaction_wheel:
         reaction_wheel_dof_name = [

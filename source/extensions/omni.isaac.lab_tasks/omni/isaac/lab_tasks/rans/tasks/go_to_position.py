@@ -153,6 +153,12 @@ class GoToPositionTask(TaskCore):
         # normed angular velocity
         angular_velocity = torch.abs(self._robot.root_vel_w[self._env_ids, -1])
 
+        # !! DEBUG PRINTS
+        # print(f"Linear velocity: {linear_velocity[:3]}")
+        # print(f"Angular velocity: {angular_velocity[:3]}")
+        # print(f"Position distance: {self._position_dist[:3]}")
+        # print(f"Boundary distance: {boundary_dist[:3]}")
+
         # Update logs (exponential moving average to see the performance at the end of the episode)
         self._logs["state"]["position_distance"] = (
             self._position_dist * (1 - self._task_cfg.ema_coeff)

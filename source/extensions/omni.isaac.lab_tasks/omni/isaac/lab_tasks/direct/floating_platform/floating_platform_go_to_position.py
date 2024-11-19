@@ -27,7 +27,7 @@ class FloatingPlatformGoToPositionEnvCfg(DirectRLEnvCfg):
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
 
     # simulation
-    decimation = 4
+    decimation = 6
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
 
     robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg()
@@ -35,7 +35,7 @@ class FloatingPlatformGoToPositionEnvCfg(DirectRLEnvCfg):
     debug_vis: bool = True
 
     # env
-    episode_length_s = 20.0
+    episode_length_s = 40.0
     num_actions = 8 if not robot_cfg.is_reaction_wheel else 9
     num_observations = 14
     num_states = 0
