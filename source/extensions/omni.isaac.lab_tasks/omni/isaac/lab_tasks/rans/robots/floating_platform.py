@@ -193,7 +193,7 @@ class FloatingPlatformRobot(RobotCore):
         velocity: torch.Tensor,
         env_ids: torch.Tensor | None = None,
     ) -> None:
-        velocity = torch.cat([velocity[:,:2], velocity[:,-1].unsqueeze(-1)], dim=1)
+        velocity = torch.cat([velocity[:, :2], velocity[:, -1].unsqueeze(-1)], dim=1)
         position = torch.zeros_like(velocity)
         self._robot.write_joint_state_to_sim(position, velocity, env_ids=env_ids)
 
