@@ -180,6 +180,17 @@ class MassPropertiesCfg:
     approximation of the body.
     """
 
+    center_of_mass: tuple[float, float, float] | None = None
+    """The center of mass of the rigid body (in m).
+
+    The center of mass is defined in the local frame of the rigid body."""
+
+    diagonal_inertia: tuple[float, float, float] | None = None
+    """
+    The diagonal inertia tensor of the rigid body (in kg*m^2).
+
+    The inertia tensor is defined in the local frame of the rigid body."""
+
 
 @configclass
 class JointDrivePropertiesCfg:

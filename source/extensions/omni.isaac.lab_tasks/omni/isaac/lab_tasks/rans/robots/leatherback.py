@@ -13,25 +13,45 @@ from .robot_core import RobotCore
 
 
 class LeatherbackRobot(RobotCore):
-    def __init__(self, robot_cfg: LeatherbackRobotCfg, robot_uid: int = 0, num_envs: int = 1, device: str = "cuda"):
-        super().__init__(robot_cfg, robot_uid=robot_uid, num_envs=num_envs, device=device)
+    def __init__(
+        self,
+        robot_cfg: LeatherbackRobotCfg,
+        robot_uid: int = 0,
+        num_envs: int = 1,
+        device: str = "cuda",
+    ):
+        super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
         self._dim_robot_obs = 2
         self._dim_robot_act = 2
-        self._dim_task_act = 0
+        self._dim_gen_act = 0
 
-        self._actions = torch.zeros((num_envs, self._dim_robot_act), device=device, dtype=torch.float32)
-        self._previous_actions = torch.zeros((num_envs, self._dim_robot_act), device=device, dtype=torch.float32)
-        self._throttle_action = torch.zeros((num_envs, 1), device=device, dtype=torch.float32)
-        self._steering_action = torch.zeros((num_envs, 1), device=device, dtype=torch.float32)
+        # Buffers
+        self.initialize_buffers()
 
-    def run_setup(self, articulation: Articulation):
-        self._throttle_dof_idx, _ = articulation.find_joints(self._robot_cfg.throttle_dof_name)
-        self._steering_dof_idx, _ = articulation.find_joints(self._robot_cfg.steering_dof_name)
+    def initialize_buffers(self, env_ids=None):
+        super().initialize_buffers(env_ids)
+        self._previous_actions = torch.zeros(
+            (self._num_envs, self._dim_robot_act),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._throttle_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self._steering_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+
+    def run_setup(self, robot: Articulation):
+        super().run_setup(robot)
+        self._throttle_dof_idx, _ = self._robot.find_joints(self._robot_cfg.throttle_dof_name)
+        self._steering_dof_idx, _ = self._robot.find_joints(self._robot_cfg.steering_dof_name)
 
     def create_logs(self):
         super().create_logs()
-        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
+        torch_zeros = lambda: torch.zeros(
+            self._num_envs,
+            dtype=torch.float32,
+            device=self._device,
+            requires_grad=False,
+        )
         self._logs["state"]["throttle"] = torch_zeros()
         self._logs["state"]["steering"] = torch_zeros()
         self._logs["state"]["action_rate"] = torch_zeros()
@@ -39,15 +59,15 @@ class LeatherbackRobot(RobotCore):
         self._logs["reward"]["action_rate"] = torch_zeros()
         self._logs["reward"]["joint_acceleration"] = torch_zeros()
 
-    def get_observations(self, robot_data: ArticulationData) -> torch.Tensor:
+    def get_observations(self) -> torch.Tensor:
         return self._actions
 
-    def compute_rewards(self, robot_data: ArticulationData):
+    def compute_rewards(self):
         # TODO: DT should be factored in?
 
         # Compute
         action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
-        joint_accelerations = torch.sum(torch.square(robot_data.joint_acc), dim=1)
+        joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
         self._logs["state"]["action_rate"] = action_rate
@@ -65,13 +85,15 @@ class LeatherbackRobot(RobotCore):
         return task_failed, task_done
 
     def reset(
-        self, task_actions: torch.Tensor, env_seeds: torch.Tensor, articulations: Articulation, env_ids: torch.Tensor
+        self,
+        env_ids: torch.Tensor,
+        gen_actions: torch.Tensor | None = None,
+        env_seeds: torch.Tensor | None = None,
     ):
-        self._actions[env_ids] = 0
+        super().reset(env_ids, gen_actions, env_seeds)
         self._previous_actions[env_ids] = 0
-        # Updates the seed
-        self._seeds[env_ids] = env_seeds
 
+    def reset_logs(self, env_ids: torch.Tensor) -> None:
         # Reset logs
         self._logs["state"]["throttle"][env_ids] = 0
         self._logs["state"]["steering"][env_ids] = 0
@@ -80,11 +102,19 @@ class LeatherbackRobot(RobotCore):
         self._logs["reward"]["action_rate"][env_ids] = 0
         self._logs["reward"]["joint_acceleration"][env_ids] = 0
 
-    def set_initial_conditions(self, env_ids: torch.Tensor, articulations: Articulation):
-        throttle_reset = torch.zeros_like(self._throttle_action)
-        steering_reset = torch.zeros_like(self._steering_action)
-        articulations.set_joint_velocity_target(throttle_reset, joint_ids=self._throttle_dof_idx, env_ids=env_ids)
-        articulations.set_joint_position_target(steering_reset, joint_ids=self._steering_dof_idx, env_ids=env_ids)
+    def set_initial_conditions(self, env_ids: torch.Tensor | None = None):
+        throttle_reset = torch.zeros(
+            (len(env_ids), self._throttle_action.shape[1]),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        steering_reset = torch.zeros(
+            (len(env_ids), self._steering_action.shape[1]),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._robot.set_joint_velocity_target(throttle_reset, joint_ids=self._throttle_dof_idx, env_ids=env_ids)
+        self._robot.set_joint_position_target(steering_reset, joint_ids=self._steering_dof_idx, env_ids=env_ids)
 
     def process_actions(self, actions: torch.Tensor):
         self._previous_actions = self._actions.clone()
@@ -99,6 +129,6 @@ class LeatherbackRobot(RobotCore):
     def compute_physics(self):
         pass  # Model motor + ackermann steering here
 
-    def apply_actions(self, articulations: Articulation):
-        articulations.set_joint_velocity_target(self._throttle_action, joint_ids=self._throttle_dof_idx)
-        articulations.set_joint_position_target(self._steering_action, joint_ids=self._steering_dof_idx)
+    def apply_actions(self):
+        self._robot.set_joint_velocity_target(self._throttle_action, joint_ids=self._throttle_dof_idx)
+        self._robot.set_joint_position_target(self._steering_action, joint_ids=self._steering_dof_idx)

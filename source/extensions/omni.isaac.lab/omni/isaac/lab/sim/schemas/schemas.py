@@ -10,7 +10,9 @@ import carb
 import omni.isaac.core.utils.stage as stage_utils
 import omni.physx.scripts.utils as physx_utils
 from omni.physx.scripts import deformableUtils as deformable_utils
-from pxr import PhysxSchema, Usd, UsdPhysics
+from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+
+MAX_FLOAT = 3.40282347e38
 
 from ..utils import (
     apply_nested,
@@ -26,7 +28,9 @@ Articulation root properties.
 
 
 def define_articulation_root_properties(
-    prim_path: str, cfg: schemas_cfg.ArticulationRootPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.ArticulationRootPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ):
     """Apply the articulation root schema on the input prim and set its properties.
 
@@ -59,7 +63,9 @@ def define_articulation_root_properties(
 
 @apply_nested
 def modify_articulation_root_properties(
-    prim_path: str, cfg: schemas_cfg.ArticulationRootPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.ArticulationRootPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ) -> bool:
     """Modify PhysX parameters for an articulation root prim.
 
@@ -149,7 +155,12 @@ def modify_articulation_root_properties(
                 )
 
             # create a fixed joint between the root link and the world frame
-            physx_utils.createJoint(stage=stage, joint_type="Fixed", from_prim=None, to_prim=articulation_prim)
+            physx_utils.createJoint(
+                stage=stage,
+                joint_type="Fixed",
+                from_prim=None,
+                to_prim=articulation_prim,
+            )
 
             # Having a fixed joint on a rigid body is not treated as "fixed base articulation".
             # instead, it is treated as a part of the maximal coordinate tree.
@@ -186,7 +197,9 @@ Rigid body properties.
 
 
 def define_rigid_body_properties(
-    prim_path: str, cfg: schemas_cfg.RigidBodyPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.RigidBodyPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ):
     """Apply the rigid body schema on the input prim and set its properties.
 
@@ -219,7 +232,9 @@ def define_rigid_body_properties(
 
 @apply_nested
 def modify_rigid_body_properties(
-    prim_path: str, cfg: schemas_cfg.RigidBodyPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.RigidBodyPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ) -> bool:
     """Modify PhysX parameters for a rigid body prim.
 
@@ -282,7 +297,9 @@ Collision properties.
 
 
 def define_collision_properties(
-    prim_path: str, cfg: schemas_cfg.CollisionPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.CollisionPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ):
     """Apply the collision schema on the input prim and set its properties.
 
@@ -314,7 +331,9 @@ def define_collision_properties(
 
 @apply_nested
 def modify_collision_properties(
-    prim_path: str, cfg: schemas_cfg.CollisionPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.CollisionPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ) -> bool:
     """Modify PhysX properties of collider prim.
 
@@ -447,7 +466,7 @@ def modify_mass_properties(prim_path: str, cfg: schemas_cfg.MassPropertiesCfg, s
     # convert to dict
     cfg = cfg.to_dict()
     # set into USD API
-    for attr_name in ["mass", "density"]:
+    for attr_name in ["mass", "density", "center_of_mass", "diagonal_inertia"]:
         value = cfg.pop(attr_name, None)
         safe_set_attribute_on_usd_schema(usd_physics_mass_api, attr_name, value, camel_case=True)
     # success
@@ -529,7 +548,9 @@ Joint drive properties.
 
 @apply_nested
 def modify_joint_drive_properties(
-    prim_path: str, drive_props: schemas_cfg.JointDrivePropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    drive_props: schemas_cfg.JointDrivePropertiesCfg,
+    stage: Usd.Stage | None = None,
 ) -> bool:
     """Modify PhysX parameters for a joint prim.
 
@@ -602,7 +623,9 @@ Fixed tendon properties.
 
 @apply_nested
 def modify_fixed_tendon_properties(
-    prim_path: str, cfg: schemas_cfg.FixedTendonPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.FixedTendonPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ) -> bool:
     """Modify PhysX parameters for a fixed tendon attachment prim.
 
@@ -665,7 +688,9 @@ Deformable body properties.
 
 
 def define_deformable_body_properties(
-    prim_path: str, cfg: schemas_cfg.DeformableBodyPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.DeformableBodyPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ):
     """Apply the deformable body schema on the input prim and set its properties.
 
@@ -719,7 +744,9 @@ def define_deformable_body_properties(
 
 @apply_nested
 def modify_deformable_body_properties(
-    prim_path: str, cfg: schemas_cfg.DeformableBodyPropertiesCfg, stage: Usd.Stage | None = None
+    prim_path: str,
+    cfg: schemas_cfg.DeformableBodyPropertiesCfg,
+    stage: Usd.Stage | None = None,
 ):
     """Modify PhysX parameters for a deformable body prim.
 
@@ -816,3 +843,117 @@ def modify_deformable_body_properties(
 
     # success
     return True
+
+
+def create_unused_path(stage, base_path, path):
+    if stage.GetPrimAtPath(base_path + "/" + path).IsValid():
+        uniquifier = 0
+        while stage.GetPrimAtPath(base_path + "/" + path + str(uniquifier)).IsValid():
+            uniquifier += 1
+        path = path + str(uniquifier)
+    return path
+
+
+def createJoint(
+    stage,
+    joint_type,
+    from_prim,
+    to_prim,
+    joint_name=None,
+    joint_base_path=None,
+):
+    # for single selection use to_prim
+    if to_prim is None:
+        to_prim = from_prim
+        from_prim = None
+
+    from_path = from_prim.GetPath().pathString if from_prim is not None and from_prim.IsValid() else ""
+    to_path = to_prim.GetPath().pathString if to_prim is not None and to_prim.IsValid() else ""
+    single_selection = from_path == "" or to_path == ""
+
+    # to_path can be not writable as in case of instancing, find first writable path
+    if joint_base_path is None:
+        joint_base_path = to_path
+    else:
+        joint_base_path = joint_base_path
+        if not stage.GetPrimAtPath(joint_base_path):
+            stage.DefinePrim(joint_base_path)
+
+    base_prim = stage.GetPrimAtPath(joint_base_path)
+    while base_prim != stage.GetPseudoRoot():
+        if base_prim.IsInPrototype():
+            base_prim = base_prim.GetParent()
+        elif base_prim.IsInstanceProxy():
+            base_prim = base_prim.GetParent()
+        elif base_prim.IsInstanceable():
+            base_prim = base_prim.GetParent()
+        else:
+            break
+    joint_base_path = str(base_prim.GetPrimPath())
+    if joint_base_path == "/":
+        joint_base_path = ""
+    if joint_name is None:
+        joint_name = "/" + create_unused_path(stage, joint_base_path, joint_type + "Joint")
+    else:
+        joint_name = "/" + create_unused_path(stage, joint_base_path, joint_name)
+    joint_path = joint_base_path + joint_name
+
+    if joint_type == "Fixed":
+        component = UsdPhysics.FixedJoint.Define(stage, joint_path)
+    elif joint_type == "Revolute":
+        component = UsdPhysics.RevoluteJoint.Define(stage, joint_path)
+        component.CreateAxisAttr("X")
+    elif joint_type == "Prismatic":
+        component = UsdPhysics.PrismaticJoint.Define(stage, joint_path)
+        component.CreateAxisAttr("X")
+    elif joint_type == "Spherical":
+        component = UsdPhysics.SphericalJoint.Define(stage, joint_path)
+        component.CreateAxisAttr("X")
+    elif joint_type == "Distance":
+        component = UsdPhysics.DistanceJoint.Define(stage, joint_path)
+        component.CreateMinDistanceAttr(0.0)
+        component.CreateMaxDistanceAttr(0.0)
+    elif joint_type == "Gear":
+        component = PhysxSchema.PhysxPhysicsGearJoint.Define(stage, joint_path)
+    elif joint_type == "RackAndPinion":
+        component = PhysxSchema.PhysxPhysicsRackAndPinionJoint.Define(stage, joint_path)
+    else:
+        component = UsdPhysics.Joint.Define(stage, joint_path)
+        prim = component.GetPrim()
+        for limit_name in ["transX", "transY", "transZ", "rotX", "rotY", "rotZ"]:
+            limit_api = UsdPhysics.LimitAPI.Apply(prim, limit_name)
+            limit_api.CreateLowAttr(1.0)
+            limit_api.CreateHighAttr(-1.0)
+
+    xfCache = UsdGeom.XformCache()
+
+    if not single_selection:
+        to_pose = xfCache.GetLocalToWorldTransform(to_prim)
+        from_pose = xfCache.GetLocalToWorldTransform(from_prim)
+        rel_pose = to_pose * from_pose.GetInverse()
+        rel_pose = rel_pose.RemoveScaleShear()
+        pos1 = Gf.Vec3f(rel_pose.ExtractTranslation())
+        rot1 = Gf.Quatf(rel_pose.ExtractRotationQuat())
+
+        component.CreateBody0Rel().SetTargets([Sdf.Path(from_path)])
+        component.CreateBody1Rel().SetTargets([Sdf.Path(to_path)])
+        component.CreateLocalPos0Attr().Set(pos1)
+        component.CreateLocalRot0Attr().Set(rot1)
+        component.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0))
+        component.CreateLocalRot1Attr().Set(Gf.Quatf(1.0))
+    else:
+        to_pose = xfCache.GetLocalToWorldTransform(to_prim)
+        to_pose = to_pose.RemoveScaleShear()
+        pos1 = Gf.Vec3f(to_pose.ExtractTranslation())
+        rot1 = Gf.Quatf(to_pose.ExtractRotationQuat())
+
+        component.CreateBody1Rel().SetTargets([Sdf.Path(to_path)])
+        component.CreateLocalPos0Attr().Set(pos1)
+        component.CreateLocalRot0Attr().Set(rot1)
+        component.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0))
+        component.CreateLocalRot1Attr().Set(Gf.Quatf(1.0))
+
+    component.CreateBreakForceAttr().Set(MAX_FLOAT)
+    component.CreateBreakTorqueAttr().Set(MAX_FLOAT)
+
+    return stage.GetPrimAtPath(joint_base_path + joint_name)

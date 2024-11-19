@@ -37,9 +37,13 @@ from .humanoid import *
 from .kinova import *
 from .leatherback import *
 from .leatherback_full import *
+from .modular_freeflyer import MODULAR_FREEFLYER_2D_CFG
 from .quadcopter import *
 from .ridgeback_franka import *
 from .sawyer import *
 from .shadow_hand import *
 from .unitree import *
 from .universal_robots import *
+from .leatherback import *
+from .leatherback_full import *
+from .floating_platform import *

@@ -4,15 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
-import numpy as np
 import torch
-from typing import Tuple
 
-import wandb
-
-from omni.isaac.lab.assets import Articulation, ArticulationData
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_gaussian, sample_random_sign, sample_uniform
+from omni.isaac.lab.utils.math import sample_random_sign, sample_uniform
 
 from omni.isaac.lab_tasks.rans import GoThroughPosesCfg
 
@@ -69,10 +64,14 @@ class GoThroughPosesTask(TaskCore):
         self._position_dist = torch.zeros((self._num_envs,), device=self._device, dtype=torch.float32)
         self._previous_position_dist = torch.zeros((self._num_envs,), device=self._device, dtype=torch.float32)
         self._target_positions = torch.zeros(
-            (self._num_envs, self._task_cfg.max_num_goals, 2), device=self._device, dtype=torch.float32
+            (self._num_envs, self._task_cfg.max_num_goals, 2),
+            device=self._device,
+            dtype=torch.float32,
         )
         self._target_heading = torch.zeros(
-            (self._num_envs, self._task_cfg.max_num_goals), device=self._device, dtype=torch.float32
+            (self._num_envs, self._task_cfg.max_num_goals),
+            device=self._device,
+            dtype=torch.float32,
         )
         self._target_index = torch.zeros((self._num_envs,), device=self._device, dtype=torch.long)
         self._trajectory_completed = torch.zeros((self._num_envs,), device=self._device, dtype=torch.bool)
@@ -85,7 +84,12 @@ class GoThroughPosesTask(TaskCore):
 
         super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
+        torch_zeros = lambda: torch.zeros(
+            self._num_envs,
+            dtype=torch.float32,
+            device=self._device,
+            requires_grad=False,
+        )
         self._logs["state"]["normed_linear_velocity"] = torch_zeros()
         self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
         self._logs["state"]["position_distance"] = torch_zeros()
@@ -137,18 +141,15 @@ class GoThroughPosesTask(TaskCore):
 
         # position error
         self._position_error = (
-            self._target_positions[self._ALL_INDICES, self._target_index]
-            - self.robot.data.root_pos_w[self._env_ids, :2]
+            self._target_positions[self._ALL_INDICES, self._target_index] - self._robot.root_pos_w[self._env_ids, :2]
         )
         self._position_dist = torch.linalg.norm(self._position_error, dim=-1)
 
         # position error expressed as distance and angular error (to the position)
-        heading = self.robot.data.heading_w[self._env_ids]
+        heading = self._robot.heading_w[self._env_ids]
         target_heading_w = torch.atan2(
-            self._target_positions[self._ALL_INDICES, self._target_index, 1]
-            - self.robot.data.root_pos_w[self._env_ids, 1],
-            self._target_positions[self._ALL_INDICES, self._target_index, 0]
-            - self.robot.data.root_pos_w[self._env_ids, 0],
+            self._target_positions[self._ALL_INDICES, self._target_index, 1] - self._robot.root_pos_w[self._env_ids, 1],
+            self._target_positions[self._ALL_INDICES, self._target_index, 0] - self._robot.root_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
         heading_error = torch.atan2(
@@ -157,8 +158,8 @@ class GoThroughPosesTask(TaskCore):
         )
 
         # Store in buffer
-        self._task_data[:, 0:2] = self.robot.data.root_lin_vel_b[self._env_ids, :2]
-        self._task_data[:, 2] = self.robot.data.root_ang_vel_w[self._env_ids, -1]
+        self._task_data[:, 0:2] = self._robot.root_lin_vel_b[self._env_ids, :2]
+        self._task_data[:, 2] = self._robot.root_ang_vel_w[self._env_ids, -1]
         self._task_data[:, 3] = self._position_dist
         self._task_data[:, 4] = torch.cos(target_heading_error)
         self._task_data[:, 5] = torch.sin(target_heading_error)
@@ -210,7 +211,9 @@ class GoThroughPosesTask(TaskCore):
             self._task_data[:, 10 + 5 * i] = torch.sin(target_heading_error)
             self._task_data[:, 11 + 5 * i] = torch.cos(heading_error)
             self._task_data[:, 12 + 5 * i] = torch.sin(heading_error)
-        return self._task_data
+
+        # Concatenate the task observations with the robot observations
+        return torch.concat((self._task_data, self._robot.get_observations()), dim=-1)
 
     def compute_rewards(self) -> torch.Tensor:
         """
@@ -220,7 +223,7 @@ class GoThroughPosesTask(TaskCore):
             torch.Tensor: The reward for the current state of the robot."""
 
         # position error expressed as distance and angular error (to the position)
-        heading = self.robot.data.heading_w[self._env_ids]
+        heading = self._robot.heading_w[self._env_ids]
         heading_error = torch.atan2(
             torch.sin(self._target_heading[self._ALL_INDICES, self._target_index] - heading),
             torch.cos(self._target_heading[self._ALL_INDICES, self._target_index] - heading),
@@ -229,19 +232,17 @@ class GoThroughPosesTask(TaskCore):
 
         # position error expressed as distance and angular error (to the position)
         target_heading_w = torch.atan2(
-            self._target_positions[self._ALL_INDICES, self._target_index, 1]
-            - self.robot.data.root_pos_w[self._env_ids, 1],
-            self._target_positions[self._ALL_INDICES, self._target_index, 0]
-            - self.robot.data.root_pos_w[self._env_ids, 0],
+            self._target_positions[self._ALL_INDICES, self._target_index, 1] - self._robot.root_pos_w[self._env_ids, 1],
+            self._target_positions[self._ALL_INDICES, self._target_index, 0] - self._robot.root_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
         target_heading_dist = torch.abs(target_heading_error)
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
         # normed linear velocity
-        linear_velocity = torch.linalg.norm(self.robot.data.root_vel_w[self._env_ids, :2], dim=-1)
+        linear_velocity = torch.linalg.norm(self._robot.root_vel_w[self._env_ids, :2], dim=-1)
         # normed angular velocity
-        angular_velocity = torch.abs(self.robot.data.root_vel_w[self._env_ids, -1])
+        angular_velocity = torch.abs(self._robot.root_vel_w[self._env_ids, -1])
         # progress
         progress_rew = self._previous_position_dist - self._position_dist
 
@@ -298,6 +299,7 @@ class GoThroughPosesTask(TaskCore):
         self._logs["reward"]["progress"] += progress_rew
         self._logs["reward"]["num_goals"] += goal_reached
 
+        # Return the reward by combining the different components and adding the robot rewards
         return (
             progress_rew * self._task_cfg.progress_weight
             + heading_rew * self._task_cfg.position_heading_weight
@@ -307,10 +309,13 @@ class GoThroughPosesTask(TaskCore):
             + boundary_rew * self._task_cfg.boundary_weight
             + self._task_cfg.time_penalty
             + self._task_cfg.reached_bonus * goal_reached
-        )
+        ) + self._robot.compute_rewards()
 
     def reset(
-        self, env_ids: torch.Tensor, gen_actions: torch.Tensor | None = None, env_seeds: torch.Tensor | None = None
+        self,
+        env_ids: torch.Tensor,
+        gen_actions: torch.Tensor | None = None,
+        env_seeds: torch.Tensor | None = None,
     ) -> None:
         """
         Resets the task to its initial state.
@@ -346,7 +351,7 @@ class GoThroughPosesTask(TaskCore):
         # Make sure the position error and position dist are up to date after the reset
         self._position_error[env_ids] = (
             self._target_positions[env_ids, self._target_index[env_ids]]
-            - self.robot.data.root_pos_w[self._env_ids, :2][env_ids]
+            - self._robot.root_pos_w[self._env_ids, :2][env_ids]
         )
         self._position_dist[env_ids] = torch.linalg.norm(self._position_error[env_ids], dim=-1)
         self._previous_position_dist[env_ids] = self._position_dist[env_ids].clone()
@@ -364,18 +369,21 @@ class GoThroughPosesTask(TaskCore):
         Updates if the platforms should be killed or not.
 
         Returns:
-            torch.Tensor: Wether the platforms should be killed or not."""
+            torch.Tensor: Whether the platforms should be killed or not."""
 
         # Kill robots that would stray too far from the target.
         self._position_error = (
-            self._target_positions[self._ALL_INDICES, self._target_index]
-            - self.robot.data.root_pos_w[self._env_ids, :2]
+            self._target_positions[self._ALL_INDICES, self._target_index] - self._robot.root_pos_w[self._env_ids, :2]
         )
         self._previous_position_dist = self._position_dist.clone()
         self._position_dist = torch.linalg.norm(self._position_error, dim=-1)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
         task_failed = torch.zeros_like(self._goal_reached, dtype=torch.long)
-        task_failed = torch.where(self._position_dist > self._task_cfg.maximum_robot_distance, ones, task_failed)
+        task_failed = torch.where(
+            self._position_dist > self._task_cfg.maximum_robot_distance,
+            ones,
+            task_failed,
+        )
 
         task_completed = torch.zeros_like(self._goal_reached, dtype=torch.long)
         # If the task is set to loop, don't terminate the episode early.
@@ -418,7 +426,10 @@ class GoThroughPosesTask(TaskCore):
 
         # Select how many random goals we want to generate.
         self._num_goals[env_ids] = torch.randint(
-            self._task_cfg.min_num_goals, self._task_cfg.max_num_goals, (num_goals,), device=self._device
+            self._task_cfg.min_num_goals,
+            self._task_cfg.max_num_goals,
+            (num_goals,),
+            device=self._device,
         )
 
         # Since we are using tensor operations, we cannot have different number of goals per environment: the
@@ -456,7 +467,10 @@ class GoThroughPosesTask(TaskCore):
                 # The environment action decides the randomization range of the radius and the spread of the cone.
                 r = (
                     sample_uniform(
-                        self._gen_actions[env_ids, 2], self._gen_actions[env_ids, 3], (num_goals,), device=self._device
+                        self._gen_actions[env_ids, 2],
+                        self._gen_actions[env_ids, 3],
+                        (num_goals,),
+                        device=self._device,
                     )
                     * (self._task_cfg.goal_max_dist - self._task_cfg.goal_min_dist)
                     + self._task_cfg.goal_min_dist
@@ -503,7 +517,7 @@ class GoThroughPosesTask(TaskCore):
         # Randomizes the initial pose of the platform
         initial_pose = torch.zeros((num_resets, 7), device=self._device, dtype=torch.float32)
 
-        # Postion, the position is picked in a cone behind the first target.
+        # Position, the position is picked in a cone behind the first target.
         r = (
             self._gen_actions[env_ids, 6] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
             + self._task_cfg.spawn_min_dist
@@ -523,7 +537,6 @@ class GoThroughPosesTask(TaskCore):
         initial_pose[:, 0] = r * torch.cos(theta) + self._target_positions[env_ids, 0, 0]
         initial_pose[:, 1] = r * torch.sin(theta) + self._target_positions[env_ids, 0, 1]
         initial_pose[:, 2] = self._robot_origins[env_ids, 2]
-
         # Orientation
         delta_heading = (
             (
@@ -556,8 +569,8 @@ class GoThroughPosesTask(TaskCore):
         initial_velocity[:, 5] = angular_velocity
 
         # Apply to articulation
-        self.robot.write_root_pose_to_sim(initial_pose, env_ids)  # That's going to break
-        self.robot.write_root_velocity_to_sim(initial_velocity, env_ids)
+        self._robot.set_pose(initial_pose, env_ids)
+        self._robot.set_velocity(initial_velocity, env_ids)
 
     def create_task_visualization(self) -> None:
         """Adds the visual marker to the scene.
@@ -576,9 +589,17 @@ class GoThroughPosesTask(TaskCore):
 
         # Define the visual markers and edit their properties
         goal_marker_cfg_green = PIN_ARROW_CFG.copy()
-        goal_marker_cfg_green.markers["pin_arrow"].visual_material.diffuse_color = (0.0, 1.0, 0.0)
+        goal_marker_cfg_green.markers["pin_arrow"].visual_material.diffuse_color = (
+            0.0,
+            1.0,
+            0.0,
+        )
         goal_marker_cfg_grey = PIN_ARROW_CFG.copy()
-        goal_marker_cfg_grey.markers["pin_arrow"].visual_material.diffuse_color = (0.5, 0.5, 0.5)
+        goal_marker_cfg_grey.markers["pin_arrow"].visual_material.diffuse_color = (
+            0.5,
+            0.5,
+            0.5,
+        )
         goal_marker_cfg_red = PIN_ARROW_CFG.copy()
         robot_marker_cfg = BICOLOR_DIAMOND_CFG.copy()
         goal_marker_cfg_red.prim_path = f"/Visuals/Command/task_{self._task_uid}/next_goal"
@@ -621,7 +642,8 @@ class GoThroughPosesTask(TaskCore):
         # Under the hood, these are converted to numpy arrays, so that's definitely a waste, but since it's
         # only for visualization, it's not a big deal.
         current_goals_pos = torch.zeros(
-            (self._target_positions[self._ALL_INDICES, self._target_index].shape[0], 3), device=self._device
+            (self._target_positions[self._ALL_INDICES, self._target_index].shape[0], 3),
+            device=self._device,
         )
         current_goals_pos[:, :2] = self._target_positions[self._ALL_INDICES, self._target_index]
         passed_goals_pos = torch.zeros((passed_pos_goals.shape[0], 3), device=self._device)
@@ -631,7 +653,8 @@ class GoThroughPosesTask(TaskCore):
 
         # Assign the orientations to the visual markers (They need to be dynamically allocated)
         current_goals_quat = torch.zeros(
-            (self._target_heading[self._ALL_INDICES, self._target_index].shape[0], 4), device=self._device
+            (self._target_heading[self._ALL_INDICES, self._target_index].shape[0], 4),
+            device=self._device,
         )
         current_goals_quat[:, 0] = torch.cos(self._target_heading[self._ALL_INDICES, self._target_index] * 0.5)
         current_goals_quat[:, 3] = torch.sin(self._target_heading[self._ALL_INDICES, self._target_index] * 0.5)
@@ -660,4 +683,4 @@ class GoThroughPosesTask(TaskCore):
             self.current_goals_visualizer.visualize(current_goals_pos, orientations=current_goals_quat)
 
         # Update the robot visualization. TODO Ideally we should lift the diamond a bit.
-        self.robot_pos_visualizer.visualize(self.robot.data.root_pos_w, self.robot.data.root_quat_w)
+        self.robot_pos_visualizer.visualize(self._robot.root_pos_w, self._robot.root_quat_w)
