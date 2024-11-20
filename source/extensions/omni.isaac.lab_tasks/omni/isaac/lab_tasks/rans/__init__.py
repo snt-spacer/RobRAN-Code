@@ -8,9 +8,10 @@ from .robots_cfg import (
     FloatingPlatformRobotCfg,
     LeatherbackRobotCfg,
     RobotCoreCfg,
+    JackalRobotCfg
 )  # noqa: F401, F403
 
-from .robots import FloatingPlatformRobot, LeatherbackRobot, RobotCore
+from .robots import FloatingPlatformRobot, LeatherbackRobot, RobotCore, JackalRobot
 
 from .tasks_cfg import (  # noqa: F401, F403
     GoThroughPosesCfg,
