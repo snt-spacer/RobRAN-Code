@@ -7,15 +7,15 @@ import torch
 
 from omni.isaac.lab.assets import Articulation, ArticulationData
 
-from omni.isaac.lab_tasks.rans import JackalRobotCfg
+from omni.isaac.lab_tasks.rans import JetbotRobotCfg
 
 from .robot_core import RobotCore
 
 
-class JackalRobot(RobotCore):
+class JetbotRobot(RobotCore):
     def __init__(
         self,
-        robot_cfg: JackalRobotCfg,
+        robot_cfg: JetbotRobotCfg,
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -107,7 +107,7 @@ class JackalRobot(RobotCore):
     def process_actions(self, actions: torch.Tensor):
         self._previous_actions = self._actions.clone()
         self._actions = actions.clone()
-        self._wheel_action = actions[:, 0].repeat_interleave(4).reshape((-1, 4)) * self._robot_cfg.wheel_scale
+        self._wheel_action = actions * self._robot_cfg.wheel_scale
 
         # Log data
         self._logs["state"]["throttle"] = self._wheel_action[:, 0]

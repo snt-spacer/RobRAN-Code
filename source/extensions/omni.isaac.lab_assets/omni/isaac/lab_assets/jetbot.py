@@ -4,9 +4,9 @@ from omni.isaac.lab.assets import ArticulationCfg
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
 
-JACKAL_CFG = ArticulationCfg(
+JETBOT_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Clearpath/Jackal/jackal.usd",
+        usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Jetbot/jetbot.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             rigid_body_enabled=True,
             max_linear_velocity=1000.0,
@@ -24,19 +24,17 @@ JACKAL_CFG = ArticulationCfg(
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.2),
         joint_pos={
-            "front_left_wheel_joint": 0.0,
-            "front_right_wheel_joint": 0.0,
-            "rear_left_wheel_joint": 0.0,
-            "rear_right_wheel_joint": 0.0,
+            "left_wheel_joint": 0.0,
+            "right_wheel_joint": 0.0,
         },
     ),
     actuators={
         "wheel_actuator": ImplicitActuatorCfg(
-            joint_names_expr=["*_wheel_joint"],
-            effort_limit=400.0,
+            joint_names_expr=[".*_wheel_joint"],
+            effort_limit=40000.0,
             velocity_limit=100.0,
             stiffness=0.0,
-            damping=10.0,
+            damping=100000.0,
         ),
     },
 

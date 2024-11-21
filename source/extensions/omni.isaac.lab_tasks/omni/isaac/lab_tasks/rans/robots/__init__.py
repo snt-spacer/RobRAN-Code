@@ -6,4 +6,4 @@
 from .floating_platform import FloatingPlatformRobot
 from .leatherback import LeatherbackRobot
 from .robot_core import RobotCore
-from .jackal import JackalRobot
+from .jetbot import JetbotRobot
