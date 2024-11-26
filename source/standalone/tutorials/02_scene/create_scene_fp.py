@@ -67,11 +67,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     """Runs the simulation loop."""
     # Extract scene entities
     # note: we only do this here for readability.
-<<<<<<< HEAD
-    robot: Articulation = scene["cartpole"]
-=======
     robot: Articulation = scene["floating_platform"]
->>>>>>> 298f15873aaa02f5306cbc3a963eec554f36dd44
     # Define simulation stepping
     sim_dt = sim.get_physics_dt()
     count = 0
