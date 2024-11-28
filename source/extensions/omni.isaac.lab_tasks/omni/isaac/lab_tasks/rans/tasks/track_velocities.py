@@ -68,15 +68,32 @@ class TrackVelocitiesTask(TaskCore):
             device=self._device,
             requires_grad=False,
         )
-        self._logs["state"]["absolute_linear_velocity"] = torch_zeros()
-        self._logs["state"]["absolute_lateral_velocity"] = torch_zeros()
-        self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
-        self._logs["state"]["linear_velocity_distance"] = torch_zeros()
-        self._logs["state"]["lateral_velocity_distance"] = torch_zeros()
-        self._logs["state"]["angular_velocity_distance"] = torch_zeros()
-        self._logs["reward"]["linear_velocity"] = torch_zeros()
-        self._logs["reward"]["lateral_velocity"] = torch_zeros()
-        self._logs["reward"]["angular_velocity"] = torch_zeros()
+        task_state_keys = [
+            "AVG/absolute_linear_velocity",
+            "AVG/absolute_lateral_velocity",
+            "AVG/absolute_angular_velocity",
+            "EMA/linear_velocity_distance",
+            "EMA/lateral_velocity_distance",
+            "EMA/angular_velocity_distance",
+        ]
+
+        task_reward_keys = ["EMA/linear_velocity", "EMA/lateral_velocity", "EMA/angular_velocity"]
+
+        for key in task_state_keys:
+            self._step_logs["task_state"][key] = torch_zeros()
+
+        for key in task_reward_keys:
+            self._step_logs["task_reward"][key] = torch_zeros()
+
+        self._average_logs["task_state"]["AVG/absolute_linear_velocity"] = True
+        self._average_logs["task_state"]["AVG/absolute_lateral_velocity"] = True
+        self._average_logs["task_state"]["AVG/absolute_angular_velocity"] = True
+        self._average_logs["task_state"]["EMA/linear_velocity_distance"] = False
+        self._average_logs["task_state"]["EMA/lateral_velocity_distance"] = False
+        self._average_logs["task_state"]["EMA/angular_velocity_distance"] = False
+        self._average_logs["task_reward"]["EMA/linear_velocity"] = False
+        self._average_logs["task_reward"]["EMA/lateral_velocity"] = False
+        self._average_logs["task_reward"]["EMA/angular_velocity"] = False
 
     def initialiaze_buffers(self, env_ids: torch.Tensor | None = None) -> None:
         """
@@ -140,9 +157,9 @@ class TrackVelocitiesTask(TaskCore):
         self._task_data[:, 5] = self._robot.root_ang_vel_w[self._env_ids, -1]
 
         # Update logs
-        self._logs["state"]["absolute_linear_velocity"] += torch.abs(self._robot.root_lin_vel_b[:, 0])
-        self._logs["state"]["absolute_lateral_velocity"] += torch.abs(self._robot.root_lin_vel_b[:, 1])
-        self._logs["state"]["absolute_angular_velocity"] += torch.abs(self._robot.root_ang_vel_w[:, 2])
+        self._step_logs["task_state"]["AVG/absolute_linear_velocity"] += torch.abs(self._robot.root_lin_vel_b[:, 0])
+        self._step_logs["task_state"]["AVG/absolute_lateral_velocity"] += torch.abs(self._robot.root_lin_vel_b[:, 1])
+        self._step_logs["task_state"]["AVG/absolute_angular_velocity"] += torch.abs(self._robot.root_ang_vel_w[:, 2])
 
         # Concatenate the task observations with the robot observations
         return torch.concat((self._task_data, self._robot.get_observations()), dim=-1)
@@ -162,17 +179,17 @@ class TrackVelocitiesTask(TaskCore):
         angular_velocity_distance = torch.abs(self._angular_velocity_target - self._robot.root_ang_vel_w[:, 2])
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
-        self._logs["state"]["linear_velocity_distance"] = (
+        self._step_logs["task_state"]["EMA/linear_velocity_distance"] = (
             linear_velocity_distance * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["linear_velocity_distance"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_state"]["EMA/linear_velocity_distance"] * self._task_cfg.ema_coeff
         )
-        self._logs["state"]["lateral_velocity_distance"] = (
+        self._step_logs["task_state"]["EMA/lateral_velocity_distance"] = (
             lateral_velocity_distance * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["lateral_velocity_distance"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_state"]["EMA/lateral_velocity_distance"] * self._task_cfg.ema_coeff
         )
-        self._logs["state"]["angular_velocity_distance"] = (
+        self._step_logs["task_state"]["EMA/angular_velocity_distance"] = (
             angular_velocity_distance * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["angular_velocity_distance"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_state"]["EMA/angular_velocity_distance"] * self._task_cfg.ema_coeff
         )
 
         # linear velocity reward
@@ -206,17 +223,17 @@ class TrackVelocitiesTask(TaskCore):
         self._goal_reached += goal_is_reached
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
-        self._logs["reward"]["linear_velocity"] = (
+        self._step_logs["task_reward"]["EMA/linear_velocity"] = (
             linear_velocity_rew * (1 - self._task_cfg.ema_coeff)
-            + self._logs["reward"]["linear_velocity"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_reward"]["EMA/linear_velocity"] * self._task_cfg.ema_coeff
         )
-        self._logs["reward"]["lateral_velocity"] = (
+        self._step_logs["task_reward"]["EMA/lateral_velocity"] = (
             lateral_velocity_rew * (1 - self._task_cfg.ema_coeff)
-            + self._logs["reward"]["lateral_velocity"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_reward"]["EMA/lateral_velocity"] * self._task_cfg.ema_coeff
         )
-        self._logs["reward"]["angular_velocity"] = (
+        self._step_logs["task_reward"]["EMA/angular_velocity"] = (
             angular_velocity_rew * (1 - self._task_cfg.ema_coeff)
-            + self._logs["reward"]["angular_velocity"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_reward"]["EMA/angular_velocity"] * self._task_cfg.ema_coeff
         )
 
         # Return the reward by combining the different components and adding the robot rewards

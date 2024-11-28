@@ -44,7 +44,6 @@ class TaskCore:
         self._robot: RobotCore = MISSING
 
         # Logs
-        self._logs = {}
         self.create_logs()
 
     @property
@@ -57,11 +56,29 @@ class TaskCore:
 
     @property
     def logs(self) -> dict:
-        return self._logs
+        return self._episode_logs
 
     def create_logs(self) -> None:
-        self._logs["state"] = {}
-        self._logs["reward"] = {}
+        """
+        Initializes dictionaries for logging.
+
+        - _step_logs: Logs data on a per-step basis.
+        - _episode_logs: Logs data at the end of each episode.
+        - _average_logs: Holds boolean values to indicate whether certain episode-level logs
+        should be averaged.
+        """
+        self._step_logs = {}
+        self._episode_logs = {}
+        self._average_logs = {}
+
+        self._step_logs["task_state"] = {}
+        self._step_logs["task_reward"] = {}
+
+        self._episode_logs["task_state"] = {}
+        self._episode_logs["task_reward"] = {}
+
+        self._average_logs["task_state"] = {}
+        self._average_logs["task_reward"] = {}
 
     def initialize_buffers(self, env_ids: torch.Tensor | None = None) -> None:
         """
@@ -111,9 +128,27 @@ class TaskCore:
     def get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError
 
-    def reset_logs(self, env_ids) -> None:
-        for key in self._logs:
-            self._logs[key][env_ids] = 0
+    def reset_logs(self, env_ids, episode_length_buf) -> None:
+        for rew_state_key in self._step_logs:
+            for key in self._step_logs[rew_state_key]:
+                if self._average_logs[rew_state_key][key]:
+                    # Avoid division by zero
+                    episode_length = episode_length_buf[env_ids] + (episode_length_buf[env_ids] == 0) * 1e-7
+                    self._episode_logs[rew_state_key][key][env_ids] = torch.div(
+                        self._step_logs[rew_state_key][key][env_ids], episode_length
+                    )
+                else:
+                    self._episode_logs[rew_state_key][key][env_ids] = self._step_logs[rew_state_key][key][env_ids]
+
+                self._step_logs[rew_state_key][key][env_ids] = 0
+
+    def compute_logs(self) -> dict:
+        extras = dict()
+        for rew_state_key in self._episode_logs.keys():
+            for key in self._episode_logs[rew_state_key]:
+                extras[rew_state_key + "/" + key] = self._episode_logs[rew_state_key][key].mean().item()
+
+        return extras
 
     def reset(
         self,
@@ -153,9 +188,6 @@ class TaskCore:
 
         # Resets the goal reached flag
         self._goal_reached[env_ids] = 0
-
-        # Resets the logs
-        self.reset_logs(env_ids)
 
     def set_goals(self, env_ids: torch.Tensor) -> None:
         raise NotImplementedError

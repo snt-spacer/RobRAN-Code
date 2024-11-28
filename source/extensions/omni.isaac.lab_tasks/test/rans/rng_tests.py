@@ -1,10 +1,16 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 from omni.isaac.lab.app import AppLauncher, run_tests
 
 # launch omniverse app
 config = {"headless": True}
 simulation_app = AppLauncher(config).app
-import unittest
 import torch
+import unittest
+
 from omni.isaac.lab_tasks.rans.utils import PerEnvSeededRNG
 
 

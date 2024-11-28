@@ -34,6 +34,7 @@ from .cartpole import *
 from .floating_platform import *
 from .franka import *
 from .humanoid import *
+from .jetbot import *
 from .kinova import *
 from .leatherback import *
 from .leatherback_full import *
@@ -44,7 +45,3 @@ from .sawyer import *
 from .shadow_hand import *
 from .unitree import *
 from .universal_robots import *
-from .leatherback import *
-from .leatherback_full import *
-from .floating_platform import *
-from .jetbot import *

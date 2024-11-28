@@ -100,11 +100,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             # if this is not done, then the robots will be spawned at the (0, 0, 0) of the simulation world
             root_state = robot.data.default_root_state.clone()
             root_state[:, :3] += scene.env_origins
-<<<<<<< HEAD
-            root_state[:, 2] = 2.0
-=======
             root_state[:, 2] = 1.0
->>>>>>> 298f15873aaa02f5306cbc3a963eec554f36dd44
             robot.write_root_state_to_sim(root_state)
             # set joint positions with some noise
             joint_pos, joint_vel = (
@@ -129,7 +125,6 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         robot.set_external_force_and_torque(thrusts, torques, body_ids=body_id, env_ids=None)
         # robot.set_external_force_and_torque(torch.tensor([[0,0,0]]), torch.tensor([[0,0,0]]), body_ids=[0], env_ids=None)
 
->>>>>>> 298f15873aaa02f5306cbc3a963eec554f36dd44
         # robot.set_joint_effort_target(efforts)
         # -- write data to sim
         # robot.set_external_force_and_torque()

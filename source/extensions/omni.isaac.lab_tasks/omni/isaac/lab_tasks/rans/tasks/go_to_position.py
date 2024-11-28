@@ -77,14 +77,32 @@ class GoToPositionTask(TaskCore):
             device=self._device,
             requires_grad=False,
         )
-        self._logs["state"]["normed_linear_velocity"] = torch_zeros()
-        self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
-        self._logs["state"]["position_distance"] = torch_zeros()
-        self._logs["state"]["boundary_distance"] = torch_zeros()
-        self._logs["reward"]["position"] = torch_zeros()
-        self._logs["reward"]["linear_velocity"] = torch_zeros()
-        self._logs["reward"]["angular_velocity"] = torch_zeros()
-        self._logs["reward"]["boundary"] = torch_zeros()
+
+        state_keys = [
+            "AVG/normed_linear_velocity",
+            "AVG/absolute_angular_velocity",
+            "EMA/position_distance",
+            "EMA/boundary_distance",
+        ]
+        reward_keys = ["AVG/position", "AVG/linear_velocity", "AVG/angular_velocity", "AVG/boundary"]
+
+        # Populate dictionaries with torch_zeros()
+        for key in state_keys:
+            self._step_logs["task_state"][key] = torch_zeros()
+            self._episode_logs["task_state"][key] = torch_zeros()
+
+        for key in reward_keys:
+            self._step_logs["task_reward"][key] = torch_zeros()
+            self._episode_logs["task_reward"][key] = torch_zeros()
+
+        self._average_logs["task_state"]["AVG/normed_linear_velocity"] = True
+        self._average_logs["task_state"]["AVG/absolute_angular_velocity"] = True
+        self._average_logs["task_state"]["EMA/position_distance"] = False
+        self._average_logs["task_state"]["EMA/boundary_distance"] = False
+        self._average_logs["task_reward"]["AVG/position"] = True
+        self._average_logs["task_reward"]["AVG/linear_velocity"] = True
+        self._average_logs["task_reward"]["AVG/angular_velocity"] = True
+        self._average_logs["task_reward"]["AVG/boundary"] = True
 
     def get_observations(self) -> torch.Tensor:
         """
@@ -160,22 +178,16 @@ class GoToPositionTask(TaskCore):
         # print(f"Boundary distance: {boundary_dist[:3]}")
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
-        self._logs["state"]["position_distance"] = (
+        self._step_logs["task_state"]["EMA/position_distance"] = (
             self._position_dist * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["position_distance"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_state"]["EMA/position_distance"] * self._task_cfg.ema_coeff
         )
-        self._logs["state"]["boundary_distance"] = (
+        self._step_logs["task_state"]["EMA/boundary_distance"] = (
             boundary_dist * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["boundary_distance"] * self._task_cfg.ema_coeff
+            + self._step_logs["task_state"]["EMA/boundary_distance"] * self._task_cfg.ema_coeff
         )
-        self._logs["state"]["normed_linear_velocity"] = (
-            linear_velocity * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["normed_linear_velocity"] * self._task_cfg.ema_coeff
-        )
-        self._logs["state"]["absolute_angular_velocity"] = (
-            angular_velocity * (1 - self._task_cfg.ema_coeff)
-            + self._logs["state"]["absolute_angular_velocity"] * self._task_cfg.ema_coeff
-        )
+        self._step_logs["task_state"]["AVG/normed_linear_velocity"] += linear_velocity
+        self._step_logs["task_state"]["AVG/absolute_angular_velocity"] += angular_velocity
 
         # position reward
         position_rew = torch.exp(-self._position_dist / self._task_cfg.position_exponential_reward_coeff)
@@ -201,20 +213,10 @@ class GoToPositionTask(TaskCore):
         self._goal_reached += goal_is_reached  # if it is add 1
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
-        self._logs["reward"]["position"] = (
-            position_rew * (1 - self._task_cfg.ema_coeff) + self._logs["reward"]["position"] * self._task_cfg.ema_coeff
-        )
-        self._logs["reward"]["linear_velocity"] = (
-            linear_velocity_rew * (1 - self._task_cfg.ema_coeff)
-            + self._logs["reward"]["linear_velocity"] * self._task_cfg.ema_coeff
-        )
-        self._logs["reward"]["angular_velocity"] = (
-            angular_velocity_rew * (1 - self._task_cfg.ema_coeff)
-            + self._logs["reward"]["angular_velocity"] * self._task_cfg.ema_coeff
-        )
-        self._logs["reward"]["boundary"] = (
-            boundary_rew * (1 - self._task_cfg.ema_coeff) + self._logs["reward"]["boundary"] * self._task_cfg.ema_coeff
-        )
+        self._step_logs["task_reward"]["AVG/position"] += position_rew
+        self._step_logs["task_reward"]["AVG/linear_velocity"] += linear_velocity_rew
+        self._step_logs["task_reward"]["AVG/angular_velocity"] += angular_velocity_rew
+        self._step_logs["task_reward"]["AVG/boundary"] += boundary_rew
 
         # Return the reward by combining the different components and adding the robot rewards
         return (

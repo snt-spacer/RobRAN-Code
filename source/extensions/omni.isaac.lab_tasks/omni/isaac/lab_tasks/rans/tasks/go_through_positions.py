@@ -90,18 +90,38 @@ class GoThroughPositionsTask(TaskCore):
             device=self._device,
             requires_grad=False,
         )
-        self._logs["state"]["normed_linear_velocity"] = torch_zeros()
-        self._logs["state"]["absolute_angular_velocity"] = torch_zeros()
-        self._logs["state"]["position_distance"] = torch_zeros()
-        self._logs["state"]["boundary_distance"] = torch_zeros()
-        self._logs["reward"]["progress"] = torch_zeros()
-        self._logs["reward"]["heading"] = torch_zeros()
-        self._logs["reward"]["linear_velocity"] = torch_zeros()
-        self._logs["reward"]["angular_velocity"] = torch_zeros()
-        self._logs["reward"]["boundary"] = torch_zeros()
-        self._logs["reward"]["heading"] = torch_zeros()
-        self._logs["reward"]["progress"] = torch_zeros()
-        self._logs["reward"]["num_goals"] = torch_zeros()
+        task_state_keys = [
+            "AVG/normed_linear_velocity",
+            "AVG/absolute_angular_velocity",
+            "AVG/position_distance",
+            "AVG/boundary_distance",
+        ]
+
+        task_reward_keys = [
+            "AVG/linear_velocity",
+            "AVG/angular_velocity",
+            "AVG/boundary",
+            "AVG/heading",
+            "AVG/progress",
+            "SUM/num_goals",
+        ]
+
+        for key in task_state_keys:
+            self._step_logs["task_state"][key] = torch_zeros()
+
+        for key in task_reward_keys:
+            self._step_logs["task_reward"][key] = torch_zeros()
+
+        self._average_logs["task_state"]["AVG/normed_linear_velocity"] = True
+        self._average_logs["task_state"]["AVG/absolute_angular_velocity"] = True
+        self._average_logs["task_state"]["AVG/position_distance"] = True
+        self._average_logs["task_state"]["AVG/boundary_distance"] = True
+        self._average_logs["task_reward"]["AVG/linear_velocity"] = True
+        self._average_logs["task_reward"]["AVG/angular_velocity"] = True
+        self._average_logs["task_reward"]["AVG/boundary"] = True
+        self._average_logs["task_reward"]["AVG/heading"] = True
+        self._average_logs["task_reward"]["AVG/progress"] = True
+        self._average_logs["task_reward"]["SUM/num_goals"] = False
 
     def get_observations(self) -> torch.Tensor:
         """
@@ -210,10 +230,10 @@ class GoThroughPositionsTask(TaskCore):
         progress_rew = self._previous_position_dist - self._position_dist
 
         # Update logs
-        self._logs["state"]["position_distance"] += self._position_dist
-        self._logs["state"]["boundary_distance"] += boundary_dist
-        self._logs["state"]["normed_linear_velocity"] += linear_velocity
-        self._logs["state"]["absolute_angular_velocity"] += angular_velocity
+        self._step_logs["task_state"]["AVG/position_distance"] += self._position_dist
+        self._step_logs["task_state"]["AVG/boundary_distance"] += boundary_dist
+        self._step_logs["task_state"]["AVG/normed_linear_velocity"] += linear_velocity
+        self._step_logs["task_state"]["AVG/absolute_angular_velocity"] += angular_velocity
 
         # heading reward (encourages the robot to face the target)
         heading_rew = torch.exp(-heading_dist / self._task_cfg.position_heading_exponential_reward_coeff)
@@ -250,12 +270,12 @@ class GoThroughPositionsTask(TaskCore):
         self._previous_position_dist[reached_ids] = 0
 
         # Update logs
-        self._logs["reward"]["linear_velocity"] += linear_velocity_rew
-        self._logs["reward"]["angular_velocity"] += angular_velocity_rew
-        self._logs["reward"]["boundary"] += boundary_rew
-        self._logs["reward"]["heading"] += heading_rew
-        self._logs["reward"]["progress"] += progress_rew
-        self._logs["reward"]["num_goals"] += goal_reached
+        self._step_logs["task_reward"]["AVG/linear_velocity"] += linear_velocity_rew
+        self._step_logs["task_reward"]["AVG/angular_velocity"] += angular_velocity_rew
+        self._step_logs["task_reward"]["AVG/boundary"] += boundary_rew
+        self._step_logs["task_reward"]["AVG/heading"] += heading_rew
+        self._step_logs["task_reward"]["AVG/progress"] += progress_rew
+        self._step_logs["task_reward"]["SUM/num_goals"] += goal_reached
 
         # Return the reward by combining the different components and adding the robot rewards
         return (

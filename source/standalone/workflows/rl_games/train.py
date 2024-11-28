@@ -106,7 +106,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.seed = agent_cfg["params"]["seed"]
 
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"])
+    log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
     # specify directory for logging runs
@@ -161,6 +161,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = Runner(IsaacAlgoObserver())
     runner.load(agent_cfg)
 
+    import wandb
+
+    date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    experiment_name = f"{args_cli.task.split('-')[2]}-{date_str}"
+
+    wandb.init(
+        project=agent_cfg["params"]["wandb"]["project"],
+        group=agent_cfg["params"]["wandb"]["group"],
+        entity=agent_cfg["params"]["wandb"]["entity"],
+        config=agent_cfg,
+        sync_tensorboard=True,
+        name=experiment_name,
+        resume="allow",
+    )
+
     # reset the agent and env
     runner.reset()
     # train the agent
@@ -171,6 +186,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # close the simulator
     env.close()
+
+    wandb.finish()
 
 
 if __name__ == "__main__":

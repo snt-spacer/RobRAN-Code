@@ -1,8 +1,14 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import numpy as np
-import warp as wp
 import torch
 
-from .rng_kernels import set_state, set_states, uniform, integer, rand_sign_fn, normal, poisson, quaternion
+import warp as wp
+
+from .rng_kernels import integer, normal, poisson, quaternion, rand_sign_fn, set_state, set_states, uniform
 
 
 class PerEnvSeededRNG:
@@ -125,9 +131,7 @@ class PerEnvSeededRNG:
                 None,
             )
 
-    def sample_uniform_warp(
-        self, low: float, high: float, shape: tuple | int, ids: wp.array | None = None
-    ) -> wp.array:
+    def sample_uniform_warp(self, low: float, high: float, shape: tuple | int, ids: wp.array | None = None) -> wp.array:
         """Sample from a uniform distribution. Warp implementation.
         Args:
             low: The lower bound of the distribution.

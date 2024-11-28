@@ -118,6 +118,16 @@ class JetbotGoToPositionEnv(DirectRLEnv):
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if (env_ids is None) or (len(env_ids) == self.num_envs):
             env_ids = self.robot._ALL_INDICES
+
+        # Logging
+        self.task_api.reset_logs(env_ids, self.episode_length_buf)
+        task_extras = self.task_api.compute_logs()
+        self.robot_api.reset_logs(env_ids, self.episode_length_buf)
+        robot_extras = self.robot_api.compute_logs()
+        self.extras["log"] = dict()
+        self.extras["log"].update(task_extras)
+        self.extras["log"].update(robot_extras)
+
         super()._reset_idx(env_ids)
 
         self.task_api.reset(env_ids)

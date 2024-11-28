@@ -1,8 +1,13 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import gymnasium as gym
 
 from . import agents
-from .jetbot_go_to_position import JetbotGoToPositionEnv, JetbotGoToPositionEnvCfg
 from .jetbot_go_to_pose import JetbotGoToPoseEnv, JetbotGoToPoseEnvCfg
+from .jetbot_go_to_position import JetbotGoToPositionEnv, JetbotGoToPositionEnvCfg
 
 ##
 # Register Gym environments.

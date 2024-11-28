@@ -39,7 +39,6 @@ class RobotCore:
         self._robot: Articulation = MISSING
 
         # Logs
-        self._logs = {}
         self.create_logs()
 
     @property
@@ -67,12 +66,22 @@ class RobotCore:
     @property
     def logs(self) -> dict:
         """Returns the logs of the robot."""
-        raise self._logs
+        raise self._episode_logs
 
     def create_logs(self):
         """Creates the logs for the robot."""
-        self._logs["state"] = {}
-        self._logs["reward"] = {}
+        self._step_logs = {}
+        self._episode_logs = {}
+        self._average_logs = {}
+
+        self._step_logs["robot_state"] = {}
+        self._step_logs["robot_reward"] = {}
+
+        self._episode_logs["robot_state"] = {}
+        self._episode_logs["robot_reward"] = {}
+
+        self._average_logs["robot_state"] = {}
+        self._average_logs["robot_reward"] = {}
 
     def initialize_buffers(self, env_ids: torch.Tensor | None = None) -> None:
         """
@@ -134,11 +143,29 @@ class RobotCore:
         else:
             self._seeds[env_ids] = env_seeds
 
-        self.reset_logs(env_ids)
         self.set_initial_conditions(env_ids)
 
-    def reset_logs(self, env_ids: torch.Tensor) -> None:
-        raise NotImplementedError
+    def reset_logs(self, env_ids, episode_length_buf) -> None:
+        for rew_state_key in self._step_logs:
+            for key in self._step_logs[rew_state_key]:
+                if self._average_logs[rew_state_key][key]:
+                    # Avoid division by zero
+                    episode_length = episode_length_buf[env_ids] + (episode_length_buf[env_ids] == 0) * 1e-7
+                    self._episode_logs[rew_state_key][key][env_ids] = torch.div(
+                        self._step_logs[rew_state_key][key][env_ids], episode_length
+                    )
+                else:
+                    self._episode_logs[rew_state_key][key][env_ids] = self._step_logs[rew_state_key][key][env_ids]
+
+                self._step_logs[rew_state_key][key][env_ids] = 0
+
+    def compute_logs(self) -> dict:
+        extras = dict()
+        for rew_state_key in self._episode_logs.keys():
+            for key in self._episode_logs[rew_state_key]:
+                extras[rew_state_key + "/" + key] = self._episode_logs[rew_state_key][key].mean().item()
+
+        return extras
 
     def set_pose(
         self,

@@ -4,6 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from .floating_platform import FloatingPlatformRobot
+from .jetbot import JetbotRobot
 from .leatherback import LeatherbackRobot
 from .robot_core import RobotCore
-from .jetbot import JetbotRobot
