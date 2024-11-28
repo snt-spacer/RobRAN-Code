@@ -22,8 +22,6 @@ from omni.isaac.core.simulation_context import SimulationContext
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.markers import VisualizationMarkers
 from omni.isaac.lab.markers.config import GATE_2D_CFG, GATE_3D_CFG, GATE_PYLONS_CFG
-from omni.isaac.lab.utils.math import random_orientation
-from omni.isaac.lab.utils.timer import Timer
 
 
 class TestRacingMarkers(unittest.TestCase):
@@ -64,8 +62,6 @@ class TestRacingMarkers(unittest.TestCase):
 
         # play the simulation
         self.sim.reset()
-        # create a buffer
-        num_frames = 0
         # run for a couple steps to check that everything is working
         for count in range(5):
             self.sim.step()
@@ -99,8 +95,6 @@ class TestRacingMarkers(unittest.TestCase):
 
         # play the simulation
         self.sim.reset()
-        # create a buffer
-        num_frames = 0
         # run for a couple steps to check that everything is working
         for count in range(5):
             self.sim.step()
@@ -133,8 +127,6 @@ class TestRacingMarkers(unittest.TestCase):
 
         # play the simulation
         self.sim.reset()
-        # create a buffer
-        num_frames = 0
         # run for a couple steps to check that everything is working
         for count in range(5):
             self.sim.step()

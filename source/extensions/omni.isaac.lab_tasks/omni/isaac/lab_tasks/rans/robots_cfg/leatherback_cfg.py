@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
-from dataclasses import MISSING
 
 from omni.isaac.lab.assets import ArticulationCfg
 from omni.isaac.lab.utils import configclass

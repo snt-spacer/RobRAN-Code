@@ -5,7 +5,7 @@
 
 import torch
 
-from omni.isaac.lab.assets import Articulation, ArticulationData
+from omni.isaac.lab.assets import Articulation
 
 from omni.isaac.lab_tasks.rans import JetbotRobotCfg
 
@@ -44,12 +44,14 @@ class JetbotRobot(RobotCore):
 
     def create_logs(self):
         super().create_logs()
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs,
-            dtype=torch.float32,
-            device=self._device,
-            requires_grad=False,
-        )
+
+        def torch_zeros():
+            return torch.zeros(
+                self._num_envs,
+                dtype=torch.float32,
+                device=self._device,
+                requires_grad=False,
+            )
 
         state_keys = ["AVG/wheel_action", "AVG/action_rate", "AVG/joint_acceleration"]
         reward_keys = [

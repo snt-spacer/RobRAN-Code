@@ -31,8 +31,6 @@ from omni.isaac.lab.markers.config import (
     POSE_MARKER_3D_CFG,
     POSITION_MARKER_3D_CFG,
 )
-from omni.isaac.lab.utils.math import random_orientation
-from omni.isaac.lab.utils.timer import Timer
 
 
 class TestNavigationMarkers(unittest.TestCase):
@@ -88,8 +86,6 @@ class TestNavigationMarkers(unittest.TestCase):
 
         # play the simulation
         self.sim.reset()
-        # create a buffer
-        num_frames = 0
         # run for a couple steps to check that everything is working
         for count in range(5):
             self.sim.step()
@@ -161,8 +157,6 @@ class TestNavigationMarkers(unittest.TestCase):
 
         # play the simulation
         self.sim.reset()
-        # create a buffer
-        num_frames = 0
         # run for a couple steps to check that everything is working
         for count in range(5):
             self.sim.step()
@@ -226,8 +220,6 @@ class TestNavigationMarkers(unittest.TestCase):
 
         # play the simulation
         self.sim.reset()
-        # create a buffer
-        num_frames = 0
         # run for a couple steps to check that everything is working
         for count in range(5):
             self.sim.step()

@@ -9,7 +9,6 @@
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.actuators import ImplicitActuatorCfg
 from omni.isaac.lab.assets import ArticulationCfg
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
 ##
 # Configuration
@@ -18,7 +17,7 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 LEATHERBACK_FULL_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         # usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Leatherback/leatherback.usd",
-        usd_path=f"/home/antoine/Documents/IsaacLab/leatherback.usd",
+        usd_path="/home/antoine/Documents/IsaacLab/leatherback.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             rigid_body_enabled=True,
             max_linear_velocity=1000.0,

@@ -8,7 +8,7 @@ import torch
 
 import warp as wp
 
-from .rng_kernels import integer, normal, poisson, quaternion, rand_sign_fn, set_state, set_states, uniform
+from .rng_kernels import integer, normal, poisson, quaternion, rand_sign_fn, set_states, uniform
 
 
 class PerEnvSeededRNG:
@@ -155,7 +155,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.from_torch(ids, dtype=wp.int32)
         output = self.sample_uniform_warp(low, high, shape, ids)
         return wp.to_torch(output)
@@ -171,7 +171,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.array(ids, dtype=wp.int32, device=self._device)
         output = self.sample_uniform_warp(low, high, shape, ids)
         return output.numpy()
@@ -196,7 +196,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.from_torch(ids, dtype=wp.int32)
         assert dtype in ["int", "float"], "The data type must be either 'int' or 'float'."
         output = self.sample_sign_warp(dtype, shape, ids)
@@ -210,7 +210,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.array(ids, dtype=wp.int32, device=self._device)
         assert dtype in ["int", "float"], "The data type must be either 'int' or 'float'."
         output = self.sample_sign_warp(dtype, shape, ids)
@@ -241,7 +241,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             torch.Tensor: The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.from_torch(ids, dtype=wp.int32)
         output = self.sample_integer_warp(low, high, shape, ids)
         return wp.to_torch(output)
@@ -257,7 +257,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             np.ndarray: The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.array(ids, dtype=wp.int32, device=self._device)
         output = self.sample_integer_warp(low, high, shape, ids)
         return output.numpy()
@@ -286,7 +286,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             torch.Tensor: The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.from_torch(ids, dtype=wp.int32)
         output = self.sample_normal_warp(mean, std, shape, ids)
         return wp.to_torch(output)
@@ -302,7 +302,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             np.ndarray: The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.array(ids, dtype=wp.int32, device=self._device)
         output = self.sample_normal_warp(mean, std, shape, ids)
         return output.numpy()
@@ -327,7 +327,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.from_torch(ids, dtype=wp.int32)
         output = self.sample_poisson_warp(lam, shape, ids)
         return wp.to_torch(output)
@@ -340,7 +340,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.array(ids, dtype=wp.int32, device=self._device)
         output = self.sample_poisson_warp(lam, shape, ids)
         return output.numpy()
@@ -363,7 +363,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             torch.Tensor: The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.from_torch(ids, dtype=wp.int32)
         output = self.sample_quaternion_warp(shape, ids)
         return wp.to_torch(output)
@@ -375,7 +375,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             np.ndarray: The sampled values."""
-        if not ids is None:
+        if ids is None:
             ids = wp.array(ids, dtype=wp.int32, device=self._device)
         output = self.sample_quaternion_warp(shape, ids)
         return output.numpy()

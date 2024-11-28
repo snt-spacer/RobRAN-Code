@@ -107,7 +107,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
                 robot.data.default_joint_pos.clone(),
                 robot.data.default_joint_vel.clone(),
             )
-            bodies = robot.data.body_names
+            # bodies = robot.data.body_names
             # --print(bodies)
             joints = robot.data.joint_names
             print(joints)
@@ -177,7 +177,7 @@ def calculate_system_energy_and_momentum(robot, platform_mass, max_thrust, radiu
     """Calculate energy and momentum of the system."""
     # Extract current velocities
     linear_velocity = robot.data.body_state_w[0, 7, :3]  # Linear velocity
-    angular_velocity = robot.data.body_state_w[0, 10, :3]  # Angular velocity
+    # angular_velocity = robot.data.body_state_w[0, 10, :3]  # Angular velocity
 
     # Kinetic energy
     kinetic_energy = 0.5 * platform_mass * (linear_velocity.norm() ** 2)
@@ -340,10 +340,10 @@ def main():
     platform_mass = 5.0  # Mass of the platform (kg)
     max_thrust = 1.0  # Maximum thrust of the thrusters (N)
 
-    # test_thruster_directions(sim, robot, scene, body_id)
-    # calculate_system_energy_and_momentum(robot, platform_mass, max_thrust, radius)
-    # test_thruster_pairs(sim, robot, scene, body_id)
-    # test_simple(sim, robot, scene, body_id)
+    test_thruster_directions(sim, robot, scene, body_id)
+    calculate_system_energy_and_momentum(robot, platform_mass, max_thrust, radius)
+    test_thruster_pairs(sim, robot, scene, body_id)
+    test_simple(sim, robot, scene, body_id)
 
 
 if __name__ == "__main__":

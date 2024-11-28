@@ -58,7 +58,15 @@ class FloatingPlatformRobot(RobotCore):
 
     def create_logs(self):
         super().create_logs()
-        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False)
+
+        def torch_zeros():
+            return torch.zeros(
+                self._num_envs,
+                dtype=torch.float32,
+                device=self._device,
+                requires_grad=False,
+            )
+
         self._logs["state"]["thrusters"] = torch_zeros()
         self._logs["state"]["reaction_wheel"] = torch_zeros()
         self._logs["state"]["action_rate"] = torch_zeros()

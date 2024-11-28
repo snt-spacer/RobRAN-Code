@@ -8,7 +8,7 @@ import torch
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.markers import ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_random_sign, sample_uniform
+from omni.isaac.lab.utils.math import sample_random_sign
 
 from omni.isaac.lab_tasks.rans import TrackVelocitiesCfg
 
@@ -62,12 +62,14 @@ class TrackVelocitiesTask(TaskCore):
 
         super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs,
-            dtype=torch.float32,
-            device=self._device,
-            requires_grad=False,
-        )
+        def torch_zeros():
+            return torch.zeros(
+                self._num_envs,
+                dtype=torch.float32,
+                device=self._device,
+                requires_grad=False,
+            )
+
         task_state_keys = [
             "AVG/absolute_linear_velocity",
             "AVG/absolute_lateral_velocity",

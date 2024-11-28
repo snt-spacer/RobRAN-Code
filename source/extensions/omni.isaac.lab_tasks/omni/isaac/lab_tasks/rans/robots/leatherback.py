@@ -5,7 +5,7 @@
 
 import torch
 
-from omni.isaac.lab.assets import Articulation, ArticulationData
+from omni.isaac.lab.assets import Articulation
 
 from omni.isaac.lab_tasks.rans import LeatherbackRobotCfg
 
@@ -46,12 +46,15 @@ class LeatherbackRobot(RobotCore):
 
     def create_logs(self):
         super().create_logs()
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs,
-            dtype=torch.float32,
-            device=self._device,
-            requires_grad=False,
-        )
+
+        def torch_zeros():
+            return torch.zeros(
+                self._num_envs,
+                dtype=torch.float32,
+                device=self._device,
+                requires_grad=False,
+            )
+
         self._logs["state"]["throttle"] = torch_zeros()
         self._logs["state"]["steering"] = torch_zeros()
         self._logs["state"]["action_rate"] = torch_zeros()

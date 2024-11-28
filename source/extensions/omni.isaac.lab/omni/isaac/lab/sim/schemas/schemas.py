@@ -875,17 +875,12 @@ def createJoint(
     if joint_base_path is None:
         joint_base_path = to_path
     else:
-        joint_base_path = joint_base_path
         if not stage.GetPrimAtPath(joint_base_path):
             stage.DefinePrim(joint_base_path)
 
     base_prim = stage.GetPrimAtPath(joint_base_path)
     while base_prim != stage.GetPseudoRoot():
-        if base_prim.IsInPrototype():
-            base_prim = base_prim.GetParent()
-        elif base_prim.IsInstanceProxy():
-            base_prim = base_prim.GetParent()
-        elif base_prim.IsInstanceable():
+        if base_prim.IsInPrototype() or base_prim.IsInstanceProxy() or base_prim.IsInstanceable():
             base_prim = base_prim.GetParent()
         else:
             break

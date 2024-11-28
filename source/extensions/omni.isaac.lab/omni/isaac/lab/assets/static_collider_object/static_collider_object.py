@@ -62,7 +62,7 @@ class StaticColliderObject(AssetBase):
     @property
     def data(self) -> None:
         """Data instance for the asset."""
-        return None
+        return
 
     @property
     def num_instances(self) -> int:

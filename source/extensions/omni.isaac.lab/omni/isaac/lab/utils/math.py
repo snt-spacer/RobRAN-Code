@@ -551,7 +551,6 @@ def get_yaw_from_quat(quat: torch.Tensor) -> torch.Tensor:
     Returns:
         The yaw.
     """
-    shape = quat.shape
     quat_yaw = quat.clone().view(-1, 4)
     qw = quat_yaw[:, 0]
     qx = quat_yaw[:, 1]

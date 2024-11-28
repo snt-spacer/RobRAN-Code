@@ -4,15 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
-import numpy as np
 import torch
-from typing import Tuple
 
-import wandb
-
-from omni.isaac.lab.assets import Articulation, ArticulationData
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_gaussian, sample_random_sign, sample_uniform
+from omni.isaac.lab.utils.math import sample_random_sign
 
 from omni.isaac.lab_tasks.rans import RaceWayposesCfg
 from omni.isaac.lab_tasks.rans.utils import TrackGenerator
@@ -99,12 +94,14 @@ class RaceWayposesTask(TaskCore):
 
         super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs,
-            dtype=torch.float32,
-            device=self._device,
-            requires_grad=False,
-        )
+        def torch_zeros():
+            return torch.zeros(
+                self._num_envs,
+                dtype=torch.float32,
+                device=self._device,
+                requires_grad=False,
+            )
+
         task_state_keys = [
             "AVG/normed_linear_velocity",
             "AVG/absolute_angular_velocity",

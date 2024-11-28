@@ -8,7 +8,11 @@ import numpy as np
 import torch
 from scipy.special import binom
 
-bernstein = lambda n, k, t: binom(n, k) * t**k * (1.0 - t) ** (n - k)
+
+def bernstein(n, k, t):
+    return binom(n, k) * t**k * (1.0 - t) ** (n - k)
+
+
 torch.manual_seed(0)
 
 

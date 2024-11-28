@@ -13,7 +13,6 @@ import omni.isaac.core.utils.stage as stage_utils
 import omni.physx.scripts.utils as physx_utils
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.actuators import ImplicitActuatorCfg
 from omni.isaac.lab.assets import ArticulationCfg
 from omni.isaac.lab.sim import schemas, schemas_cfg
 from omni.isaac.lab.utils import configclass
@@ -45,7 +44,7 @@ class ModularFreeFlyer2DProps:
         assert self.mass > 0, "The mass must be larger than 0."
         assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
         assert self.refinement > 0, "The refinement level must be larger than 0."
-        assert type(self.enable_collision) == bool, "The enable_collision must be a bool."
+        assert isinstance(self.enable_collision, bool), "The enable_collision must be a bool."
         self.refinement = int(self.refinement)
 
 
@@ -64,7 +63,7 @@ def generate_freeflyer(root_path: str, robot_cfg: ModularFreeFlyer2DProps) -> No
 
     # Create the root of the articulation
     stage = stage_utils.get_current_stage()
-    root_prim = prim_utils.create_prim(root_path)
+    # root_prim = prim_utils.create_prim(root_path)
     body_path = root_path + "/body"
     joint_base_path = root_path + "/joints"
     schemas.define_articulation_root_properties(root_path, art_props)

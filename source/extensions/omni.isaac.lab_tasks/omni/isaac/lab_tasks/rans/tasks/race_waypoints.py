@@ -94,12 +94,14 @@ class RaceWaypointsTask(TaskCore):
 
         super().create_logs()
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs,
-            dtype=torch.float32,
-            device=self._device,
-            requires_grad=False,
-        )
+        def torch_zeros():
+            return torch.zeros(
+                self._num_envs,
+                dtype=torch.float32,
+                device=self._device,
+                requires_grad=False,
+            )
+
         task_state_keys = [
             "AVG/normed_linear_velocity",
             "AVG/absolute_angular_velocity",

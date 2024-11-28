@@ -9,12 +9,10 @@ from typing import TYPE_CHECKING
 
 import carb
 import omni.isaac.core.utils.prims as prim_utils
-import omni.isaac.core.utils.stage as stage_utils
-import omni.kit.commands
-from pxr import Gf, Sdf, Usd
+from pxr import Usd
 
-from omni.isaac.lab.sim import converters, schemas
-from omni.isaac.lab.sim.utils import bind_visual_material, clone, select_usd_variants
+from omni.isaac.lab.sim import schemas
+from omni.isaac.lab.sim.utils import clone
 
 if TYPE_CHECKING:
     from . import robots_from_code_cfg
@@ -94,7 +92,7 @@ def _spawn_from_code(
         FileNotFoundError: If the USD file does not exist at the given path.
     """
     # check file path exists
-    stage: Usd.Stage = stage_utils.get_current_stage()
+    # stage: Usd.Stage = stage_utils.get_current_stage()
 
     if not prim_utils.is_prim_path_valid(prim_path):
         # add prim as reference to stage

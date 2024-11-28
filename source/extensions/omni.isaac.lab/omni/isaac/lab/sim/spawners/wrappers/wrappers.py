@@ -193,9 +193,9 @@ def spawn_many_asset(
 
     # Check inputs:
     if translation is None:
-        raise RuntimeError(f"Translation is required for spawning multiple assets.")
+        raise RuntimeError("Translation is required for spawning multiple assets.")
     if orientation is None:
-        raise RuntimeError(f"Orientation is required for spawning multiple assets.")
+        raise RuntimeError("Orientation is required for spawning multiple assets.")
 
     # Check if the number of assets match the length of the list holding the number of instances.
     if len(cfg.num_assets) != len(cfg.assets_cfg):
