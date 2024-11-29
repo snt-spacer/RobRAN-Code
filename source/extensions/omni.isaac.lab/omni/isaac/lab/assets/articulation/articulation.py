@@ -13,16 +13,16 @@ from collections.abc import Sequence
 from prettytable import PrettyTable
 from typing import TYPE_CHECKING
 
-import carb
 import omni.isaac.core.utils.stage as stage_utils
+import omni.log
 import omni.physics.tensors.impl.api as physx
-from omni.isaac.core.utils.types import ArticulationActions
 from pxr import PhysxSchema, UsdPhysics
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
 import omni.isaac.lab.utils.string as string_utils
 from omni.isaac.lab.actuators import ActuatorBase, ActuatorBaseCfg, ImplicitActuator
+from omni.isaac.lab.utils.types import ArticulationActions
 
 from ..asset_base import AssetBase
 from .articulation_data import ArticulationData
@@ -540,9 +540,14 @@ class Articulation(AssetBase):
         # set into internal buffers
         self._data.joint_limits[env_ids, joint_ids] = limits
         # update default joint pos to stay within the new limits
-        if torch.any((self._data.default_joint_pos < limits[..., 0]) | (self._data.default_joint_pos > limits[..., 1])):
-            self._data.default_joint_pos = torch.clamp(self._data.default_joint_pos, limits[..., 0], limits[..., 1])
-            carb.log_warn(
+        if torch.any(
+            (self._data.default_joint_pos[env_ids, joint_ids] < limits[..., 0])
+            | (self._data.default_joint_pos[env_ids, joint_ids] > limits[..., 1])
+        ):
+            self._data.default_joint_pos[env_ids, joint_ids] = torch.clamp(
+                self._data.default_joint_pos[env_ids, joint_ids], limits[..., 0], limits[..., 1]
+            )
+            omni.log.warn(
                 "Some default joint positions are outside of the range of the new joint limits. Default joint positions"
                 " will be clamped to be within the new joint limits."
             )
@@ -925,13 +930,13 @@ class Articulation(AssetBase):
             raise RuntimeError(f"Failed to create articulation at: {self.cfg.prim_path}. Please check PhysX logs.")
 
         # log information about the articulation
-        carb.log_info(f"Articulation initialized at: {self.cfg.prim_path} with root '{root_prim_path_expr}'.")
-        carb.log_info(f"Is fixed root: {self.is_fixed_base}")
-        carb.log_info(f"Number of bodies: {self.num_bodies}")
-        carb.log_info(f"Body names: {self.body_names}")
-        carb.log_info(f"Number of joints: {self.num_joints}")
-        carb.log_info(f"Joint names: {self.joint_names}")
-        carb.log_info(f"Number of fixed tendons: {self.num_fixed_tendons}")
+        omni.log.info(f"Articulation initialized at: {self.cfg.prim_path} with root '{root_prim_path_expr}'.")
+        omni.log.info(f"Is fixed root: {self.is_fixed_base}")
+        omni.log.info(f"Number of bodies: {self.num_bodies}")
+        omni.log.info(f"Body names: {self.body_names}")
+        omni.log.info(f"Number of joints: {self.num_joints}")
+        omni.log.info(f"Joint names: {self.joint_names}")
+        omni.log.info(f"Number of fixed tendons: {self.num_fixed_tendons}")
 
         # container for data access
         self._data = ArticulationData(self.root_physx_view, self.device)
@@ -1105,12 +1110,10 @@ class Articulation(AssetBase):
         self._has_implicit_actuators = False
 
         # cache the values coming from the usd
-        usd_stiffness = self.root_physx_view.get_dof_stiffnesses().clone()
-        usd_damping = self.root_physx_view.get_dof_dampings().clone()
-        usd_armature = self.root_physx_view.get_dof_armatures().clone()
-        usd_friction = self.root_physx_view.get_dof_friction_coefficients().clone()
-        usd_effort_limit = self.root_physx_view.get_dof_max_forces().clone()
-        usd_velocity_limit = self.root_physx_view.get_dof_max_velocities().clone()
+        self._data.default_joint_stiffness = self.root_physx_view.get_dof_stiffnesses().to(self.device).clone()
+        self._data.default_joint_damping = self.root_physx_view.get_dof_dampings().to(self.device).clone()
+        self._data.default_joint_armature = self.root_physx_view.get_dof_armatures().to(self.device).clone()
+        self._data.default_joint_friction = self.root_physx_view.get_dof_friction_coefficients().to(self.device).clone()
 
         # iterate over all actuator configurations
         for actuator_name, actuator_cfg in self.cfg.actuators.items():
@@ -1134,15 +1137,15 @@ class Articulation(AssetBase):
                 ),
                 num_envs=self.num_instances,
                 device=self.device,
-                stiffness=usd_stiffness[:, joint_ids],
-                damping=usd_damping[:, joint_ids],
-                armature=usd_armature[:, joint_ids],
-                friction=usd_friction[:, joint_ids],
-                effort_limit=usd_effort_limit[:, joint_ids],
-                velocity_limit=usd_velocity_limit[:, joint_ids],
+                stiffness=self._data.default_joint_stiffness[:, joint_ids],
+                damping=self._data.default_joint_damping[:, joint_ids],
+                armature=self._data.default_joint_armature[:, joint_ids],
+                friction=self._data.default_joint_friction[:, joint_ids],
+                effort_limit=self.root_physx_view.get_dof_max_forces().to(self.device).clone()[:, joint_ids],
+                velocity_limit=self.root_physx_view.get_dof_max_velocities().to(self.device).clone()[:, joint_ids],
             )
             # log information on actuator groups
-            carb.log_info(
+            omni.log.info(
                 f"Actuator collection: {actuator_name} with model '{actuator_cfg.class_type.__name__}' and"
                 f" joint names: {joint_names} [{joint_ids}]."
             )
@@ -1165,19 +1168,14 @@ class Articulation(AssetBase):
                 self.write_joint_effort_limit_to_sim(1.0e9, joint_ids=actuator.joint_indices)
                 self.write_joint_armature_to_sim(actuator.armature, joint_ids=actuator.joint_indices)
                 self.write_joint_friction_to_sim(actuator.friction, joint_ids=actuator.joint_indices)
-
-        # set the default joint parameters based on the changes from the actuators
-        self._data.default_joint_stiffness = self.root_physx_view.get_dof_stiffnesses().to(device=self.device).clone()
-        self._data.default_joint_damping = self.root_physx_view.get_dof_dampings().to(device=self.device).clone()
-        self._data.default_joint_armature = self.root_physx_view.get_dof_armatures().to(device=self.device).clone()
-        self._data.default_joint_friction = (
-            self.root_physx_view.get_dof_friction_coefficients().to(device=self.device).clone()
-        )
+                # Store the actual default stiffness and damping values for explicit actuators (not written the sim)
+                self._data.default_joint_stiffness[:, actuator.joint_indices] = actuator.stiffness
+                self._data.default_joint_damping[:, actuator.joint_indices] = actuator.damping
 
         # perform some sanity checks to ensure actuators are prepared correctly
         total_act_joints = sum(actuator.num_joints for actuator in self.actuators.values())
         if total_act_joints != (self.num_joints - self.num_fixed_tendons):
-            carb.log_warn(
+            omni.log.warn(
                 "Not all actuators are configured! Total number of actuated joints not equal to number of"
                 f" joints available: {total_act_joints} != {self.num_joints - self.num_fixed_tendons}."
             )
@@ -1190,10 +1188,11 @@ class Articulation(AssetBase):
         # parse fixed tendons properties if they exist
         if self.num_fixed_tendons > 0:
             stage = stage_utils.get_current_stage()
+            joint_paths = self.root_physx_view.dof_paths[0]
 
             # iterate over all joints to find tendons attached to them
             for j in range(self.num_joints):
-                usd_joint_path = self.root_physx_view.dof_paths[0][j]
+                usd_joint_path = joint_paths[j]
                 # check whether joint has tendons - tendon name follows the joint name it is attached to
                 joint = UsdPhysics.Joint.Get(stage, usd_joint_path)
                 if joint.GetPrim().HasAPI(PhysxSchema.PhysxTendonAxisRootAPI):
@@ -1336,7 +1335,7 @@ class Articulation(AssetBase):
                 effort_limits[index],
             ])
         # convert table to string
-        carb.log_info(f"Simulation parameters for joints in {self.cfg.prim_path}:\n" + table.get_string())
+        omni.log.info(f"Simulation parameters for joints in {self.cfg.prim_path}:\n" + table.get_string())
 
         # read out all tendon parameters from simulation
         if self.num_fixed_tendons > 0:
@@ -1372,4 +1371,4 @@ class Articulation(AssetBase):
                     ft_offsets[index],
                 ])
             # convert table to string
-            carb.log_info(f"Simulation parameters for tendons in {self.cfg.prim_path}:\n" + tendon_table.get_string())
+            omni.log.info(f"Simulation parameters for tendons in {self.cfg.prim_path}:\n" + tendon_table.get_string())

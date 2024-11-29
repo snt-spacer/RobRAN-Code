@@ -812,7 +812,7 @@ def plot_actions_histogram(control_history: np.ndarray, save_dir: str, fig_count
 
     freq = pd.DataFrame(
         data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]),
-        columns=[f"T{i+1}" for i in range(control_history.shape[2])],
+        columns=[f"T{i + 1}" for i in range(control_history.shape[2])],
     )
     mean_freq = freq.mean()
     plt.bar(mean_freq.index, mean_freq.values)
@@ -837,7 +837,7 @@ def plot_actions_box_plot(control_history: np.ndarray, save_dir: str, fig_count:
 
     freq = pd.DataFrame(
         data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]),
-        columns=[f"T{i+1}" for i in range(control_history.shape[2])],
+        columns=[f"T{i + 1}" for i in range(control_history.shape[2])],
     )
     sns.boxplot(data=freq, orient="h")
     plt.title(f"Mean number of thrusts in {control_history.shape[0]} episodes")
@@ -1205,7 +1205,7 @@ def plot_single_action_histogram(
     plt.clf()
     control_history = np.array(control_history)
 
-    actions_df = pd.DataFrame(control_history, columns=[f"T{i+1}" for i in range(control_history.shape[1])])
+    actions_df = pd.DataFrame(control_history, columns=[f"T{i + 1}" for i in range(control_history.shape[1])])
     freq = actions_df.sum()
     plt.bar(freq.index, freq.values, color=plt.colormaps["tab20"](0))
     plt.title("Number of thrusts in episode")

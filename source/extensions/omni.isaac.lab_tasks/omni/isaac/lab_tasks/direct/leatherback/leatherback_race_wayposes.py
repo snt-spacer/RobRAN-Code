@@ -24,9 +24,9 @@ class LeatherbackRaceWayposesEnvCfg(DirectRLEnvCfg):
     # Env settings TODO: get from config or task.
     decimation = 4
     episode_length_s = 20.0
-    num_actions = 2
-    num_observations = 15
-    num_states = 0
+    action_space = 2
+    observation_space = 15
+    state_space = 0
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=20.0, replicate_physics=True)

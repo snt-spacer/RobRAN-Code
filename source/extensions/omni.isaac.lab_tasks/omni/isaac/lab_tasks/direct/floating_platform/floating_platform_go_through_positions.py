@@ -41,9 +41,9 @@ class FloatingPlatformGoThroughPositionsEnvCfg(DirectRLEnvCfg):
 
     # env
     episode_length_s = 20.0
-    num_actions = 8 if not robot_cfg.is_reaction_wheel else 9
-    num_observations = 17
-    num_states = 0
+    action_space = 8 if not robot_cfg.is_reaction_wheel else 9
+    observation_space = 17
+    state_space = 0
 
 
 class FloatingPlatformGoThroughPositionsEnv(DirectRLEnv):
