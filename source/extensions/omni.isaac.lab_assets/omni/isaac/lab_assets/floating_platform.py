@@ -40,5 +40,6 @@ FLOATING_PLATFORM_CFG = ArticulationCfg(
             ".*": 0.0,
         },
     ),
+    actuators={},
 )
 """Configuration for a simple floating platform robot."""

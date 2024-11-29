@@ -67,12 +67,24 @@ class FloatingPlatformRobot(RobotCore):
                 requires_grad=False,
             )
 
-        self._logs["state"]["thrusters"] = torch_zeros()
-        self._logs["state"]["reaction_wheel"] = torch_zeros()
-        self._logs["state"]["action_rate"] = torch_zeros()
-        self._logs["state"]["joint_acceleration"] = torch_zeros()
-        self._logs["reward"]["action_rate"] = torch_zeros()
-        self._logs["reward"]["joint_acceleration"] = torch_zeros()
+        state_keys = ["AVG/thrusters", "AVG/reaction_wheel", "AVG/action_rate", "AVG/joint_acceleration"]
+        reward_keys = ["AVG/action_rate", "AVG/joint_acceleration"]
+
+        # Populate dictionaries with torch_zeros()
+        for key in state_keys:
+            self._step_logs["robot_state"][key] = torch_zeros()
+            self._episode_logs["robot_state"][key] = torch_zeros()
+
+        for key in reward_keys:
+            self._step_logs["robot_reward"][key] = torch_zeros()
+            self._episode_logs["robot_reward"][key] = torch_zeros()
+
+        self._average_logs["robot_state"]["AVG/thrusters"] = True
+        self._average_logs["robot_state"]["AVG/reaction_wheel"] = True
+        self._average_logs["robot_state"]["AVG/action_rate"] = True
+        self._average_logs["robot_state"]["AVG/joint_acceleration"] = True
+        self._average_logs["robot_reward"]["AVG/action_rate"] = True
+        self._average_logs["robot_reward"]["AVG/joint_acceleration"] = True
 
     def get_observations(self) -> torch.Tensor:
         # print robot_data positions to validate in only moves on the x-y plane
@@ -88,10 +100,10 @@ class FloatingPlatformRobot(RobotCore):
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
-        self._logs["state"]["action_rate"] = action_rate
-        self._logs["state"]["joint_acceleration"] = joint_accelerations
-        self._logs["reward"]["action_rate"] = action_rate
-        self._logs["reward"]["joint_acceleration"] = joint_accelerations
+        self._step_logs["robot_state"]["AVG/action_rate"] = action_rate
+        self._step_logs["robot_state"]["AVG/joint_acceleration"] = joint_accelerations
+        self._step_logs["robot_reward"]["AVG/action_rate"] = action_rate
+        self._step_logs["robot_reward"]["AVG/joint_acceleration"] = joint_accelerations
         return (
             action_rate * self._robot_cfg.rew_action_rate_scale
             + joint_accelerations * self._robot_cfg.rew_joint_accel_scale
@@ -111,15 +123,6 @@ class FloatingPlatformRobot(RobotCore):
         super().reset(env_ids, gen_actions, env_seeds)
         self._previous_actions[env_ids] = 0
 
-    def reset_logs(self, env_ids: torch.Tensor) -> None:
-        # Reset logs
-        self._logs["state"]["thrusters"][env_ids] = 0
-        self._logs["state"]["reaction_wheel"][env_ids] = 0
-        self._logs["state"]["action_rate"][env_ids] = 0
-        self._logs["state"]["joint_acceleration"][env_ids] = 0
-        self._logs["reward"]["action_rate"][env_ids] = 0
-        self._logs["reward"]["joint_acceleration"][env_ids] = 0
-
     def set_initial_conditions(self, env_ids: torch.Tensor):
         thrust_reset = torch.zeros_like(self._thrust_action)
         self._robot.set_external_force_and_torque(
@@ -136,14 +139,11 @@ class FloatingPlatformRobot(RobotCore):
 
     def process_actions(self, actions: torch.Tensor):
         # Expand to match num_envs x action_dim
-        # print(f'raw actions: {actions[:3]}')
         self._previous_actions = self._actions.clone()
         self._actions = actions.clone()
 
         # Calculate the number of active thrusters (those with a value of 1)
-        n_active_thrusters = torch.sum(
-            actions[:, : self._robot_cfg.num_thrusters], dim=1, keepdim=True
-        )  # Count 1s for active thrusters
+        n_active_thrusters = torch.sum(actions[:, : self._robot_cfg.num_thrusters], dim=1, keepdim=True)
         # Determine thrust scaling factor
         if self._robot_cfg.split_thrust:
             # Calculate thrust scale as max thrust divided by the number of active thrusters
@@ -154,19 +154,15 @@ class FloatingPlatformRobot(RobotCore):
             )
         else:
             thrust_scale = self._robot_cfg.max_thrust
-        # print(f"Thrust scale: {thrust_scale[:3]}")
 
         # Apply thrust to thrusters, based on whether reaction wheel is present
         self._thrust_action = actions[:, : self._robot_cfg.num_thrusters].float() * thrust_scale
-        # print(f"Thrust action: {self._thrust_action[:3]}")
         # transform the 2D thrust actions into 3D forces and torques with x and y components set to zero and z components based on the thrust actions
         self._thrust_action = self._thrust_action.unsqueeze(2).expand(-1, -1, 3)
         self._thrust_action = torch.cat(
             (torch.zeros_like(self._thrust_action[:, :, :2]), self._thrust_action[:, :, 2:]), dim=2
         )
-        # self._thrust_action = torch.nn.functional.pad(self._thrust_action.unsqueeze(2), (0, 2))
 
-        # print(f"Thrust action expanded: {self._thrust_action[:3]}")
         if self._robot_cfg.is_reaction_wheel:
             # Separate continuous control for reaction wheel
             self._reaction_wheel_action = (
@@ -175,9 +171,9 @@ class FloatingPlatformRobot(RobotCore):
             self._reaction_wheel_action = self._reaction_wheel_action.unsqueeze(2).expand(-1, -1, 3)
 
         # Log data for monitoring
-        self._logs["state"]["thrusters"] = self._thrust_action[:, 0]
+        self._step_logs["robot_state"]["AVG/thrusters"] = torch.linalg.norm(self._thrust_action[:, :, 2], dim=-1)
         if self._robot_cfg.is_reaction_wheel:
-            self._logs["state"]["reaction_wheel"] = self._reaction_wheel_action[:, 0]
+            self._step_logs["robot_state"]["AVG/reaction_wheel"] = self._reaction_wheel_action[:, 0]
 
     def compute_physics(self):
         pass  # Model motor + ackermann steering here
@@ -188,13 +184,6 @@ class FloatingPlatformRobot(RobotCore):
         )
         if self._robot_cfg.is_reaction_wheel:
             articulations.set_joint_effort_target(self._reaction_wheel_action, joint_ids=self._reaction_wheel_dof_idx)
-
-    # def set_pose(
-    #     self,
-    #     pose: torch.Tensor,
-    #     env_ids: torch.Tensor | None = None,
-    # ) -> None:
-    #     self._robot.write_root_pose_to_sim(pose, env_ids)
 
     def set_velocity(
         self,

@@ -14,6 +14,12 @@ params:
   model:
     name: multi_discrete_a2c
 
+  wandb:
+    project: jetbot_direct
+    entity: spacer-rl
+    group: 'zeroG'
+    notes: ''
+
   # doesn't have this fine grained control but made it close
   network:
     name: actor_critic

@@ -119,9 +119,11 @@ class RaceWaypointsTask(TaskCore):
         ]
         for key in task_state_keys:
             self._step_logs["task_state"][key] = torch_zeros()
+            self._episode_logs["task_state"][key] = torch_zeros()
 
         for key in task_reward_keys:
             self._step_logs["task_reward"][key] = torch_zeros()
+            self._episode_logs["task_reward"][key] = torch_zeros()
 
         self._average_logs["task_state"]["AVG/normed_linear_velocity"] = True
         self._average_logs["task_state"]["AVG/absolute_angular_velocity"] = True
