@@ -17,31 +17,36 @@ from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 
-from omni.isaac.lab_tasks.rans import FloatingPlatformRobot, FloatingPlatformRobotCfg, GoToPositionCfg, GoToPositionTask
+from omni.isaac.lab_tasks.rans import (
+    FloatingPlatformRobot,
+    FloatingPlatformRobotCfg,
+    GoThroughPositionsCfg,
+    GoThroughPositionsTask,
+)
 
 
 @configclass
-class FloatingPlatformGoToPositionEnvCfg(DirectRLEnvCfg):
+class FloatingPlatformGoThroughPositionsEnvCfg(DirectRLEnvCfg):
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
 
     # simulation
-    decimation = 6
+    decimation = 4
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
 
     robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg()
-    task_cfg: GoToPositionCfg = GoToPositionCfg()
+    task_cfg: GoThroughPositionsCfg = GoThroughPositionsCfg()
     debug_vis: bool = True
 
     # env
-    episode_length_s = 40.0
+    episode_length_s = 20.0
     num_actions = 8 if not robot_cfg.is_reaction_wheel else 9
-    num_observations = 14
+    num_observations = 17
     num_states = 0
 
 
-class FloatingPlatformGoToPositionEnv(DirectRLEnv):
+class FloatingPlatformGoThroughPositionsEnv(DirectRLEnv):
     # Workflow: Step
     #   - self._pre_physics_step
     #   - (Loop over N skipped steps)
@@ -63,9 +68,9 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
     #   - (Check if noise is required)
     #       - self._add_noise
 
-    cfg: FloatingPlatformGoToPositionEnvCfg
+    cfg: FloatingPlatformGoThroughPositionsEnvCfg
 
-    def __init__(self, cfg: FloatingPlatformGoToPositionEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: FloatingPlatformGoThroughPositionsEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
@@ -85,7 +90,9 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
         self.robot_api = FloatingPlatformRobot(
             self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device
         )
-        self.task_api = GoToPositionTask(self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device)
+        self.task_api = GoThroughPositionsTask(
+            self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device
+        )
 
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
@@ -100,7 +107,7 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
         self.robot_api.process_actions(actions)
-        # print(f"Robots position: {self.robot_api.body_pos_w[:3]}")
+        # print(f"Robots Pose: {self.robot_api.body_pos_w[:3]}")
 
     def _apply_action(self) -> None:
         self.robot_api.apply_actions(self.robot)

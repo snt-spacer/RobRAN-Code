@@ -155,7 +155,7 @@ class GoToPoseTask(TaskCore):
             torch.cos(self._target_headings - heading),
         )
 
-        # Store in buffer
+        # Store in buffer [distance, cos(target_heading_error), sin(target_heading_error), cos(heading_error), sin(heading_error), vx, vy, w, prev_action]
         self._task_data[:, 0] = self._position_dist
         self._task_data[:, 1] = torch.cos(target_heading_error)
         self._task_data[:, 2] = torch.sin(target_heading_error)

@@ -126,7 +126,7 @@ class GoToPositionTask(TaskCore):
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
 
-        # Store in buffer
+        # Store in buffer [distance, cos(angle), sin(angle), lin_vel_x, lin_vel_y, ang_vel, prev_action]
         self._task_data[:, 0] = self._position_dist
         self._task_data[:, 1] = torch.cos(target_heading_error)
         self._task_data[:, 2] = torch.sin(target_heading_error)
