@@ -161,20 +161,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = Runner(IsaacAlgoObserver())
     runner.load(agent_cfg)
 
-    import wandb
+    if "wandb" in agent_cfg["params"] and agent_cfg["params"]["wandb"].get("enabled", False):
+        import wandb
 
-    date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    experiment_name = f"{args_cli.task.split('-')[2]}-{date_str}"
+        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        experiment_name = f"{args_cli.task.split('-')[2]}-{date_str}"
 
-    wandb.init(
-        project=agent_cfg["params"]["wandb"]["project"],
-        group=agent_cfg["params"]["wandb"]["group"],
-        entity=agent_cfg["params"]["wandb"]["entity"],
-        config=agent_cfg,
-        sync_tensorboard=True,
-        name=experiment_name,
-        resume="allow",
-    )
+        wandb.init(
+            project=agent_cfg["params"]["wandb"]["project"],
+            group=agent_cfg["params"]["wandb"]["group"],
+            entity=agent_cfg["params"]["wandb"]["entity"],
+            config=agent_cfg,
+            sync_tensorboard=True,
+            name=experiment_name,
+            resume="allow",
+        )
 
     # reset the agent and env
     runner.reset()
@@ -187,7 +188,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # close the simulator
     env.close()
 
-    wandb.finish()
+    if "wandb" in agent_cfg["params"] and agent_cfg["params"]["wandb"].get("enabled", False):
+        wandb.finish()
 
 
 if __name__ == "__main__":

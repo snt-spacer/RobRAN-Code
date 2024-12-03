@@ -15,6 +15,7 @@ params:
     name: continuous_a2c_logstd
 
   wandb:
+    enabled: True
     project: jetbot_direct
     entity: spacer-rl
     group: 'zeroG'

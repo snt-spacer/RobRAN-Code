@@ -59,32 +59,12 @@ class FloatingPlatformRobot(RobotCore):
     def create_logs(self):
         super().create_logs()
 
-        def torch_zeros():
-            return torch.zeros(
-                self._num_envs,
-                dtype=torch.float32,
-                device=self._device,
-                requires_grad=False,
-            )
-
-        state_keys = ["AVG/thrusters", "AVG/reaction_wheel", "AVG/action_rate", "AVG/joint_acceleration"]
-        reward_keys = ["AVG/action_rate", "AVG/joint_acceleration"]
-
-        # Populate dictionaries with torch_zeros()
-        for key in state_keys:
-            self._step_logs["robot_state"][key] = torch_zeros()
-            self._episode_logs["robot_state"][key] = torch_zeros()
-
-        for key in reward_keys:
-            self._step_logs["robot_reward"][key] = torch_zeros()
-            self._episode_logs["robot_reward"][key] = torch_zeros()
-
-        self._average_logs["robot_state"]["AVG/thrusters"] = True
-        self._average_logs["robot_state"]["AVG/reaction_wheel"] = True
-        self._average_logs["robot_state"]["AVG/action_rate"] = True
-        self._average_logs["robot_state"]["AVG/joint_acceleration"] = True
-        self._average_logs["robot_reward"]["AVG/action_rate"] = True
-        self._average_logs["robot_reward"]["AVG/joint_acceleration"] = True
+        self.scalar_logger.add_log("robot_state", "AVG/thrusters", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/reaction_wheel", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/action_rate", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/joint_acceleration", "mean")
+        self.scalar_logger.add_log("robot_reward", "AVG/action_rate", "mean")
+        self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
         # print robot_data positions to validate in only moves on the x-y plane
@@ -100,10 +80,11 @@ class FloatingPlatformRobot(RobotCore):
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
-        self._step_logs["robot_state"]["AVG/action_rate"] = action_rate
-        self._step_logs["robot_state"]["AVG/joint_acceleration"] = joint_accelerations
-        self._step_logs["robot_reward"]["AVG/action_rate"] = action_rate
-        self._step_logs["robot_reward"]["AVG/joint_acceleration"] = joint_accelerations
+        self.scalar_logger.log("robot_state", "AVG/action_rate", action_rate)
+        self.scalar_logger.log("robot_state", "AVG/joint_acceleration", joint_accelerations)
+        self.scalar_logger.log("robot_reward", "AVG/action_rate", action_rate)
+        self.scalar_logger.log("robot_reward", "AVG/joint_acceleration", joint_accelerations)
+
         return (
             action_rate * self._robot_cfg.rew_action_rate_scale
             + joint_accelerations * self._robot_cfg.rew_joint_accel_scale
@@ -171,9 +152,9 @@ class FloatingPlatformRobot(RobotCore):
             self._reaction_wheel_action = self._reaction_wheel_action.unsqueeze(2).expand(-1, -1, 3)
 
         # Log data for monitoring
-        self._step_logs["robot_state"]["AVG/thrusters"] = torch.linalg.norm(self._thrust_action[:, :, 2], dim=-1)
+        self.scalar_logger.log("robot_state", "AVG/thrusters", torch.linalg.norm(self._thrust_action[:, :, 2], dim=-1))
         if self._robot_cfg.is_reaction_wheel:
-            self._step_logs["robot_state"]["AVG/reaction_wheel"] = self._reaction_wheel_action[:, 0]
+            self.scalar_logger.log("robot_state", "AVG/reaction_wheel", self._reaction_wheel_action[:, 0])
 
     def compute_physics(self):
         pass  # Model motor + ackermann steering here

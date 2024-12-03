@@ -40,10 +40,10 @@ class GoToPoseTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
-
         # Task and reward parameters
         self._task_cfg = task_cfg
+
+        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = 8
@@ -74,41 +74,17 @@ class GoToPoseTask(TaskCore):
 
         super().create_logs()
 
-        def torch_zeros():
-            return torch.zeros(
-                self._num_envs,
-                dtype=torch.float32,
-                device=self._device,
-                requires_grad=False,
-            )
-
-        state_keys = [
-            "AVG/normed_linear_velocity",
-            "AVG/absolute_angular_velocity",
-            "EMA/position_distance",
-            "EMA/heading_distance",
-            "EMA/boundary_distance",
-        ]
-        reward_keys = ["AVG/position", "AVG/heading", "AVG/linear_velocity", "AVG/angular_velocity", "AVG/boundary"]
-
-        for key in state_keys:
-            self._step_logs["task_state"][key] = torch_zeros()
-            self._episode_logs["task_state"][key] = torch_zeros()
-
-        for key in reward_keys:
-            self._step_logs["task_reward"][key] = torch_zeros()
-            self._episode_logs["task_reward"][key] = torch_zeros()
-
-        self._average_logs["task_state"]["AVG/normed_linear_velocity"] = True
-        self._average_logs["task_state"]["AVG/absolute_angular_velocity"] = True
-        self._average_logs["task_state"]["EMA/position_distance"] = False
-        self._average_logs["task_state"]["EMA/heading_distance"] = False
-        self._average_logs["task_state"]["EMA/boundary_distance"] = False
-        self._average_logs["task_reward"]["AVG/position"] = True
-        self._average_logs["task_reward"]["AVG/heading"] = True
-        self._average_logs["task_reward"]["AVG/linear_velocity"] = True
-        self._average_logs["task_reward"]["AVG/angular_velocity"] = True
-        self._average_logs["task_reward"]["AVG/boundary"] = True
+        self.scalar_logger.add_log("task_state", "AVG/normed_linear_velocity", "mean")
+        self.scalar_logger.add_log("task_state", "AVG/absolute_angular_velocity", "mean")
+        self.scalar_logger.add_log("task_state", "EMA/position_distance", "ema")
+        self.scalar_logger.add_log("task_state", "EMA/heading_distance", "ema")
+        self.scalar_logger.add_log("task_state", "EMA/boundary_distance", "ema")
+        self.scalar_logger.add_log("task_reward", "AVG/position", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/heading", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/linear_velocity", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/angular_velocity", "max")
+        self.scalar_logger.add_log("task_reward", "AVG/boundary", "min")
+        self.scalar_logger.set_ema_coeff(self._task_cfg.ema_coeff)
 
     def get_observations(self) -> torch.Tensor:
         """
@@ -191,20 +167,11 @@ class GoToPoseTask(TaskCore):
         progress = self._previous_position_dist - self._position_dist
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
-        self._step_logs["task_state"]["EMA/position_distance"] = (
-            self._position_dist * (1 - self._task_cfg.ema_coeff)
-            + self._step_logs["task_state"]["EMA/position_distance"] * self._task_cfg.ema_coeff
-        )
-        self._step_logs["task_state"]["EMA/heading_distance"] = (
-            heading_dist * (1 - self._task_cfg.ema_coeff)
-            + self._step_logs["task_state"]["EMA/heading_distance"] * self._task_cfg.ema_coeff
-        )
-        self._step_logs["task_state"]["EMA/boundary_distance"] = (
-            boundary_dist * (1 - self._task_cfg.ema_coeff)
-            + self._step_logs["task_state"]["EMA/boundary_distance"] * self._task_cfg.ema_coeff
-        )
-        self._step_logs["task_state"]["AVG/normed_linear_velocity"] += linear_velocity
-        self._step_logs["task_state"]["AVG/absolute_angular_velocity"] += angular_velocity
+        self.scalar_logger.log("task_state", "EMA/position_distance", self._position_dist)
+        self.scalar_logger.log("task_state", "EMA/heading_distance", heading_dist)
+        self.scalar_logger.log("task_state", "EMA/boundary_distance", boundary_dist)
+        self.scalar_logger.log("task_state", "AVG/normed_linear_velocity", linear_velocity)
+        self.scalar_logger.log("task_state", "AVG/absolute_angular_velocity", angular_velocity)
 
         # position reward
         position_rew = torch.exp(-self._position_dist / self._task_cfg.position_exponential_reward_coeff)
@@ -236,11 +203,11 @@ class GoToPoseTask(TaskCore):
         self._goal_reached += goal_is_reached  # if it is add 1
 
         # Update logs (exponential moving average to see the performance at the end of the episode)
-        self._step_logs["task_reward"]["AVG/position"] += position_rew
-        self._step_logs["task_reward"]["AVG/heading"] += heading_rew
-        self._step_logs["task_reward"]["AVG/linear_velocity"] += linear_velocity_rew
-        self._step_logs["task_reward"]["AVG/angular_velocity"] += angular_velocity_rew
-        self._step_logs["task_reward"]["AVG/boundary"] += boundary_rew
+        self.scalar_logger.log("task_reward", "AVG/position", position_rew)
+        self.scalar_logger.log("task_reward", "AVG/heading", heading_rew)
+        self.scalar_logger.log("task_reward", "AVG/linear_velocity", linear_velocity_rew)
+        self.scalar_logger.log("task_reward", "AVG/angular_velocity", angular_velocity_rew)
+        self.scalar_logger.log("task_reward", "AVG/boundary", boundary_rew)
 
         # Return the reward by combining the different components and adding the robot rewards
         return (

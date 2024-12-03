@@ -36,7 +36,8 @@ class JetbotRobot(RobotCore):
             device=self._device,
             dtype=torch.float32,
         )
-        self._wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self.left_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self.right_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
 
     def run_setup(self, robot: Articulation):
         super().run_setup(robot)
@@ -45,34 +46,12 @@ class JetbotRobot(RobotCore):
     def create_logs(self):
         super().create_logs()
 
-        def torch_zeros():
-            return torch.zeros(
-                self._num_envs,
-                dtype=torch.float32,
-                device=self._device,
-                requires_grad=False,
-            )
-
-        state_keys = ["AVG/wheel_action", "AVG/action_rate", "AVG/joint_acceleration"]
-        reward_keys = [
-            "AVG/action_rate",
-            "AVG/joint_acceleration",
-        ]
-
-        # Populate dictionaries with torch_zeros()
-        for key in state_keys:
-            self._step_logs["robot_state"][key] = torch_zeros()
-            self._episode_logs["robot_state"][key] = torch_zeros()
-
-        for key in reward_keys:
-            self._step_logs["robot_reward"][key] = torch_zeros()
-            self._episode_logs["robot_reward"][key] = torch_zeros()
-
-        self._average_logs["robot_state"]["AVG/wheel_action"] = True
-        self._average_logs["robot_state"]["AVG/action_rate"] = True
-        self._average_logs["robot_state"]["AVG/joint_acceleration"] = True
-        self._average_logs["robot_reward"]["AVG/action_rate"] = True
-        self._average_logs["robot_reward"]["AVG/joint_acceleration"] = True
+        self.scalar_logger.add_log("robot_state", "AVG/left_wheel_action", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/right_wheel_action", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/action_rate", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/joint_acceleration", "mean")
+        self.scalar_logger.add_log("robot_reward", "AVG/action_rate", "mean")
+        self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
         return self._actions
@@ -83,10 +62,11 @@ class JetbotRobot(RobotCore):
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
-        self._step_logs["robot_state"]["AVG/action_rate"] = action_rate
-        self._step_logs["robot_state"]["AVG/joint_acceleration"] = joint_accelerations
-        self._step_logs["robot_reward"]["AVG/action_rate"] = action_rate
-        self._step_logs["robot_reward"]["AVG/joint_acceleration"] = joint_accelerations
+        self.scalar_logger.log("robot_state", "AVG/action_rate", action_rate)
+        self.scalar_logger.log("robot_state", "AVG/joint_acceleration", joint_accelerations)
+        self.scalar_logger.log("robot_reward", "AVG/action_rate", action_rate)
+        self.scalar_logger.log("robot_reward", "AVG/joint_acceleration", joint_accelerations)
+
         return (
             action_rate * self._robot_cfg.rew_action_rate_scale
             + joint_accelerations * self._robot_cfg.rew_joint_accel_scale
@@ -108,7 +88,7 @@ class JetbotRobot(RobotCore):
 
     def set_initial_conditions(self, env_ids: torch.Tensor | None = None):
         wheels_reset = torch.zeros(
-            (len(env_ids), self._wheel_action.shape[1]),
+            (len(env_ids), self._dim_robot_act),
             device=self._device,
             dtype=torch.float32,
         )
@@ -117,13 +97,16 @@ class JetbotRobot(RobotCore):
     def process_actions(self, actions: torch.Tensor):
         self._previous_actions = self._actions.clone()
         self._actions = actions.clone()
-        self._wheel_action = actions * self._robot_cfg.wheel_scale
+        self.left_wheel_action = actions[:, 0] * self._robot_cfg.wheel_scale
+        self.right_wheel_action = actions[:, 1] * self._robot_cfg.wheel_scale
 
         # Log data
-        self._step_logs["robot_state"]["AVG/wheel_action"] = self._wheel_action[:, 0]
+        self.scalar_logger.log("robot_state", "AVG/left_wheel_action", self.left_wheel_action)
+        self.scalar_logger.log("robot_state", "AVG/right_wheel_action", self.right_wheel_action)
 
     def compute_physics(self):
         pass  # Model motor
 
     def apply_actions(self):
-        self._robot.set_joint_velocity_target(self._wheel_action, joint_ids=self._wheels_dof_idx)
+        wheel_action = torch.cat((self.left_wheel_action.unsqueeze(-1), self.right_wheel_action.unsqueeze(-1)), dim=1)
+        self._robot.set_joint_velocity_target(wheel_action, joint_ids=self._wheels_dof_idx)

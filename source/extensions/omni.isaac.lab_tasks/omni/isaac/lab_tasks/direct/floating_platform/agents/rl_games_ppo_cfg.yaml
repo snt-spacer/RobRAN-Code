@@ -15,7 +15,8 @@ params:
     name: multi_discrete_a2c
 
   wandb:
-    project: jetbot_direct
+    enabled: True
+    project: floating_platform_direct
     entity: spacer-rl
     group: 'zeroG'
     notes: ''

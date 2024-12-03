@@ -6,11 +6,11 @@
 import gymnasium as gym
 
 from . import agents
-from .jetbot_go_through_poses import JetbotGoThroughPosesEnv, JetbotGoThroughPosesEnvCfg
-from .jetbot_go_through_position import JetbotGoThroughPositionsEnv, JetbotGoThroughPositionsEnvCfg
-from .jetbot_go_to_pose import JetbotGoToPoseEnv, JetbotGoToPoseEnvCfg
-from .jetbot_go_to_position import JetbotGoToPositionEnv, JetbotGoToPositionEnvCfg
-from .jetbot_track_velocities import JetbotTrackVelocitiesEnv, JetbotTrackVelocitiesEnvCfg
+from .jetbot_go_through_poses_env import JetbotGoThroughPosesEnv, JetbotGoThroughPosesEnvCfg
+from .jetbot_go_through_positions_env import JetbotGoThroughPositionsEnv, JetbotGoThroughPositionsEnvCfg
+from .jetbot_go_to_pose_env import JetbotGoToPoseEnv, JetbotGoToPoseEnvCfg
+from .jetbot_go_to_position_env import JetbotGoToPositionEnv, JetbotGoToPositionEnvCfg
+from .jetbot_track_velocities_env import JetbotTrackVelocitiesEnv, JetbotTrackVelocitiesEnvCfg
 
 ##
 # Register Gym environments.

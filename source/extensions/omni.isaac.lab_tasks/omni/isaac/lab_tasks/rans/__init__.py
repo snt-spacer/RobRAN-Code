@@ -30,4 +30,4 @@ from .tasks import (  # noqa: F401, F403
     TrackVelocitiesTask,
 )
 
-from .utils import TrackGenerator, PerEnvSeededRNG  # noqa: F401, F403
+from .utils import TrackGenerator, PerEnvSeededRNG, ScalarLogger  # noqa: F401, F403

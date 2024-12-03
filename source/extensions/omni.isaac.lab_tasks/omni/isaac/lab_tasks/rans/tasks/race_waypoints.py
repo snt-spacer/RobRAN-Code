@@ -94,47 +94,16 @@ class RaceWaypointsTask(TaskCore):
 
         super().create_logs()
 
-        def torch_zeros():
-            return torch.zeros(
-                self._num_envs,
-                dtype=torch.float32,
-                device=self._device,
-                requires_grad=False,
-            )
-
-        task_state_keys = [
-            "AVG/normed_linear_velocity",
-            "AVG/absolute_angular_velocity",
-            "AVG/position_distance",
-            "AVG/boundary_distance",
-        ]
-
-        task_reward_keys = [
-            "AVG/linear_velocity",
-            "AVG/angular_velocity",
-            "AVG/boundary",
-            "AVG/heading",
-            "AVG/progress",
-            "SUM/num_goals",
-        ]
-        for key in task_state_keys:
-            self._step_logs["task_state"][key] = torch_zeros()
-            self._episode_logs["task_state"][key] = torch_zeros()
-
-        for key in task_reward_keys:
-            self._step_logs["task_reward"][key] = torch_zeros()
-            self._episode_logs["task_reward"][key] = torch_zeros()
-
-        self._average_logs["task_state"]["AVG/normed_linear_velocity"] = True
-        self._average_logs["task_state"]["AVG/absolute_angular_velocity"] = True
-        self._average_logs["task_state"]["AVG/position_distance"] = True
-        self._average_logs["task_state"]["AVG/boundary_distance"] = True
-        self._average_logs["task_reward"]["AVG/linear_velocity"] = True
-        self._average_logs["task_reward"]["AVG/angular_velocity"] = True
-        self._average_logs["task_reward"]["AVG/boundary"] = True
-        self._average_logs["task_reward"]["AVG/heading"] = True
-        self._average_logs["task_reward"]["AVG/progress"] = True
-        self._average_logs["task_reward"]["SUM/num_goals"] = False
+        self.scalar_logger.add_log("task_state", "AVG/normed_linear_velocity", "mean")
+        self.scalar_logger.add_log("task_state", "AVG/absolute_angular_velocity", "mean")
+        self.scalar_logger.add_log("task_state", "AVG/position_distance", "mean")
+        self.scalar_logger.add_log("task_state", "AVG/boundary_distance", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/linear_velocity", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/angular_velocity", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/boundary", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/heading", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/progress", "mean")
+        self.scalar_logger.add_log("task_reward", "SUM/num_goals", "sum")
 
     def get_observations(self) -> torch.Tensor:
         """
@@ -243,10 +212,10 @@ class RaceWaypointsTask(TaskCore):
         progress_rew = self._previous_position_dist - self._position_dist
 
         # Update logs
-        self._step_logs["task_state"]["AVG/position_distance"] += self._position_dist
-        self._step_logs["task_state"]["AVG/boundary_distance"] += boundary_dist
-        self._step_logs["task_state"]["AVG/normed_linear_velocity"] += linear_velocity
-        self._step_logs["task_state"]["AVG/absolute_angular_velocity"] += angular_velocity
+        self.scalar_logger.log("task_state", "AVG/position_distance", self._position_dist)
+        self.scalar_logger.log("task_state", "AVG/boundary_distance", boundary_dist)
+        self.scalar_logger.log("task_state", "AVG/normed_linear_velocity", linear_velocity)
+        self.scalar_logger.log("task_state", "AVG/absolute_angular_velocity", angular_velocity)
 
         # heading reward (encourages the robot to face the target)
         heading_rew = torch.exp(-heading_dist / self._task_cfg.position_heading_exponential_reward_coeff)
@@ -283,12 +252,12 @@ class RaceWaypointsTask(TaskCore):
         self._previous_position_dist[reached_ids] = 0
 
         # Update logs
-        self._step_logs["task_reward"]["AVG/linear_velocity"] += linear_velocity_rew
-        self._step_logs["task_reward"]["AVG/angular_velocity"] += angular_velocity_rew
-        self._step_logs["task_reward"]["AVG/boundary"] += boundary_rew
-        self._step_logs["task_reward"]["AVG/heading"] += heading_rew
-        self._step_logs["task_reward"]["AVG/progress"] += progress_rew
-        self._step_logs["task_reward"]["SUM/num_goals"] += goal_reached
+        self.scalar_logger.log("task_reward", "AVG/linear_velocity", linear_velocity_rew)
+        self.scalar_logger.log("task_reward", "AVG/angular_velocity", angular_velocity_rew)
+        self.scalar_logger.log("task_reward", "AVG/boundary", boundary_rew)
+        self.scalar_logger.log("task_reward", "AVG/heading", heading_rew)
+        self.scalar_logger.log("task_reward", "AVG/progress", progress_rew)
+        self.scalar_logger.log("task_reward", "SUM/num_goals", goal_reached)
 
         # Return the reward by combining the different components and adding the robot rewards
         return (

@@ -15,7 +15,8 @@ params:
     name: continuous_a2c_logstd
 
   wandb:
-    project: jetbot_direct
+    enabled: True
+    project: leatherback_direct
     entity: spacer-rl
     group: 'zeroG'
     notes: ''

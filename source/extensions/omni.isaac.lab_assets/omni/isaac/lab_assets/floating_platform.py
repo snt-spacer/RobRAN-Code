@@ -16,8 +16,7 @@ from omni.isaac.lab.utils.assets import REPO_ROOT_PATH
 
 FLOATING_PLATFORM_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        # usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Leatherback/leatherback.usd",
-        usd_path=f"{REPO_ROOT_PATH}/floating_platform.usd",
+        usd_path=f"{REPO_ROOT_PATH}/source/assets/robots/floating_platform.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=True,
             rigid_body_enabled=True,
