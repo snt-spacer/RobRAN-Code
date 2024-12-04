@@ -87,6 +87,13 @@ class GoToPositionTask(TaskCore):
         Args:
             robot_data: The current state of the robot.
 
+        self._task_data[:, 0] = The distance between the robot and the target position.
+        self._task_data[:, 1] = The cosine of the angle between the robot heading and the target position.
+        self._task_data[:, 2] = The sine of the angle between the robot heading and the target position.
+        self._task_data[:, 3] = The linear velocity of the robot along the x-axis.
+        self._task_data[:, 4] = The linear velocity of the robot along the y-axis.
+        self._task_data[:, 5] = The angular velocity of the robot.
+
         Returns:
             torch.Tensor: The observation tensor."""
 

@@ -17,6 +17,7 @@ from .tasks_cfg import (  # noqa: F401, F403
     RaceWayposesCfg,
     TaskCoreCfg,
     TrackVelocitiesCfg,
+    PushBlockCfg,
 )
 
 from .tasks import (  # noqa: F401, F403
@@ -28,6 +29,7 @@ from .tasks import (  # noqa: F401, F403
     RaceWayposesTask,
     TaskCore,
     TrackVelocitiesTask,
+    PushBlockTask,
 )
 
 from .utils import TrackGenerator, PerEnvSeededRNG, ScalarLogger  # noqa: F401, F403

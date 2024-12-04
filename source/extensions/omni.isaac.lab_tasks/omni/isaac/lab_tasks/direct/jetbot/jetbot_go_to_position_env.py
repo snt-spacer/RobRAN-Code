@@ -24,9 +24,10 @@ class JetbotGoToPositionEnvCfg(DirectRLEnvCfg):
     # env
     decimation = 4
     episode_length_s = 20.0
-    action_space = 2
+
     observation_space = 8
     state_space = 0
+    action_space = 2
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
