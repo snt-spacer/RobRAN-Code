@@ -7,7 +7,6 @@ import math
 import torch
 
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_random_sign, sample_uniform
 
 from omni.isaac.lab_tasks.rans import GoThroughPosesCfg
 
@@ -414,15 +413,10 @@ class GoThroughPosesTask(TaskCore):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations."""
 
-        num_goals = len(env_ids)
-
         # Select how many random goals we want to generate.
-        self._num_goals[env_ids] = torch.randint(
-            self._task_cfg.min_num_goals,
-            self._task_cfg.max_num_goals,
-            (num_goals,),
-            device=self._device,
-        )
+        self._num_goals[env_ids] = self._rng.sample_integer_torch(
+            self._task_cfg.min_num_goals, self._task_cfg.max_num_goals, 1, ids=env_ids
+        ).to(torch.long)
 
         # Since we are using tensor operations, we cannot have different number of goals per environment: the
         # tensor containing the target positions must have the same number of goals for all environments.
@@ -432,51 +426,45 @@ class GoThroughPosesTask(TaskCore):
                 # Randomize the first goal
                 # The position is picked randomly in a square centered on the origin
                 self._target_positions[env_ids, i] = (
-                    sample_uniform(
-                        -self._task_cfg.goal_max_dist_from_origin,
-                        self._task_cfg.goal_max_dist_from_origin,
-                        (num_goals, 2),
-                        device=self._device,
+                    self._rng.sample_uniform_torch(
+                        -self._task_cfg.goal_max_dist_from_origin, self._task_cfg.goal_max_dist_from_origin, 2, env_ids
                     )
                     + self._env_origins[env_ids, :2]
                 )
                 # The orientation is picked randomly
-                self._target_heading[env_ids, i] = sample_uniform(-math.pi, math.pi, (num_goals,), device=self._device)
+                self._target_heading[env_ids, i] = self._rng.sample_uniform_torch(-math.pi, math.pi, 1, env_ids)
             else:
                 # If needed, randomize the next goals
                 # The orientation is picked in a cone aligned with the direction to the previous goal
                 self._target_heading[env_ids, i] = self._target_heading[env_ids, i - 1] + (
-                    sample_uniform(
-                        self._gen_actions[env_ids, 0],
-                        self._gen_actions[env_ids, 1],
-                        (num_goals,),
-                        device=self._device,
+                    self._rng.sample_uniform_torch(
+                        self._gen_actions[env_ids, 0], self._gen_actions[env_ids, 1], 1, env_ids
                     )
                     * (self._task_cfg.goal_max_heading_dist - self._task_cfg.goal_min_heading_dist)
                     + self._task_cfg.goal_min_heading_dist
-                ) * sample_random_sign((num_goals,), device=self._device)
+                ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
                 # The position is picked randomly in a cone oriented towards the previous goal.
                 # The environment action decides the randomization range of the radius and the spread of the cone.
                 r = (
-                    sample_uniform(
+                    self._rng.sample_uniform_torch(
                         self._gen_actions[env_ids, 2],
                         self._gen_actions[env_ids, 3],
-                        (num_goals,),
-                        device=self._device,
+                        1,
+                        env_ids,
                     )
                     * (self._task_cfg.goal_max_dist - self._task_cfg.goal_min_dist)
                     + self._task_cfg.goal_min_dist
                 )
                 theta = self._target_heading[env_ids, i - 1] + (
-                    sample_uniform(
+                    self._rng.sample_uniform_torch(
                         self._gen_actions[env_ids, 4],
                         self._gen_actions[env_ids, 5],
-                        (num_goals,),
-                        device=self._device,
+                        1,
+                        env_ids,
                     )
                     * (self._task_cfg.goal_max_cone_spread - self._task_cfg.goal_min_cone_spread)
                     + self._task_cfg.goal_min_cone_spread
-                ) * sample_random_sign((num_goals,), device=self._device)
+                ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
 
                 self._target_positions[env_ids, i, 0] = r * torch.cos(theta) + self._target_positions[env_ids, i - 1, 0]
                 self._target_positions[env_ids, i, 1] = r * torch.sin(theta) + self._target_positions[env_ids, i - 1, 1]
@@ -522,7 +510,7 @@ class GoThroughPosesTask(TaskCore):
                 * (self._task_cfg.spawn_max_cone_spread - self._task_cfg.spawn_min_cone_spread)
                 + self._task_cfg.spawn_min_cone_spread
             )
-            * sample_random_sign((num_resets,), device=self._device)
+            * self._rng.sample_sign_torch("float", 1, ids=env_ids)
             + self._target_heading[env_ids, 0]
             + math.pi
         )
@@ -536,7 +524,7 @@ class GoThroughPosesTask(TaskCore):
                 * (self._task_cfg.spawn_max_heading_dist - self._task_cfg.spawn_min_heading_dist)
             )
             + self._task_cfg.spawn_min_heading_dist
-        ) * sample_random_sign((num_resets,), device=self._device)
+        ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
         theta = delta_heading + self._target_heading[env_ids, 0]
         initial_pose[:, 3] = torch.cos(theta * 0.5)
         initial_pose[:, 6] = torch.sin(theta * 0.5)
@@ -545,11 +533,11 @@ class GoThroughPosesTask(TaskCore):
         initial_velocity = torch.zeros((num_resets, 6), device=self._device, dtype=torch.float32)
 
         # Linear velocity
+        theta = self._rng.sample_uniform_torch(0, 2 * math.pi, 1, ids=env_ids)
         velocity_norm = (
             self._gen_actions[env_ids, 9] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
             + self._task_cfg.spawn_min_lin_vel
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         initial_velocity[:, 0] = velocity_norm * torch.cos(theta)
         initial_velocity[:, 1] = velocity_norm * torch.sin(theta)
 

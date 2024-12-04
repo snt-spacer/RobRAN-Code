@@ -8,7 +8,6 @@ import torch
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.markers import ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_random_sign
 
 from omni.isaac.lab_tasks.rans import TrackVelocitiesCfg
 
@@ -273,41 +272,38 @@ class TrackVelocitiesTask(TaskCore):
         Args:
             env_ids (torch.Tensor): The ids of the environments."""
 
-        num_goals = len(env_ids)
-
         # Set velocity targets
         if self._task_cfg.enable_linear_velocity:
             self._linear_velocity_target[env_ids] = (
                 self._gen_actions[env_ids, 0] * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
                 + self._task_cfg.goal_min_lin_vel
-            ) * sample_random_sign(num_goals, device=self._device)
+            ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
             self._linear_velocity_desired[env_ids] = self._linear_velocity_target.clone()
         if self._task_cfg.enable_lateral_velocity:
             self._lateral_velocity_target[env_ids] = (
                 self._gen_actions[env_ids, 1] * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
                 + self._task_cfg.goal_min_lat_vel
-            ) * sample_random_sign(num_goals, device=self._device)
+            ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
             self._lateral_velocity_desired[env_ids] = self._lateral_velocity_target.clone()
         if self._task_cfg.enable_angular_velocity:
             self._angular_velocity_target[env_ids] = (
                 self._gen_actions[env_ids, 2] * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
                 + self._task_cfg.goal_min_ang_vel
-            ) * sample_random_sign(num_goals, device=self._device)
+            ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
             self._angular_velocity_desired[env_ids] = self._angular_velocity_target.clone()
 
         # Pick a random smoothing factor
         self._smoothing_factor[env_ids] = (
-            torch.rand((num_goals,), device=self._device)
+            self._rng.sample_uniform_torch(0.0, 1.0, 1, ids=env_ids)
             * (self._task_cfg.smoothing_factor[1] - self._task_cfg.smoothing_factor[0])
             + self._task_cfg.smoothing_factor[0]
         )
         # Pick a random number of steps to update the goals
-        self._update_after_n_steps[env_ids] = torch.randint(
+        self._update_after_n_steps[env_ids] = self._rng.sample_integer_torch(
             self._task_cfg.interval[0],
             self._task_cfg.interval[1],
-            (num_goals,),
-            dtype=torch.int32,
-            device=self._device,
+            1,
+            ids=env_ids,
         )
 
     def update_goals(self) -> None:
@@ -344,32 +340,31 @@ class TrackVelocitiesTask(TaskCore):
                     self._gen_actions[idx_to_update, 0]
                     * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
                     + self._task_cfg.goal_min_lin_vel
-                ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
+                ) * self._rng.sample_sign_torch("float", 1, ids=idx_to_update)
             if self._task_cfg.enable_lateral_velocity:
                 self._lateral_velocity_desired[idx_to_update] = (
                     self._gen_actions[idx_to_update, 1]
                     * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
                     + self._task_cfg.goal_min_lat_vel
-                ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
+                ) * self._rng.sample_sign_torch("float", 1, ids=idx_to_update)
             if self._task_cfg.enable_angular_velocity:
                 self._angular_velocity_desired[idx_to_update] = (
                     self._gen_actions[idx_to_update, 2]
                     * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
                     + self._task_cfg.goal_min_ang_vel
-                ) * torch.sign(torch.rand((num_updates,), device=self._device) - 0.5)
+                ) * self._rng.sample_sign_torch("float", 1, ids=idx_to_update)
             # Pick a random smoothing factor
             self._smoothing_factor[idx_to_update] = (
-                torch.rand((num_updates,), device=self._device)
+                self._rng.sample_uniform_torch(0.0, 1.0, 1, ids=idx_to_update)
                 * (self._task_cfg.smoothing_factor[1] - self._task_cfg.smoothing_factor[0])
                 + self._task_cfg.smoothing_factor[0]
             )
             # Pick a random number of steps to update the goals
-            self._update_after_n_steps[idx_to_update] = torch.randint(
+            self._update_after_n_steps[idx_to_update] = self._rng.sample_integer_torch(
                 self._task_cfg.interval[0],
                 self._task_cfg.interval[1],
-                (num_updates,),
-                dtype=torch.int32,
-                device=self._device,
+                1,
+                ids=idx_to_update,
             )
             self._num_steps[idx_to_update] = 0
 
@@ -398,7 +393,7 @@ class TrackVelocitiesTask(TaskCore):
             self._gen_actions[env_ids, 3] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
             + self._task_cfg.spawn_min_lin_vel
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        theta = self._rng.sample_uniform_torch(0.0, 2 * math.pi, 1, ids=env_ids)
         initial_velocity[:, 0] = velocity_norm * torch.cos(theta)
         initial_velocity[:, 1] = velocity_norm * torch.sin(theta)
 

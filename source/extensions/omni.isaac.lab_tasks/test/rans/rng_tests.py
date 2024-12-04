@@ -89,6 +89,57 @@ class TestRandomNumberGenerator(unittest.TestCase):
         output_2 = pesrng_2.sample_uniform_torch(0.0, 1.0, (10, 5))
         self.assertTrue(torch.equal(output_1, output_2))
 
+    def test_uniform_reproducibility_1D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        low = torch.zeros((1000), device="cuda")
+        high = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_uniform_torch(low, high, 1)
+        output_2 = pesrng_2.sample_uniform_torch(0.0, 1.0, (1,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_uniform_reproducibility_2D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        low = torch.zeros((1000), device="cuda")
+        high = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_uniform_torch(low, high, 10)
+        output_2 = pesrng_2.sample_uniform_torch(0.0, 1.0, (10,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_uniform_reproducibility_3D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        low = torch.zeros((1000), device="cuda")
+        high = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_uniform_torch(low, high, (10, 5))
+        output_2 = pesrng_2.sample_uniform_torch(0.0, 1.0, (10, 5))
+        self.assertTrue(torch.equal(output_1, output_2))
+
     def test_uniform_index_sampling(self):
         pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
         pesrng_1.set_seeds(
@@ -338,6 +389,57 @@ class TestRandomNumberGenerator(unittest.TestCase):
         output_2 = pesrng_2.sample_integer_torch(0, 100, (10, 5))
         self.assertTrue(torch.equal(output_1, output_2))
 
+    def test_integer_reproducibility_1D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        min = torch.zeros((1000), dtype=torch.int32, device="cuda")
+        max = torch.ones((1000), dtype=torch.int32, device="cuda") * 100
+        output_1 = pesrng_1.sample_integer_torch(min, max, 1)
+        output_2 = pesrng_2.sample_integer_torch(0, 100, (1,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_integer_reproducibility_2D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        min = torch.zeros((1000), dtype=torch.int32, device="cuda")
+        max = torch.ones((1000), dtype=torch.int32, device="cuda") * 100
+        output_1 = pesrng_1.sample_integer_torch(min, max, 10)
+        output_2 = pesrng_2.sample_integer_torch(0, 100, (10,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_integer_reproducibility_3D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        min = torch.zeros((1000), dtype=torch.int32, device="cuda")
+        max = torch.ones((1000), dtype=torch.int32, device="cuda") * 100
+        output_1 = pesrng_1.sample_integer_torch(min, max, (10, 5))
+        output_2 = pesrng_2.sample_integer_torch(0, 100, (10, 5))
+        self.assertTrue(torch.equal(output_1, output_2))
+
     def test_integer_index_sampling(self):
         pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
         pesrng_1.set_seeds(
@@ -427,6 +529,57 @@ class TestRandomNumberGenerator(unittest.TestCase):
             torch.arange(1000, dtype=torch.int32, device="cuda"),
         )
         output_1 = pesrng_1.sample_normal_torch(0.0, 1.0, (10, 5))
+        output_2 = pesrng_2.sample_normal_torch(0.0, 1.0, (10, 5))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_normal_reproducibility_1D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        mean = torch.zeros((1000), device="cuda")
+        std = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_normal_torch(mean, std, 1)
+        output_2 = pesrng_2.sample_normal_torch(0.0, 1.0, (1,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_normal_reproducibility_2D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        mean = torch.zeros((1000), device="cuda")
+        std = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_normal_torch(mean, std, 10)
+        output_2 = pesrng_2.sample_normal_torch(0.0, 1.0, (10,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_normal_reproducibility_3D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        mean = torch.zeros((1000), device="cuda")
+        std = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_normal_torch(mean, std, (10, 5))
         output_2 = pesrng_2.sample_normal_torch(0.0, 1.0, (10, 5))
         self.assertTrue(torch.equal(output_1, output_2))
 
@@ -521,6 +674,54 @@ class TestRandomNumberGenerator(unittest.TestCase):
             torch.arange(1000, dtype=torch.int32, device="cuda"),
         )
         output_1 = pesrng_1.sample_poisson_torch(1.0, (10, 5))
+        output_2 = pesrng_2.sample_poisson_torch(1.0, (10, 5))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_poisson_reproducibility_1D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        lams = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_poisson_torch(lams, 1)
+        output_2 = pesrng_2.sample_poisson_torch(1.0, (1,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_poisson_reproducibility_2D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        lams = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_poisson_torch(lams, 10)
+        output_2 = pesrng_2.sample_poisson_torch(1.0, (10,))
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_poisson_reproducibility_3D_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        lams = torch.ones((1000), device="cuda")
+        output_1 = pesrng_1.sample_poisson_torch(lams, (10, 5))
         output_2 = pesrng_2.sample_poisson_torch(1.0, (10, 5))
         self.assertTrue(torch.equal(output_1, output_2))
 

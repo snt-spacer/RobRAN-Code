@@ -7,7 +7,6 @@ import math
 import torch
 
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_random_sign, sample_uniform
 
 from omni.isaac.lab_tasks.rans import GoToPoseCfg
 
@@ -291,20 +290,15 @@ class GoToPoseTask(TaskCore):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations."""
 
-        num_goals = len(env_ids)
-
         # The position is picked randomly in a square centered on the origin
         self._target_positions[env_ids] = (
-            sample_uniform(
-                -self._task_cfg.goal_max_dist_from_origin,
-                self._task_cfg.goal_max_dist_from_origin,
-                (num_goals, 2),
-                device=self._device,
+            self._rng.sample_uniform_torch(
+                -self._task_cfg.goal_max_dist_from_origin, self._task_cfg.goal_max_dist_from_origin, 2, ids=env_ids
             )
             + self._env_origins[env_ids, :2]
         )
         # Randomize heading
-        self._target_headings[env_ids] = torch.rand(num_goals, device=self._device) * math.pi * 2
+        self._target_headings[env_ids] = self._rng.sample_uniform_torch(0, math.pi * 2, 1, ids=env_ids)
 
         # Update the visual markers
         self._markers_quat[env_ids, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
@@ -339,7 +333,7 @@ class GoToPoseTask(TaskCore):
                 * (self._task_cfg.spawn_max_cone_spread - self._task_cfg.spawn_min_cone_spread)
                 + self._task_cfg.spawn_min_cone_spread
             )
-            * sample_random_sign((num_resets,), device=self._device)
+            * self._rng.sample_sign_torch("float", 1, ids=env_ids)
             + self._target_headings[env_ids]
             + math.pi
         )
@@ -352,7 +346,7 @@ class GoToPoseTask(TaskCore):
             self._gen_actions[env_ids, 2]
             * (self._task_cfg.spawn_max_heading_dist - self._task_cfg.spawn_min_heading_dist)
             + self._task_cfg.spawn_min_heading_dist
-        ) * sample_random_sign((num_resets,), device=self._device)
+        ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
         theta = sampled_heading + self._target_headings[env_ids]
         initial_pose[:, 3] = torch.cos(theta * 0.5)
         initial_pose[:, 6] = torch.sin(theta * 0.5)
@@ -365,7 +359,7 @@ class GoToPoseTask(TaskCore):
             self._gen_actions[env_ids, 3] * (self._task_cfg.spawn_max_lin_vel - self._task_cfg.spawn_min_lin_vel)
             + self._task_cfg.spawn_min_lin_vel
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        theta = self._rng.sample_uniform_torch(0, math.pi * 2, 1, ids=env_ids)
         initial_velocity[:, 0] = velocity_norm * torch.cos(theta)
         initial_velocity[:, 1] = velocity_norm * torch.sin(theta)
 

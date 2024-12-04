@@ -26,7 +26,7 @@ class PerEnvSeededRNG:
         if isinstance(seeds, int):
             self._seeds = wp.array(np.ones(num_envs) * seeds, dtype=wp.int32, device=device)
         else:
-            self._seeds = wp.from_torch(seeds, dtype=wp.int32, device=device)
+            self._seeds = wp.from_torch(seeds, dtype=wp.int32)
 
         self._states = wp.zeros(self._seeds.shape, dtype=wp.uint32, device=device)
         self._new_states = wp.zeros(self._seeds.shape, dtype=wp.uint32, device=device)
@@ -105,12 +105,12 @@ class PerEnvSeededRNG:
 
         if isinstance(ids, torch.Tensor):
             self.set_seeds_warp(
-                wp.from_torch(seeds, dtype=wp.int32),
-                wp.from_torch(ids, dtype=wp.int32),
+                wp.from_torch(seeds.to(torch.int32), dtype=wp.int32),
+                wp.from_torch(ids.to(torch.int32), dtype=wp.int32),
             )
         else:
             self.set_seeds_warp(
-                wp.from_torch(seeds, dtype=wp.int32),
+                wp.from_torch(seeds.to(torch.int32), dtype=wp.int32),
                 None,
             )
 
@@ -131,8 +131,13 @@ class PerEnvSeededRNG:
                 None,
             )
 
-    def sample_uniform_warp(self, low: float, high: float, shape: tuple | int, ids: wp.array | None = None) -> wp.array:
+    def sample_uniform_warp(
+        self, low: float | wp.array, high: float | wp.array, shape: tuple | int, ids: wp.array | None = None
+    ) -> wp.array:
         """Sample from a uniform distribution. Warp implementation.
+
+        If low and high are arrays, their shapes need to match that of the ids.
+
         Args:
             low: The lower bound of the distribution.
             high: The upper bound of the distribution.
@@ -145,7 +150,7 @@ class PerEnvSeededRNG:
         return uniform(low, high, self._states, self._new_states, ids, self.to_tuple(shape), self._device)
 
     def sample_uniform_torch(
-        self, low: float, high: float, shape: tuple | int, ids: torch.Tensor | None = None
+        self, low: float | torch.Tensor, high: float | torch.Tensor, shape: tuple | int, ids: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Sample from a uniform distribution. Torch implementation.
         Args:
@@ -155,13 +160,21 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if ids is None:
-            ids = wp.from_torch(ids, dtype=wp.int32)
+        if ids is not None:
+            ids = wp.from_torch(ids.to(torch.int32), dtype=wp.int32)
+        if isinstance(low, torch.Tensor):
+            low = wp.from_torch(low)
+        else:
+            low = float(low)
+        if isinstance(high, torch.Tensor):
+            high = wp.from_torch(high)
+        else:
+            high = float(high)
         output = self.sample_uniform_warp(low, high, shape, ids)
         return wp.to_torch(output)
 
     def sample_uniform_numpy(
-        self, low: float, high: float, shape: tuple | int, ids: np.ndarray | None = None
+        self, low: float | np.ndarray, high: float | np.ndarray, shape: tuple | int, ids: np.ndarray | None = None
     ) -> np.ndarray:
         """Sample from a uniform distribution. Numpy implementation.
         Args:
@@ -171,8 +184,16 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if ids is None:
-            ids = wp.array(ids, dtype=wp.int32, device=self._device)
+        if ids is not None:
+            ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
+        if isinstance(low, np.ndarray):
+            low = wp.array(low, dtype=float, device=self._device)
+        else:
+            low = float(low)
+        if isinstance(high, np.ndarray):
+            high = wp.array(high, dtype=float, device=self._device)
+        else:
+            high = float(high)
         output = self.sample_uniform_warp(low, high, shape, ids)
         return output.numpy()
 
@@ -196,8 +217,8 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if ids is None:
-            ids = wp.from_torch(ids, dtype=wp.int32)
+        if ids is not None:
+            ids = wp.from_torch(ids.to(torch.int32), dtype=wp.int32)
         assert dtype in ["int", "float"], "The data type must be either 'int' or 'float'."
         output = self.sample_sign_warp(dtype, shape, ids)
         return wp.to_torch(output)
@@ -210,14 +231,16 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if ids is None:
-            ids = wp.array(ids, dtype=wp.int32, device=self._device)
+        if ids is not None:
+            ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
         assert dtype in ["int", "float"], "The data type must be either 'int' or 'float'."
         output = self.sample_sign_warp(dtype, shape, ids)
         return output.numpy()
 
     # Rand int
-    def sample_integer_warp(self, low: int, high: int, shape: tuple | int, ids: wp.array | None = None) -> wp.array:
+    def sample_integer_warp(
+        self, low: int | wp.array, high: int | wp.array, shape: tuple | int, ids: wp.array | None = None
+    ) -> wp.array:
         """Sample for a random integer. Warp implementation.
         Args:
             low: The lower bound of the distribution.
@@ -231,7 +254,7 @@ class PerEnvSeededRNG:
         return integer(low, high, self._states, self._new_states, ids, self.to_tuple(shape), self._device)
 
     def sample_integer_torch(
-        self, low: int, high: int, shape: tuple | int, ids: torch.Tensor | None = None
+        self, low: int | torch.Tensor, high: int | torch.Tensor, shape: tuple | int, ids: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Sample for a random integer. Torch implementation.
         Args:
@@ -241,13 +264,21 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             torch.Tensor: The sampled values."""
-        if ids is None:
-            ids = wp.from_torch(ids, dtype=wp.int32)
+        if ids is not None:
+            ids = wp.from_torch(ids.to(torch.int32))
+        if isinstance(low, torch.Tensor):
+            low = wp.from_torch(low.to(torch.int32))
+        else:
+            low = int(low)
+        if isinstance(high, torch.Tensor):
+            high = wp.from_torch(high.to(torch.int32))
+        else:
+            high = int(high)
         output = self.sample_integer_warp(low, high, shape, ids)
         return wp.to_torch(output)
 
     def sample_integer_numpy(
-        self, low: int, high: int, shape: tuple | int, ids: np.ndarray | None = None
+        self, low: int | np.ndarray, high: int | np.ndarray, shape: tuple | int, ids: np.ndarray | None = None
     ) -> np.ndarray:
         """Sample for a random integer. Numpy implementation.
         Args:
@@ -257,12 +288,22 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             np.ndarray: The sampled values."""
-        if ids is None:
-            ids = wp.array(ids, dtype=wp.int32, device=self._device)
+        if ids is not None:
+            ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
+        if isinstance(low, np.ndarray):
+            low = wp.array(low, dtype=wp.int32, device=self._device)
+        else:
+            low = int(low)
+        if isinstance(high, np.ndarray):
+            high = wp.array(high, dtype=wp.int32, device=self._device)
+        else:
+            high = int(high)
         output = self.sample_integer_warp(low, high, shape, ids)
         return output.numpy()
 
-    def sample_normal_warp(self, mean: float, std: float, shape: tuple | int, ids: wp.array | None = None) -> wp.array:
+    def sample_normal_warp(
+        self, mean: float | wp.array, std: float | wp.array, shape: tuple | int, ids: wp.array | None = None
+    ) -> wp.array:
         """Sample from a normal distribution. Warp implementation.
         Args:
             mean: The mean of the distribution.
@@ -276,7 +317,7 @@ class PerEnvSeededRNG:
         return normal(mean, std, self._states, self._new_states, ids, self.to_tuple(shape), self._device)
 
     def sample_normal_torch(
-        self, mean: float, std: float, shape: tuple | int, ids: torch.Tensor | None = None
+        self, mean: float | torch.Tensor, std: float | torch.Tensor, shape: tuple | int, ids: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Sample from a normal distribution. Torch implementation.
         Args:
@@ -286,13 +327,21 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             torch.Tensor: The sampled values."""
-        if ids is None:
-            ids = wp.from_torch(ids, dtype=wp.int32)
+        if ids is not None:
+            ids = wp.from_torch(ids.to(torch.int32), dtype=wp.int32)
+        if isinstance(mean, torch.Tensor):
+            mean = wp.from_torch(mean)
+        else:
+            mean = float(mean)
+        if isinstance(std, torch.Tensor):
+            std = wp.from_torch(std)
+        else:
+            std = float(std)
         output = self.sample_normal_warp(mean, std, shape, ids)
         return wp.to_torch(output)
 
     def sample_normal_numpy(
-        self, mean: float, std: float, shape: tuple | int, ids: np.ndarray | None = None
+        self, mean: float | np.ndarray, std: float | np.ndarray, shape: tuple | int, ids: np.ndarray | None = None
     ) -> np.ndarray:
         """Sample from a normal distribution. Numpy implementation.
         Args:
@@ -302,12 +351,20 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             np.ndarray: The sampled values."""
-        if ids is None:
-            ids = wp.array(ids, dtype=wp.int32, device=self._device)
+        if ids is not None:
+            ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
+        if isinstance(mean, np.ndarray):
+            mean = wp.array(mean, dtype=float, device=self._device)
+        else:
+            mean = float(mean)
+        if isinstance(std, np.ndarray):
+            std = wp.array(std, dtype=float, device=self._device)
+        else:
+            std = float(std)
         output = self.sample_normal_warp(mean, std, shape, ids)
         return output.numpy()
 
-    def sample_poisson_warp(self, lam: float, shape: tuple | int, ids: wp.array | None = None) -> wp.array:
+    def sample_poisson_warp(self, lam: float | wp.array, shape: tuple | int, ids: wp.array | None = None) -> wp.array:
         """Sample from a poisson distribution. Warp implementation.
         Args:
             lam: The rate of the distribution.
@@ -319,7 +376,9 @@ class PerEnvSeededRNG:
             ids = self._ALL_INDICES
         return poisson(lam, self._states, self._new_states, ids, self.to_tuple(shape), self._device)
 
-    def sample_poisson_torch(self, lam: float, shape: tuple | int, ids: torch.Tensor | None = None) -> torch.Tensor:
+    def sample_poisson_torch(
+        self, lam: float | torch.Tensor, shape: tuple | int, ids: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """Sample from a poisson distribution. Torch implementation.
         Args:
             lam: The rate of the distribution.
@@ -327,12 +386,16 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if ids is None:
-            ids = wp.from_torch(ids, dtype=wp.int32)
+        if ids is not None:
+            ids = wp.from_torch(ids.to(torch.int32), dtype=wp.int32)
+        if isinstance(lam, torch.Tensor):
+            lam = wp.from_torch(lam)
+        else:
+            lam = float(lam)
         output = self.sample_poisson_warp(lam, shape, ids)
         return wp.to_torch(output)
 
-    def sample_poisson_numpy(self, lam: float, shape: tuple | int, ids: np.ndarray | None) -> np.ndarray:
+    def sample_poisson_numpy(self, lam: float | np.ndarray, shape: tuple | int, ids: np.ndarray | None) -> np.ndarray:
         """Sample from a poisson distribution. Numpy implementation.
         Args:
             lam: The rate of the distribution.
@@ -340,8 +403,12 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             The sampled values."""
-        if ids is None:
-            ids = wp.array(ids, dtype=wp.int32, device=self._device)
+        if ids is not None:
+            ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
+        if isinstance(lam, np.ndarray):
+            lam = wp.array(lam, dtype=float, device=self._device)
+        else:
+            lam = float(lam)
         output = self.sample_poisson_warp(lam, shape, ids)
         return output.numpy()
 
@@ -363,8 +430,8 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             torch.Tensor: The sampled values."""
-        if ids is None:
-            ids = wp.from_torch(ids, dtype=wp.int32)
+        if ids is not None:
+            ids = wp.from_torch(ids.to(torch.int32), dtype=wp.int32)
         output = self.sample_quaternion_warp(shape, ids)
         return wp.to_torch(output)
 
@@ -375,7 +442,7 @@ class PerEnvSeededRNG:
             ids: The ids of the environments.
         Returns:
             np.ndarray: The sampled values."""
-        if ids is None:
-            ids = wp.array(ids, dtype=wp.int32, device=self._device)
+        if ids is not None:
+            ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
         output = self.sample_quaternion_warp(shape, ids)
         return output.numpy()

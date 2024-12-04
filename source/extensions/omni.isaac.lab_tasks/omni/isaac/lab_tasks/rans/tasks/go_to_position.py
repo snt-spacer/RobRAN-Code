@@ -7,7 +7,6 @@ import math
 import torch
 
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_SPHERE_CFG, VisualizationMarkers
-from omni.isaac.lab.utils.math import sample_random_sign, sample_uniform
 
 from omni.isaac.lab_tasks.rans import GoToPositionCfg
 
@@ -261,15 +260,10 @@ class GoToPositionTask(TaskCore):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations."""
 
-        num_goals = len(env_ids)
-
         # The position is picked randomly in a square centered on the origin
         self._target_positions[env_ids] = (
-            sample_uniform(
-                -self._task_cfg.goal_max_dist_from_origin,
-                self._task_cfg.goal_max_dist_from_origin,
-                (num_goals, 2),
-                device=self._device,
+            self._rng.sample_uniform_torch(
+                -self._task_cfg.goal_max_dist_from_origin, self._task_cfg.goal_max_dist_from_origin, 2, ids=env_ids
             )
             + self._env_origins[env_ids, :2]
         )
@@ -303,7 +297,7 @@ class GoToPositionTask(TaskCore):
             self._gen_actions[env_ids, 0] * (self._task_cfg.spawn_max_dist - self._task_cfg.spawn_min_dist)
             + self._task_cfg.spawn_min_dist
         )
-        theta = sample_uniform(-math.pi, math.pi, (num_resets,), device=self._device)
+        theta = self._rng.sample_uniform_torch(-math.pi, math.pi, 1, ids=env_ids)
         initial_pose[:, 0] = r * torch.cos(theta) + self._target_positions[env_ids, 0]
         initial_pose[:, 1] = r * torch.sin(theta) + self._target_positions[env_ids, 1]
         initial_pose[:, 2] = self._robot_origins[env_ids, 2]
@@ -319,7 +313,7 @@ class GoToPositionTask(TaskCore):
             self._gen_actions[env_ids, 1]
             * (self._task_cfg.spawn_max_heading_dist - self._task_cfg.spawn_min_heading_dist)
             + self._task_cfg.spawn_min_heading_dist
-        ) * sample_random_sign(num_resets, device=self._device)
+        ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
         # The spawn heading is the delta heading + the target heading
         theta = delta_heading + target_heading
         initial_pose[:, 3] = torch.cos(theta * 0.5)

@@ -115,7 +115,7 @@ def rand_uniform_3D(
     new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
 
 
-def uniform(
+def uniform_single(
     low: float, high: float, states: wp.array, new_states: wp.array, ids: wp.array, shape: tuple[int], device="cuda"
 ) -> wp.array:
     """Sample from a uniform distribution.
@@ -134,7 +134,10 @@ def uniform(
         The sampled values.
     """
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.float32, device=device)
     match len(kernel_shape):
         case 1:
@@ -162,6 +165,164 @@ def uniform(
             raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
     wp.copy(states, new_states)
     return outputs
+
+
+###################
+# UNIFORM TENSOR
+###################
+
+
+@wp.kernel
+def rand_uniform_1D_tensorized(
+    low: wp.array(dtype=wp.float32),
+    high: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.float32),
+):
+    """Sample from a uniform distribution. 1D version.
+    The state for each environment is updated automatically.
+    Args:
+        low: The lower bound of the uniform distribution for each environments.
+        high: The upper bound of the uniform distribution for each environments.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor."""
+    tid = wp.tid()
+    output[tid] = wp.randf(states[ids[tid]], low[tid], high[tid])
+    new_states[ids[tid]] = states[ids[tid]] + wp.uint32(1)
+
+
+@wp.kernel
+def rand_uniform_2D_tensorized(
+    low: wp.array(dtype=wp.float32),
+    high: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.float32, ndim=2),
+    offset: wp.uint32,
+):
+    """Sample from a uniform distribution. 2D version.
+    The state for each environment is updated automatically.
+    Args:
+        low: The lower bound of the uniform distribution for each environments.
+        high: The upper bound of the uniform distribution for each environments.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 2D tensor. Used to calculate the correct state for each environment."""
+    i, j = wp.tid()
+    output[i][j] = wp.randf(states[ids[i]] + wp.uint32(j), low[i], high[i])
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+@wp.kernel
+def rand_uniform_3D_tensorized(
+    low: wp.array(dtype=wp.float32),
+    high: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=float, ndim=3),
+    offset: wp.uint32,
+    shape: wp.vec3i,
+):
+    """Sample from a uniform distribution. 3D version.
+    The state for each environment is updated automatically.
+    Args:
+        low: The lower bound of the uniform distribution for each environments.
+        high: The upper bound of the uniform distribution for each environments.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 3D tensor. Used to calculate the correct state for each environment.
+        shape: The shape of the 3D tensor. Used to calculate the correct state for each environment."""
+    i, j, k = wp.tid()
+    output[i][j][k] = wp.randf(states[ids[i]] + wp.uint32(j * shape[1] + k), low[i], high[i])
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+def uniform_tensorized(
+    low: wp.array,
+    high: wp.array,
+    states: wp.array,
+    new_states: wp.array,
+    ids: wp.array,
+    shape: tuple[int],
+    device="cuda",
+) -> wp.array:
+    """Sample from a uniform distribution.
+    Automatically uses the correct kernel based on the desired shape. It is important to note that the
+    final shape is defined as: (ids.shape[0],) + shape.
+    The kernel will automatically update the state for each environment after sampling.
+    Args:
+        low: The lower bound of the uniform distribution.
+        high: The upper bound of the uniform distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        shape: The shape of the output tensor.
+        device: The device to be used for the computation.
+    Returns:
+        The sampled values.
+    """
+    offset = math.prod(shape)
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
+    outputs = wp.empty(kernel_shape, dtype=wp.float32, device=device)
+    match len(kernel_shape):
+        case 1:
+            wp.launch(
+                kernel=rand_uniform_1D_tensorized,
+                dim=kernel_shape[0],
+                inputs=[low, high, states, new_states, ids, outputs],
+                device=device,
+            )
+        case 2:
+            wp.launch(
+                kernel=rand_uniform_2D_tensorized,
+                dim=kernel_shape,
+                inputs=[low, high, states, new_states, ids, outputs, offset],
+                device=device,
+            )
+        case 3:
+            wp.launch(
+                kernel=rand_uniform_3D_tensorized,
+                dim=kernel_shape,
+                inputs=[low, high, states, new_states, ids, outputs, offset, kernel_shape],
+                device=device,
+            )
+        case _:
+            raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
+    wp.copy(states, new_states)
+    return outputs
+
+
+def uniform(
+    low: float | wp.array,
+    high: float | wp.array,
+    states: wp.array,
+    new_states: wp.array,
+    ids: wp.array,
+    shape: tuple[int],
+    device="cuda",
+):
+    if isinstance(low, wp.array) or isinstance(high, wp.array):
+        if isinstance(low, float) or isinstance(high, float):
+            raise ValueError("The high value must be a tensor if the low value is a tensor.")
+        output = uniform_tensorized(low, high, states, new_states, ids, shape, device=device)
+    elif isinstance(low, float) or isinstance(high, float):
+        if isinstance(low, wp.array) or isinstance(high, wp.array):
+            raise ValueError("The low value must be a tensor if the high value is a tensor.")
+        output = uniform_single(low, high, states, new_states, ids, shape, device=device)
+    return output
 
 
 ###################
@@ -324,7 +485,10 @@ def rand_sign_int(states: wp.array, new_states: wp.array, ids: wp.array, shape: 
     Returns:
         The sampled values."""
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.int32, device=device)
     match len(kernel_shape):
         case 1:
@@ -371,7 +535,10 @@ def rand_sign_float(
     Returns:
         The sampled values."""
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.float32, device=device)
     match len(kernel_shape):
         case 1:
@@ -432,6 +599,7 @@ def rand_sign_fn(
 def rand_poisson_1D(
     lam: wp.float32,
     states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
     ids: wp.array(dtype=wp.int32),
     output: wp.array(dtype=wp.int32),
 ):
@@ -444,7 +612,7 @@ def rand_poisson_1D(
         output: The output tensor."""
     tid = wp.tid()
     output[tid] = wp.int32(wp.poisson(states[ids[tid]], lam))
-    states[ids[tid]] = states[ids[tid]] + wp.uint32(1)
+    new_states[ids[tid]] = states[ids[tid]] + wp.uint32(1)
 
 
 @wp.kernel
@@ -495,7 +663,75 @@ def rand_poisson_3D(
     new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
 
 
-def poisson(
+@wp.kernel
+def rand_poisson_1D_tensorized(
+    lam: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.int32),
+):
+    """Sample from a poisson distribution. 1D version.
+    The state for each environment is updated automatically.
+    Args:
+        lam: The lambda parameter of the poisson distribution.
+        states: The state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor."""
+    tid = wp.tid()
+    output[tid] = wp.int32(wp.poisson(states[ids[tid]], lam[tid]))
+    new_states[ids[tid]] = states[ids[tid]] + wp.uint32(1)
+
+
+@wp.kernel
+def rand_poisson_2D_tensorized(
+    lam: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.int32, ndim=2),
+    offset: wp.uint32,
+):
+    """Sample from a poisson distribution. 2D version.
+    The state for each environment is updated automatically.
+    Args:
+        lam: The lambda parameter of the poisson distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 2D tensor. Used to calculate the correct state for each environment."""
+    i, j = wp.tid()
+    output[i][j] = wp.int32(wp.poisson(states[ids[i]] + wp.uint32(j), lam[i]))
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+@wp.kernel
+def rand_poisson_3D_tensorized(
+    lam: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.int32, ndim=3),
+    offset: wp.uint32,
+    shape: wp.vec3i,
+):
+    """Sample from a poisson distribution. 3D version.
+    The state for each environment is updated automatically.
+    Args:
+        lam: The lambda parameter of the poisson distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 3D tensor. Used to calculate the correct state for each environment.
+        shape: The shape of the 3D tensor. Used to calculate the correct state for each environment."""
+    i, j, k = wp.tid()
+    output[i][j][k] = wp.int32(wp.poisson(states[ids[i]] + wp.uint32(j * shape[1] + k), lam[i]))
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+def poisson_single(
     lam: float, states: wp.array, new_states: wp.array, ids: wp.array, shape: tuple[int], device="cuda"
 ) -> wp.array:
     """
@@ -513,7 +749,10 @@ def poisson(
     Returns:
         The sampled values."""
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.int32, device=device)
     match len(kernel_shape):
         case 1:
@@ -541,6 +780,67 @@ def poisson(
             raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
     wp.copy(states, new_states)
     return outputs
+
+
+def poisson_tensorized(
+    lam: wp.array, states: wp.array, new_states: wp.array, ids: wp.array, shape: tuple[int], device="cuda"
+) -> wp.array:
+    """
+    Sample a random sign as a integer.
+    Automatically uses the correct kernel based on the desired shape. It is important to note that the
+    final shape is defined as: (ids.shape[0],) + shape.
+    The kernel will automatically update the state for each environment after sampling.
+    Args:
+        lam: The lambda parameter of the poisson distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        shape: The shape of the output tensor.
+        device: The device to be used for the computation.
+    Returns:
+        The sampled values."""
+    offset = math.prod(shape)
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
+    outputs = wp.empty(kernel_shape, dtype=wp.int32, device=device)
+    match len(kernel_shape):
+        case 1:
+            wp.launch(
+                kernel=rand_poisson_1D_tensorized,
+                dim=kernel_shape[0],
+                inputs=[lam, states, new_states, ids, outputs],
+                device=device,
+            )
+        case 2:
+            wp.launch(
+                kernel=rand_poisson_2D_tensorized,
+                dim=kernel_shape,
+                inputs=[lam, states, new_states, ids, outputs, offset],
+                device=device,
+            )
+        case 3:
+            wp.launch(
+                kernel=rand_poisson_3D_tensorized,
+                dim=kernel_shape,
+                inputs=[lam, states, new_states, ids, outputs, offset, kernel_shape],
+                device=device,
+            )
+        case _:
+            raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
+    wp.copy(states, new_states)
+    return outputs
+
+
+def poisson(
+    lam: float | wp.array, states: wp.array, new_states: wp.array, ids: wp.array, shape: tuple[int], device="cuda"
+):
+    if isinstance(lam, wp.array):
+        output = poisson_tensorized(lam, states, new_states, ids, shape, device=device)
+    else:
+        output = poisson_single(lam, states, new_states, ids, shape, device=device)
+    return output
 
 
 ###################
@@ -622,7 +922,81 @@ def rand_int_3D(
     new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
 
 
-def integer(
+@wp.kernel
+def rand_int_1D_tensorized(
+    low: wp.array(dtype=wp.int32),
+    high: wp.array(dtype=wp.int32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.int32),
+):
+    """Sample integer values from a uniform distribution. 1D version.
+    The state for each environment is updated automatically.
+    Args:
+        low: The lower bound of the uniform distribution.
+        high: The upper bound of the uniform distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor."""
+    tid = wp.tid()
+    output[tid] = wp.randi(states[ids[tid]], low[tid], high[tid])
+    new_states[ids[tid]] = states[ids[tid]] + wp.uint32(1)
+
+
+@wp.kernel
+def rand_int_2D_tensorized(
+    low: wp.array(dtype=wp.int32),
+    high: wp.array(dtype=wp.int32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.int32, ndim=2),
+    offset: wp.uint32,
+):
+    """Sample integer values from a uniform distribution. 2D version.
+    The state for each environment is updated automatically.
+    Args:
+        low: The lower bound of the uniform distribution.
+        high: The upper bound of the uniform distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 2D tensor. Used to calculate the correct state for each environment."""
+    i, j = wp.tid()
+    output[i][j] = wp.randi(states[ids[i]] + wp.uint32(j), low[i], high[i])
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+@wp.kernel
+def rand_int_3D_tensorized(
+    low: wp.array(dtype=wp.int32),
+    high: wp.array(dtype=wp.int32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.int32, ndim=3),
+    offset: wp.uint32,
+    shape: wp.vec3i,
+):
+    """Sample integer values from a uniform distribution. 3D version.
+    The state for each environment is updated automatically.
+    Args:
+        low: The lower bound of the uniform distribution.
+        high: The upper bound of the uniform distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 3D tensor. Used to calculate the correct state for each environment."""
+    i, j, k = wp.tid()
+    output[i][j][k] = wp.randi(states[ids[i]] + wp.uint32(j * shape[1] + k), low[i], high[i])
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+def integer_single(
     low: int, high: int, states: wp.array, new_states: wp.array, ids: wp.array, shape: tuple[int], device="cuda"
 ) -> wp.array:
     """
@@ -640,7 +1014,10 @@ def integer(
     Returns:
         The sampled values."""
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.int32, device=device)
     match len(kernel_shape):
         case 1:
@@ -668,6 +1045,97 @@ def integer(
             raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
     wp.copy(states, new_states)
     return outputs
+
+
+def integer_tensorized(
+    low: wp.array,
+    high: wp.array,
+    states: wp.array,
+    new_states: wp.array,
+    ids: wp.array,
+    shape: tuple[int],
+    device="cuda",
+) -> wp.array:
+    """
+    Sample a random integer between two bounds.
+    Automatically uses the correct kernel based on the desired shape. It is important to note that the
+    final shape is defined as: (ids.shape[0],) + shape.
+    The kernel will automatically update the state for each environment after sampling.
+    Args:
+        lam: The lambda parameter of the poisson distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        shape: The shape of the output tensor.
+        device: The device to be used for the computation.
+    Returns:
+        The sampled values."""
+    offset = math.prod(shape)
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
+    outputs = wp.empty(kernel_shape, dtype=wp.int32, device=device)
+    match len(kernel_shape):
+        case 1:
+            wp.launch(
+                kernel=rand_int_1D_tensorized,
+                dim=kernel_shape[0],
+                inputs=[low, high, states, new_states, ids, outputs],
+                device=device,
+            )
+        case 2:
+            wp.launch(
+                kernel=rand_int_2D_tensorized,
+                dim=kernel_shape,
+                inputs=[low, high, states, new_states, ids, outputs, offset],
+                device=device,
+            )
+        case 3:
+            wp.launch(
+                kernel=rand_int_3D_tensorized,
+                dim=kernel_shape,
+                inputs=[low, high, states, new_states, ids, outputs, offset, kernel_shape],
+                device=device,
+            )
+        case _:
+            raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
+    wp.copy(states, new_states)
+    return outputs
+
+
+def integer(
+    low: int | wp.array,
+    high: int | wp.array,
+    states: wp.array,
+    new_states: wp.array,
+    ids: wp.array,
+    shape: tuple[int],
+    device="cuda",
+):
+    """Sample a random integer between two bounds.
+    Automatically uses the correct kernel based on the desired shape. It is important to note that the
+    final shape is defined as: (ids.shape[0],) + shape.
+    The kernel will automatically update the state for each environment after sampling.
+    Args:
+        low: The lower bound of the uniform distribution.
+        high: The upper bound of the uniform distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        shape: The shape of the output tensor.
+        device: The device to be used for the computation.
+    Returns:
+        The sampled values."""
+    if isinstance(low, wp.array) or isinstance(high, wp.array):
+        if isinstance(low, int) or isinstance(high, int):
+            raise ValueError("The high value must be a tensor if the low value is a tensor.")
+        output = integer_tensorized(low, high, states, new_states, ids, shape, device=device)
+    elif isinstance(low, int) or isinstance(high, int):
+        if isinstance(low, wp.array) or isinstance(high, wp.array):
+            raise ValueError("The low value must be a tensor if the high value is a tensor.")
+        output = integer_single(low, high, states, new_states, ids, shape, device=device)
+    return output
 
 
 ###################
@@ -750,7 +1218,82 @@ def rand_normal_3D(
     new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
 
 
-def normal(
+@wp.kernel
+def rand_normal_1D_tensorized(
+    mean: wp.array(dtype=wp.float32),
+    std: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.float32),
+):
+    """Sample from a normal distribution. 1D version.
+    The state for each environment is updated automatically.
+    Args:
+        mean: The mean of the distribution.
+        std: The standard deviation of the distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor."""
+    tid = wp.tid()
+    output[tid] = mean[tid] + wp.randn(states[ids[tid]]) * std[tid]
+    new_states[ids[tid]] = states[ids[tid]] + wp.uint32(1)
+
+
+@wp.kernel
+def rand_normal_2D_tensorized(
+    mean: wp.array(dtype=wp.float32),
+    std: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.float32, ndim=2),
+    offset: wp.uint32,
+):
+    """Sample from a normal distribution. 2D version.
+    The state for each environment is updated automatically.
+    Args:
+        mean: The mean of the distribution.
+        std: The standard deviation of the distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 2D tensor. Used to calculate the correct state for each environment."""
+    i, j = wp.tid()
+    output[i][j] = mean[i] + wp.randn(states[ids[i]] + wp.uint32(j)) * std[i]
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+@wp.kernel
+def rand_normal_3D_tensorized(
+    mean: wp.array(dtype=wp.float32),
+    std: wp.array(dtype=wp.float32),
+    states: wp.array(dtype=wp.uint32),
+    new_states: wp.array(dtype=wp.uint32),
+    ids: wp.array(dtype=wp.int32),
+    output: wp.array(dtype=wp.float32, ndim=3),
+    offset: wp.uint32,
+    shape: wp.vec3i,
+):
+    """Sample from a normal distribution. 3D version.
+    The state for each environment is updated automatically.
+    Args:
+        mean: The mean of the distribution.
+        std: The standard deviation of the distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        output: The output tensor.
+        offset: The offset for the 3D tensor. Used to calculate the correct state for each environment.
+        shape: The shape of the 3D tensor. Used to calculate the correct state for each environment."""
+    i, j, k = wp.tid()
+    output[i][j][k] = mean[i] + wp.randn(states[ids[i]] + wp.uint32(j * shape[1] + k)) * std[i]
+    new_states[ids[i]] = states[ids[i]] + wp.uint32(offset)
+
+
+def normal_single(
     mean: float, std: float, states: wp.array, new_states: wp.array, ids: wp.array, shape: tuple[int], device="cuda"
 ) -> wp.array:
     """
@@ -769,7 +1312,10 @@ def normal(
     Returns:
         The sampled values."""
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.float32, device=device)
     match len(kernel_shape):
         case 1:
@@ -797,6 +1343,84 @@ def normal(
             raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
     wp.copy(states, new_states)
     return outputs
+
+
+def normal_tensorized(
+    mean: wp.array,
+    std: wp.array,
+    states: wp.array,
+    new_states: wp.array,
+    ids: wp.array,
+    shape: tuple[int],
+    device="cuda",
+) -> wp.array:
+    """
+    Samples a normal distribution between two bounds.
+    Automatically uses the correct kernel based on the desired shape. It is important to note that the
+    final shape is defined as: (ids.shape[0],) + shape.
+    The kernel will automatically update the state for each environment after sampling.
+    Args:
+        mean: The mean of the distribution.
+        std: The standard deviation of the distribution.
+        states: The state for each environment.
+        new_states: The new state for each environment.
+        ids: The ids of the selected environments.
+        shape: The shape of the output tensor.
+        device: The device to be used for the computation.
+    Returns:
+        The sampled values."""
+    offset = math.prod(shape)
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
+    outputs = wp.empty(kernel_shape, dtype=wp.float32, device=device)
+    match len(kernel_shape):
+        case 1:
+            wp.launch(
+                kernel=rand_normal_1D_tensorized,
+                dim=kernel_shape[0],
+                inputs=[mean, std, states, new_states, ids, outputs],
+                device=device,
+            )
+        case 2:
+            wp.launch(
+                kernel=rand_normal_2D_tensorized,
+                dim=kernel_shape,
+                inputs=[mean, std, states, new_states, ids, outputs, offset],
+                device=device,
+            )
+        case 3:
+            wp.launch(
+                kernel=rand_normal_3D_tensorized,
+                dim=kernel_shape,
+                inputs=[mean, std, states, new_states, ids, outputs, offset, kernel_shape],
+                device=device,
+            )
+        case _:
+            raise ValueError("Invalid shape, must be 1, 2 or 3 dimensions")
+    wp.copy(states, new_states)
+    return outputs
+
+
+def normal(
+    mean: float | wp.array,
+    std: float | wp.array,
+    states: wp.array,
+    new_states: wp.array,
+    ids: wp.array,
+    shape: tuple[int],
+    device="cuda",
+):
+    if isinstance(mean, wp.array) or isinstance(std, wp.array):
+        if isinstance(mean, float) or isinstance(std, float):
+            raise ValueError("The high value must be a tensor if the low value is a tensor.")
+        output = normal_tensorized(mean, std, states, new_states, ids, shape, device=device)
+    elif isinstance(mean, float) or isinstance(std, float):
+        if isinstance(mean, wp.array) or isinstance(std, wp.array):
+            raise ValueError("The low value must be a tensor if the high value is a tensor.")
+        output = normal_single(mean, std, states, new_states, ids, shape, device=device)
+    return output
 
 
 ###################
@@ -887,7 +1511,10 @@ def quaternion(states: wp.array, new_states: wp.array, ids: wp.array, shape: tup
     Returns:
         The sampled values."""
     offset = math.prod(shape)
-    kernel_shape = (ids.shape[0],) + shape
+    if shape[0] == 1:
+        kernel_shape = (ids.shape[0],)
+    else:
+        kernel_shape = (ids.shape[0],) + shape
     outputs = wp.empty(kernel_shape, dtype=wp.quatf, device=device)
     match len(kernel_shape):
         case 1:

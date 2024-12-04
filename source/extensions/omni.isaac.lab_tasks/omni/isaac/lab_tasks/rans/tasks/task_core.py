@@ -7,7 +7,7 @@ import torch
 from dataclasses import MISSING
 
 from omni.isaac.lab_tasks.rans import RobotCore
-from omni.isaac.lab_tasks.rans.utils import ScalarLogger
+from omni.isaac.lab_tasks.rans.utils import PerEnvSeededRNG, ScalarLogger
 
 
 class TaskCore:
@@ -43,6 +43,10 @@ class TaskCore:
 
         # Robot
         self._robot: RobotCore = MISSING
+
+        # RNG
+        seeds = torch.randint(0, 2**31, (self._num_envs,), dtype=torch.int32, device=self._device)
+        self._rng = PerEnvSeededRNG(seeds, self._num_envs, self._device)
 
         # Logs
         self.create_logs()
@@ -138,6 +142,15 @@ class TaskCore:
             env_seed (torch.Tensor | None): The seed to used in each environment.
             env_ids (torch.Tensor): The ids of the environments."""
 
+        # Updates the seed
+        if env_seeds is None:
+            self._seeds[env_ids] = torch.randint(0, 2**31, (len(env_ids),), dtype=torch.int32, device=self._device)
+        else:
+            self._seeds[env_ids] = env_seeds
+
+        # Update the RNG
+        self._rng.set_seeds(self._seeds[env_ids], env_ids)
+
         # Reset the robot
         self._robot.reset(env_ids)
 
@@ -146,12 +159,6 @@ class TaskCore:
             self._gen_actions[env_ids] = torch.rand((len(env_ids), self.num_gen_actions), device=self._device)
         else:
             self._gen_actions[env_ids] = gen_actions
-
-        # Updates the seed
-        if env_seeds is None:
-            self._seeds[env_ids] = torch.randint(0, 100000, (len(env_ids),), dtype=torch.int32, device=self._device)
-        else:
-            self._seeds[env_ids] = env_seeds
 
         # Randomizes goals and initial conditions
         self.set_goals(env_ids)
