@@ -15,16 +15,16 @@ from .robot_core import RobotCore
 class LeatherbackRobot(RobotCore):
     def __init__(
         self,
-        robot_cfg: LeatherbackRobotCfg,
+        robot_cfg: LeatherbackRobotCfg = LeatherbackRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
     ):
         super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
-        self._dim_robot_obs = 2
-        self._dim_robot_act = 2
-        self._dim_gen_act = 0
+        self._dim_robot_obs = self._robot_cfg.observation_space
+        self._dim_robot_act = self._robot_cfg.action_space
+        self._dim_gen_act = self._robot_cfg.gen_space
 
         # Buffers
         self.initialize_buffers()

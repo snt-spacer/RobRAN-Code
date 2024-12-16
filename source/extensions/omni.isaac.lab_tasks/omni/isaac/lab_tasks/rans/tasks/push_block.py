@@ -6,8 +6,10 @@
 import math
 import torch
 
-from omni.isaac.lab.assets import RigidObject
+from omni.isaac.lab.assets import RigidObject, RigidObjectCfg
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, CYLINDER_MARKER_CFG, VisualizationMarkers
+from omni.isaac.lab.scene import InteractiveScene
+from omni.isaac.lab.sim import CollisionPropertiesCfg, CuboidCfg, MassPropertiesCfg, RigidBodyPropertiesCfg
 
 from omni.isaac.lab_tasks.rans import PushBlockCfg
 
@@ -23,8 +25,7 @@ class PushBlockTask(TaskCore):
 
     def __init__(
         self,
-        task_cfg: PushBlockCfg,
-        block: RigidObject,
+        task_cfg: PushBlockCfg = PushBlockCfg(),
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -47,13 +48,42 @@ class PushBlockTask(TaskCore):
         super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Defines the observation and actions space sizes for this task
-        self._dim_task_obs = 9
-        self._dim_gen_act = 5
-
-        self.block = block
+        self._dim_task_obs = self._task_cfg.observation_space
+        self._dim_gen_act = self._task_cfg.gen_space
 
         # Buffers
         self.initialize_buffers()
+        self.design_scene()
+
+    def design_scene(self) -> None:
+        """Setups the cube to be pushed in the environment."""
+        # Block
+        block_cfg: RigidObjectCfg = RigidObjectCfg(
+            prim_path="/World/envs/env_.*/block",
+            spawn=CuboidCfg(
+                size=(0.1, 0.1, 0.1),
+                rigid_props=RigidBodyPropertiesCfg(
+                    kinematic_enabled=False,
+                    disable_gravity=False,
+                    enable_gyroscopic_forces=True,
+                    solver_position_iteration_count=8,
+                    solver_velocity_iteration_count=0,
+                    sleep_threshold=0.005,
+                    stabilization_threshold=0.0025,
+                    max_depenetration_velocity=1000.0,
+                ),
+                mass_props=MassPropertiesCfg(mass=1.0),
+                collision_props=CollisionPropertiesCfg(
+                    collision_enabled=True,
+                ),
+            ),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(4.0, 0.0, 0.1), rot=(1.0, 0.0, 0.0, 0.0)),
+        )
+        self.block = RigidObject(block_cfg)
+
+    def register_rigid_objects(self, scene: InteractiveScene) -> None:
+        """Registers the rigid objects in the scene."""
+        scene.rigid_objects["block"] = self.block
 
     def initialize_buffers(self, env_ids: torch.Tensor | None = None) -> None:
         """

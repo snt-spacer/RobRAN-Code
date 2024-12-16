@@ -16,32 +16,33 @@ from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 
-from omni.isaac.lab_tasks.rans import LeatherbackRobot, LeatherbackRobotCfg, RaceWayposesCfg, RaceWayposesTask
+from omni.isaac.lab_tasks.rans import ROBOT_CFG_FACTORY, ROBOT_FACTORY, TASK_CFG_FACTORY, TASK_FACTORY
 
 
 @configclass
-class LeatherbackRaceWayposesEnvCfg(DirectRLEnvCfg):
-    # Env settings TODO: get from config or task.
+class SingleEnvCfg(DirectRLEnvCfg):
+    # env
     decimation = 4
     episode_length_s = 20.0
 
+    robot_name = "Leatherback"
+    task_name = "GoToPosition"
+
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=20.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
 
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
-
-    robot_cfg: LeatherbackRobotCfg = LeatherbackRobotCfg()
-    task_cfg: RaceWayposesCfg = RaceWayposesCfg()
     debug_vis: bool = True
 
-    action_space = robot_cfg.action_space + task_cfg.action_space
-    observation_space = robot_cfg.observation_space + task_cfg.observation_space
-    state_space = robot_cfg.state_space + task_cfg.state_space
-    gen_space = robot_cfg.gen_space + task_cfg.gen_space
+    action_space = 0
+    observation_space = 0
+    state_space = 0
+    gen_space = 0
 
 
-class LeatherbackRaceWayposesEnv(DirectRLEnv):
+class SingleEnv(DirectRLEnv):
+
     # Workflow: Step
     #   - self._pre_physics_step
     #   - (Loop over N skipped steps)
@@ -63,24 +64,40 @@ class LeatherbackRaceWayposesEnv(DirectRLEnv):
     #   - (Check if noise is required)
     #       - self._add_noise
 
-    cfg: LeatherbackRaceWayposesEnvCfg
+    cfg: SingleEnvCfg
 
     def __init__(
         self,
-        cfg: LeatherbackRaceWayposesEnvCfg,
+        cfg: SingleEnvCfg,
         render_mode: str | None = None,
         **kwargs,
     ):
+        cfg = self.edit_cfg(cfg)
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
         self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
 
+    def edit_cfg(self, cfg: SingleEnvCfg) -> SingleEnvCfg:
+        self.robot_cfg = ROBOT_CFG_FACTORY(cfg.robot_name)
+        self.task_cfg = TASK_CFG_FACTORY(cfg.task_name)
+
+        cfg.action_space = self.robot_cfg.action_space + self.task_cfg.action_space
+        cfg.observation_space = self.robot_cfg.observation_space + self.task_cfg.observation_space
+        cfg.state_space = self.robot_cfg.state_space + self.task_cfg.state_space
+        cfg.gen_space = self.robot_cfg.gen_space + self.task_cfg.gen_space
+        return cfg
+
     def _setup_scene(self):
-        self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
-        self.robot_api = LeatherbackRobot(self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device)
-        self.task_api = RaceWayposesTask(self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device)
+        self.robot = Articulation(self.robot_cfg.robot_cfg)
+        self.robot_api = ROBOT_FACTORY(
+            self.cfg.robot_name, robot_cfg=self.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device
+        )
+        self.task_api = TASK_FACTORY(
+            self.cfg.task_name, task_cfg=self.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device
+        )
+        self.task_api.register_rigid_objects(self.scene)
 
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
@@ -88,7 +105,7 @@ class LeatherbackRaceWayposesEnv(DirectRLEnv):
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=[])
         # add articultion to scene
-        self.scene.articulations["leatherback"] = self.robot
+        self.scene.articulations[self.cfg.robot_name] = self.robot
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)

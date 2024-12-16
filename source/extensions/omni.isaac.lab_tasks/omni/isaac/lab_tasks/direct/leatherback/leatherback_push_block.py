@@ -9,12 +9,11 @@ import torch
 from collections.abc import Sequence
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, RigidObject, RigidObjectCfg
+from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
-from omni.isaac.lab.sim.spawners.shapes import CuboidCfg
 from omni.isaac.lab.utils import configclass
 
 from omni.isaac.lab_tasks.rans import LeatherbackRobot, LeatherbackRobotCfg, PushBlockCfg, PushBlockTask
@@ -25,9 +24,6 @@ class LeatherbackPushBlockEnvCfg(DirectRLEnvCfg):
     # env
     decimation = 4
     episode_length_s = 20.0
-    observation_space = 11
-    state_space = 0
-    action_space = 2
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
@@ -39,28 +35,10 @@ class LeatherbackPushBlockEnvCfg(DirectRLEnvCfg):
     task_cfg: PushBlockCfg = PushBlockCfg()
     debug_vis: bool = True
 
-    # Block
-    block_cfg: RigidObjectCfg = RigidObjectCfg(
-        prim_path="/World/envs/env_.*/block",
-        spawn=CuboidCfg(
-            size=(0.1, 0.1, 0.1),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                kinematic_enabled=False,
-                disable_gravity=False,
-                enable_gyroscopic_forces=True,
-                solver_position_iteration_count=8,
-                solver_velocity_iteration_count=0,
-                sleep_threshold=0.005,
-                stabilization_threshold=0.0025,
-                max_depenetration_velocity=1000.0,
-            ),
-            mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
-            collision_props=sim_utils.CollisionPropertiesCfg(
-                collision_enabled=True,
-            ),
-        ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(4.0, 0.0, 0.1), rot=(1.0, 0.0, 0.0, 0.0)),
-    )
+    action_space = robot_cfg.action_space + task_cfg.action_space
+    observation_space = robot_cfg.observation_space + task_cfg.observation_space
+    state_space = robot_cfg.state_space + task_cfg.state_space
+    gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
 class LeatherbackPushBlockEnv(DirectRLEnv):
@@ -103,13 +81,8 @@ class LeatherbackPushBlockEnv(DirectRLEnv):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
         self.robot_api = LeatherbackRobot(self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device)
 
-        # add block and register to scene
-        self.block = RigidObject(self.cfg.block_cfg)
-        self.scene.rigid_objects["block"] = self.block
-
-        self.task_api = PushBlockTask(
-            self.cfg.task_cfg, self.block, task_uid=0, num_envs=self.num_envs, device=self.device
-        )
+        self.task_api = PushBlockTask(self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device)
+        self.task_api.register_rigid_objects(self.scene)
 
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())

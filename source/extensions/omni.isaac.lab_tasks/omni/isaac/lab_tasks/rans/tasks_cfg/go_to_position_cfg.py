@@ -57,3 +57,9 @@ class GoToPositionCfg(TaskCoreCfg):
     linear_velocity_weight: float = -0.05
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
+
+    # Spaces
+    observation_space: int = 6
+    state_space: int = 0
+    action_space: int = 0
+    gen_space: int = 4

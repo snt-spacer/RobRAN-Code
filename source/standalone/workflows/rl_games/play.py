@@ -29,7 +29,13 @@ parser.add_argument(
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
-args_cli = parser.parse_args()
+# args_cli = parser.parse_args()
+import sys
+
+args_cli, hydra_args = parser.parse_known_args()
+# clear out sys.argv for Hydra
+sys.argv = [sys.argv[0]] + hydra_args
+
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
@@ -50,22 +56,31 @@ from rl_games.common import env_configurations, vecenv
 from rl_games.common.player import BasePlayer
 from rl_games.torch_runner import Runner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from omni.isaac.lab.envs import (
+    DirectMARLEnv,
+    DirectMARLEnvCfg,
+    DirectRLEnvCfg,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from omni.isaac.lab.utils.assets import retrieve_file_path
 from omni.isaac.lab.utils.dict import print_dict
 
 import omni.isaac.lab_tasks  # noqa: F401
-from omni.isaac.lab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
+from omni.isaac.lab_tasks.utils import get_checkpoint_path
+from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
 
 
-def main():
+@hydra_task_config(args_cli.task, "rl_games_cfg_entry_point")
+def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+    # Use `env_cfg` and `agent_cfg` directly where necessary.
     """Play with RL-Games agent."""
     # parse env configuration
-    env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
-    )
-    agent_cfg = load_cfg_from_registry(args_cli.task, "rl_games_cfg_entry_point")
+    # env_cfg = parse_env_cfg(
+    #     args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
+    # )
+    # agent_cfg = load_cfg_from_registry(args_cli.task, "rl_games_cfg_entry_point")
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2])
@@ -94,6 +109,7 @@ def main():
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {

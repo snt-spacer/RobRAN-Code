@@ -8,6 +8,8 @@ from .task_core import TaskCore  # noqa: F401, F403
 
 # isort: on
 
+from omni.isaac.lab_tasks.rans.utils.misc import factory
+
 from .go_through_poses import GoThroughPosesTask  # noqa: F401, F403
 from .go_through_positions import GoThroughPositionsTask  # noqa: F401, F403
 from .go_to_pose import GoToPoseTask  # noqa: F401, F403
@@ -16,3 +18,13 @@ from .push_block import PushBlockTask  # noqa: F401, F403
 from .race_waypoints import RaceWaypointsTask  # noqa: F401, F403
 from .race_wayposes import RaceWayposesTask  # noqa: F401, F403
 from .track_velocities import TrackVelocitiesTask  # noqa: F401, F403
+
+TASK_FACTORY = factory()
+TASK_FACTORY.register("GoThroughPoses", GoThroughPosesTask)
+TASK_FACTORY.register("GoThroughPositions", GoThroughPositionsTask)
+TASK_FACTORY.register("GoToPose", GoToPoseTask)
+TASK_FACTORY.register("GoToPosition", GoToPositionTask)
+TASK_FACTORY.register("PushBlock", PushBlockTask)
+TASK_FACTORY.register("RaceWaypoints", RaceWaypointsTask)
+TASK_FACTORY.register("RaceWayposes", RaceWayposesTask)
+TASK_FACTORY.register("TrackVelocities", TrackVelocitiesTask)

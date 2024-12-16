@@ -24,9 +24,6 @@ class LeatherbackGoToPoseEnvCfg(DirectRLEnvCfg):
     # env
     decimation = 4
     episode_length_s = 20.0
-    action_space = 2
-    observation_space = 10
-    state_space = 0
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
@@ -37,6 +34,11 @@ class LeatherbackGoToPoseEnvCfg(DirectRLEnvCfg):
     robot_cfg: LeatherbackRobotCfg = LeatherbackRobotCfg()
     task_cfg: GoToPoseCfg = GoToPoseCfg()
     debug_vis: bool = True
+
+    action_space = robot_cfg.action_space + task_cfg.action_space
+    observation_space = robot_cfg.observation_space + task_cfg.observation_space
+    state_space = robot_cfg.state_space + task_cfg.state_space
+    gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
 class LeatherbackGoToPoseEnv(DirectRLEnv):

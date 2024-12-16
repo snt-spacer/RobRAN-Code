@@ -4,9 +4,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # isort: off
-from .robots_cfg import FloatingPlatformRobotCfg, LeatherbackRobotCfg, RobotCoreCfg, JetbotRobotCfg  # noqa: F401, F403
+from .robots_cfg import (
+    FloatingPlatformRobotCfg,
+    LeatherbackRobotCfg,
+    RobotCoreCfg,
+    JetbotRobotCfg,
+    ROBOT_CFG_FACTORY,
+)  # noqa: F401, F403
 
-from .robots import FloatingPlatformRobot, LeatherbackRobot, RobotCore, JetbotRobot
+from .robots import FloatingPlatformRobot, LeatherbackRobot, RobotCore, JetbotRobot, ROBOT_FACTORY  # noqa: F401, F403
 
 from .tasks_cfg import (  # noqa: F401, F403
     GoThroughPosesCfg,
@@ -18,6 +24,7 @@ from .tasks_cfg import (  # noqa: F401, F403
     TaskCoreCfg,
     TrackVelocitiesCfg,
     PushBlockCfg,
+    TASK_CFG_FACTORY,
 )
 
 from .tasks import (  # noqa: F401, F403
@@ -30,6 +37,7 @@ from .tasks import (  # noqa: F401, F403
     TaskCore,
     TrackVelocitiesTask,
     PushBlockTask,
+    TASK_FACTORY,
 )
 
 from .utils import TrackGenerator, PerEnvSeededRNG, ScalarLogger  # noqa: F401, F403

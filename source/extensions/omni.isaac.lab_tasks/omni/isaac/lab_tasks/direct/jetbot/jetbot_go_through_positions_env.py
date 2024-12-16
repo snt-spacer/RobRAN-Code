@@ -24,9 +24,6 @@ class JetbotGoThroughPositionsEnvCfg(DirectRLEnvCfg):
     # env
     decimation = 4
     episode_length_s = 20.0
-    action_spaces = 2
-    observation_space = 11
-    state_spaces = 0
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
@@ -37,6 +34,11 @@ class JetbotGoThroughPositionsEnvCfg(DirectRLEnvCfg):
     robot_cfg: JetbotRobotCfg = JetbotRobotCfg()
     task_cfg: GoThroughPositionsCfg = GoThroughPositionsCfg()
     debug_vis: bool = True
+
+    action_space = robot_cfg.action_space + task_cfg.action_space
+    observation_space = robot_cfg.observation_space + task_cfg.observation_space
+    state_space = robot_cfg.state_space + task_cfg.state_space
+    gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
 class JetbotGoThroughPositionsEnv(DirectRLEnv):

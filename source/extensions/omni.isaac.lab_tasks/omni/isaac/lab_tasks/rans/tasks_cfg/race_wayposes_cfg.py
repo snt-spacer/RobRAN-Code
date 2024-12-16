@@ -93,3 +93,9 @@ class RaceWayposesCfg(TaskCoreCfg):
     time_penalty: float = -0.0
     reached_bonus: float = 20.0
     progress_weight: float = 2.0
+
+    # Spaces
+    observation_space: int = 3 + 5 * num_subsequent_goals
+    state_space: int = 0
+    action_space: int = 0
+    gen_space: int = 11

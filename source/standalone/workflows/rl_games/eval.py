@@ -177,11 +177,12 @@ def main():
                 break
     # Convert data to numpy arrays
     ep_data["obs"], ep_data["rews"], ep_data["act"] = map(np.array, (ep_data["obs"], ep_data["rews"], ep_data["act"]))
-    print("Mapping to numpy arrays done.")
+    save_dir = os.path.join(log_root_path, log_dir, f"eval_{args_cli.num_envs}_envs", task_name)
+    print("Saving plots in ", save_dir)
     # Plot the episode data
     plot_episode_data_virtual(
         ep_data,
-        save_dir=os.path.join(log_root_path, log_dir, f"eval_{args_cli.num_envs}_envs", task_name),
+        save_dir=save_dir,
         task=task_name,
         all_agents=print_all_agents,
     )

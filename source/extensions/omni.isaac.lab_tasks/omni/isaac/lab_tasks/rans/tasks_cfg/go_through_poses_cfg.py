@@ -98,3 +98,9 @@ class GoThroughPosesCfg(TaskCoreCfg):
     time_penalty: float = -0.0
     reached_bonus: float = 10.0
     progress_weight: float = 1.0
+
+    # Spaces
+    observation_space: int = 3 + 5 * num_subsequent_goals
+    state_space: int = 0
+    action_space: int = 0
+    gen_space: int = 11

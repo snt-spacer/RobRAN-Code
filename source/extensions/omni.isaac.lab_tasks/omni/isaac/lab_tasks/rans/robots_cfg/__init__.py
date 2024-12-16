@@ -10,3 +10,10 @@ from .robot_core_cfg import RobotCoreCfg  # noqa: F401, F403
 from .leatherback_cfg import LeatherbackRobotCfg  # noqa: F401, F403
 from .floating_platform_cfg import FloatingPlatformRobotCfg  # noqa: F401, F403
 from .jetbot_cfg import JetbotRobotCfg  # noqa: F401, F403
+
+from omni.isaac.lab_tasks.rans.utils.misc import factory
+
+ROBOT_CFG_FACTORY = factory()
+ROBOT_CFG_FACTORY.register("Jetbot", JetbotRobotCfg)
+ROBOT_CFG_FACTORY.register("Leatherback", LeatherbackRobotCfg)
+ROBOT_CFG_FACTORY.register("FloatingPlatform", FloatingPlatformRobotCfg)

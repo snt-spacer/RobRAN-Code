@@ -24,7 +24,7 @@ class RaceWaypointsTask(TaskCore):
 
     def __init__(
         self,
-        task_cfg: RaceWaypointsCfg,
+        task_cfg: RaceWaypointsCfg = RaceWaypointsCfg(),
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -56,8 +56,8 @@ class RaceWaypointsTask(TaskCore):
         )
 
         # Defines the observation and actions space sizes for this task
-        self._dim_task_obs = 3 + 3 * self._task_cfg.num_subsequent_goals
-        self._dim_gen_act = 6
+        self._dim_task_obs = self._task_cfg.observation_space
+        self._dim_gen_act = self._task_cfg.gen_space
 
         # Buffers
         self.initialize_buffers()

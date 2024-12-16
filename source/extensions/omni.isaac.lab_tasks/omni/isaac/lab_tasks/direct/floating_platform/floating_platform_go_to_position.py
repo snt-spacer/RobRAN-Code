@@ -22,23 +22,24 @@ from omni.isaac.lab_tasks.rans import FloatingPlatformRobot, FloatingPlatformRob
 
 @configclass
 class FloatingPlatformGoToPositionEnvCfg(DirectRLEnvCfg):
+    # env
+    decimation = 4
+    episode_length_s = 20.0
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
 
     # simulation
-    decimation = 6
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
 
     robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg()
     task_cfg: GoToPositionCfg = GoToPositionCfg()
     debug_vis: bool = True
 
-    # env
-    episode_length_s = 40.0
-    action_space = 8 if not robot_cfg.is_reaction_wheel else 9
-    observation_space = 14
-    state_space = 0
+    action_space = robot_cfg.action_space + task_cfg.action_space
+    observation_space = robot_cfg.observation_space + task_cfg.observation_space
+    state_space = robot_cfg.state_space + task_cfg.state_space
+    gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
 class FloatingPlatformGoToPositionEnv(DirectRLEnv):
@@ -103,7 +104,7 @@ class FloatingPlatformGoToPositionEnv(DirectRLEnv):
         # print(f"Robots position: {self.robot_api.body_pos_w[:3]}")
 
     def _apply_action(self) -> None:
-        self.robot_api.apply_actions(self.robot)
+        self.robot_api.apply_actions()
 
     def _get_observations(self) -> dict:
         task_obs = self.task_api.get_observations()

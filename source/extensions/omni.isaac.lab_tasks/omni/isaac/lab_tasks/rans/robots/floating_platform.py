@@ -17,7 +17,7 @@ class FloatingPlatformRobot(RobotCore):
 
     def __init__(
         self,
-        robot_cfg: FloatingPlatformRobotCfg,
+        robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -25,13 +25,9 @@ class FloatingPlatformRobot(RobotCore):
         super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
         # Available for use robot_cfg.is_reaction_wheel,robot_cfg.split_thrust,robot_cfg.rew_reaction_wheel_scale
-        self._dim_robot_obs = 2
-        self._dim_robot_act = (
-            self._robot_cfg.num_thrusters
-            if not self._robot_cfg.is_reaction_wheel
-            else self._robot_cfg.num_thrusters + 1
-        )
-        self._dim_gen_act = 0
+        self._dim_robot_obs = self._robot_cfg.observation_space
+        self._dim_robot_act = self._robot_cfg.action_space
+        self._dim_gen_act = self._robot_cfg.gen_space
 
         # Buffers
         self.initialize_buffers()
@@ -45,7 +41,7 @@ class FloatingPlatformRobot(RobotCore):
         self._thrust_action = torch.zeros(
             (self._num_envs, self._robot_cfg.num_thrusters), device=self._device, dtype=torch.float32
         )
-        if self._robot_cfg.is_reaction_wheel:
+        if self._robot_cfg.has_reaction_wheel:
             self._reaction_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
 
     def run_setup(self, robot: Articulation):
@@ -53,7 +49,7 @@ class FloatingPlatformRobot(RobotCore):
         self._thrusters_dof_idx, _ = self._robot.find_bodies(self._robot_cfg.thrusters_dof_name)
         self._root_idx, _ = self._robot.find_bodies([self._robot_cfg.root_id_name])
 
-        if self._robot_cfg.is_reaction_wheel:
+        if self._robot_cfg.has_reaction_wheel:
             self._reaction_wheel_dof_idx, _ = self._robot.find_joints(self._robot_cfg.reaction_wheel_dof_name)
 
     def create_logs(self):
@@ -113,7 +109,7 @@ class FloatingPlatformRobot(RobotCore):
         self._robot.set_joint_velocity_target(locking_joints, env_ids=env_ids)
         self._robot.set_joint_position_target(locking_joints, env_ids=env_ids)
 
-        if self._robot_cfg.is_reaction_wheel:
+        if self._robot_cfg.has_reaction_wheel:
             rw_reset = torch.zeros_like(self._reaction_wheel_action)
             self._robot.set_joint_velocity_target(rw_reset, joint_ids=self._reaction_wheel_dof_idx, env_ids=env_ids)
             self._robot.set_joint_effort_target(rw_reset, joint_ids=self._reaction_wheel_dof_idx, env_ids=env_ids)
@@ -144,7 +140,7 @@ class FloatingPlatformRobot(RobotCore):
             (torch.zeros_like(self._thrust_action[:, :, :2]), self._thrust_action[:, :, 2:]), dim=2
         )
 
-        if self._robot_cfg.is_reaction_wheel:
+        if self._robot_cfg.has_reaction_wheel:
             # Separate continuous control for reaction wheel
             self._reaction_wheel_action = (
                 actions[:, self._robot_cfg.num_thrusters :] * self._robot_cfg.reaction_wheel_scale
@@ -153,18 +149,18 @@ class FloatingPlatformRobot(RobotCore):
 
         # Log data for monitoring
         self.scalar_logger.log("robot_state", "AVG/thrusters", torch.linalg.norm(self._thrust_action[:, :, 2], dim=-1))
-        if self._robot_cfg.is_reaction_wheel:
+        if self._robot_cfg.has_reaction_wheel:
             self.scalar_logger.log("robot_state", "AVG/reaction_wheel", self._reaction_wheel_action[:, 0])
 
     def compute_physics(self):
         pass  # Model motor + ackermann steering here
 
-    def apply_actions(self, articulations: Articulation):
-        articulations.set_external_force_and_torque(
+    def apply_actions(self):
+        self._robot.set_external_force_and_torque(
             self._thrust_action, torch.zeros_like(self._thrust_action), body_ids=self._thrusters_dof_idx
         )
-        if self._robot_cfg.is_reaction_wheel:
-            articulations.set_joint_effort_target(self._reaction_wheel_action, joint_ids=self._reaction_wheel_dof_idx)
+        if self._robot_cfg.has_reaction_wheel:
+            self._robot.set_joint_effort_target(self._reaction_wheel_action, joint_ids=self._reaction_wheel_dof_idx)
 
     def set_velocity(
         self,

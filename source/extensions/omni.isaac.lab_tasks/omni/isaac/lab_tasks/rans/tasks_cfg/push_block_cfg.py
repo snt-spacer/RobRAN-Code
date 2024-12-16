@@ -65,3 +65,9 @@ class PushBlockCfg(TaskCoreCfg):
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
     goal_reached_weight: float = 10.0
+
+    # Spaces
+    observation_space: int = 9
+    state_space: int = 0
+    action_space: int = 0
+    gen_space: int = 5

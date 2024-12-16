@@ -6,6 +6,8 @@
 import torch
 from dataclasses import MISSING
 
+from omni.isaac.lab.scene import InteractiveScene
+
 from omni.isaac.lab_tasks.rans import RobotCore
 from omni.isaac.lab_tasks.rans.utils import PerEnvSeededRNG, ScalarLogger
 
@@ -62,6 +64,10 @@ class TaskCore:
     @property
     def logs(self) -> dict:
         return self.scalar_logger.get_episode_logs
+
+    def design_scene(self) -> None:
+        """Adds objects to the scene."""
+        pass
 
     def create_logs(self) -> None:
         """
@@ -178,3 +184,6 @@ class TaskCore:
 
     def update_task_visualization(self) -> None:
         raise NotImplementedError
+
+    def register_rigid_objects(self, scene: InteractiveScene) -> None:
+        pass

@@ -105,8 +105,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # note: certain randomizations occur in the environment initialization so we set the seed here
     env_cfg.seed = agent_cfg["params"]["seed"]
 
+    # create isaac environment
+    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2])
+    if "Single" in args_cli.task:
+        print(f"Using entity: {args_cli.task}")
+        agent_cfg["params"]["config"]["name"] = env.env.cfg.robot_name + "-" + env.env.cfg.task_name
+        print(f'Using project: {agent_cfg["params"]["config"]["name"]}')
+        log_root_path = os.path.join(
+            "logs", "rl_games", args_cli.task.split("-")[2], agent_cfg["params"]["config"]["name"]
+        )
+    else:
+        log_root_path = os.path.join(
+            "logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2]
+        )
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
     # specify directory for logging runs
@@ -127,8 +140,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     clip_obs = agent_cfg["params"]["env"].get("clip_observations", math.inf)
     clip_actions = agent_cfg["params"]["env"].get("clip_actions", math.inf)
 
-    # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
@@ -166,6 +177,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
         date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         experiment_name = f"{args_cli.task.split('-')[2]}-{date_str}"
+        # use robot and task name as entity
+        print(f"Using entity: {args_cli.task}")
+        if "Single" in args_cli.task:
+            name = agent_cfg["params"]["config"]["name"]
+            agent_cfg["params"]["wandb"]["project"] = args_cli.task.split("-")[2] + "-" + name
+            experiment_name = f"{name}-{date_str}"
 
         wandb.init(
             project=agent_cfg["params"]["wandb"]["project"],

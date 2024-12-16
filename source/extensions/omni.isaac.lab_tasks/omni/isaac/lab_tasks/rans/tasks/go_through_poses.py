@@ -22,7 +22,7 @@ class GoThroughPosesTask(TaskCore):
 
     def __init__(
         self,
-        task_cfg: GoThroughPosesCfg,
+        task_cfg: GoThroughPosesCfg = GoThroughPosesCfg(),
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -45,8 +45,8 @@ class GoThroughPosesTask(TaskCore):
         super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Defines the observation and actions space sizes for this task
-        self._dim_task_obs = 3 + 5 * self._task_cfg.num_subsequent_goals
-        self._dim_gen_act = 11
+        self._dim_task_obs = self._task_cfg.observation_space
+        self._dim_gen_act = self._task_cfg.gen_space
 
         # Buffers
         self.initialize_buffers()

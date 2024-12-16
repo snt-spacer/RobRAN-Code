@@ -65,3 +65,9 @@ class TrackVelocitiesCfg(TaskCoreCfg):
     # Visualization
     visualization_linear_velocity_scale: float = 1.0
     visualization_angular_velocity_scale: float = 2.5
+
+    # Spaces
+    observation_space: int = 6
+    state_space: int = 0
+    action_space: int = 0
+    gen_space: int = 5

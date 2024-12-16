@@ -77,3 +77,9 @@ class GoToPoseCfg(TaskCoreCfg):
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
     progress_weight: float = 0.2
+
+    # Spaces
+    observation_space: int = 8
+    state_space: int = 0
+    action_space: int = 0
+    gen_space: int = 5

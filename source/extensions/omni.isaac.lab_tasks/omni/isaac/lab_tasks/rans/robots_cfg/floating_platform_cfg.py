@@ -16,7 +16,7 @@ class FloatingPlatformRobotCfg(RobotCoreCfg):
     """Core configuration for a RANS task."""
 
     robot_cfg: ArticulationCfg = FLOATING_PLATFORM_CFG.replace(prim_path="/World/envs/env_.*/Robot")
-    is_reaction_wheel = False
+    has_reaction_wheel = False
     num_thrusters = 8
 
     thrusters_dof_name = [f"thruster_{i}" for i in range(1, num_thrusters + 1)]
@@ -24,19 +24,19 @@ class FloatingPlatformRobotCfg(RobotCoreCfg):
     rew_action_rate_scale = -0.12
     rew_joint_accel_scale = -2.5e-6
 
-    max_thrust = 1.0  # [N]
-    split_thrust = True  # Split max thrust force among thrusters
-    # rew_action_rate_scale = 0.0
+    max_thrust = 1.0
+    """Maximum thrust of the thrusters in Newtons"""
+    split_thrust = True
+    """Split the thrust between the thrusters"""
 
-    if is_reaction_wheel:
+    if has_reaction_wheel:
         reaction_wheel_dof_name = [
             "reaction_wheel",
         ]
         reaction_wheel_scale = 0.1  # [Nm]
 
-    # action_space = spaces.Tuple([spaces.Discrete(2)] * num_thrusters)
-
-    # spaces.MultiBinary(num_thrusters) if not is_reaction_wheel else spaces.Tuple((
-    #     spaces.MultiBinary(num_thrusters),
-    #     spaces.Box(low=-1.0, high=1.0, shape=(1,))
-    # ))
+    # Spaces
+    observation_space: int = num_thrusters + 1 * has_reaction_wheel
+    state_space: int = 0
+    action_space: int = num_thrusters + 1 * has_reaction_wheel
+    gen_space: int = 0
