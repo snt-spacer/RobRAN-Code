@@ -8,6 +8,7 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+import sys
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -29,7 +30,10 @@ parser.add_argument(
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
-args_cli = parser.parse_args()
+args_cli, hydra_args = parser.parse_known_args()
+# clear out sys.argv for Hydra
+sys.argv = [sys.argv[0]] + hydra_args
+
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
@@ -50,25 +54,32 @@ from rl_games.common import env_configurations, vecenv
 from rl_games.common.player import BasePlayer
 from rl_games.torch_runner import Runner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from omni.isaac.lab.envs import (
+    DirectMARLEnv,
+    DirectMARLEnvCfg,
+    DirectRLEnvCfg,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from omni.isaac.lab.utils.assets import retrieve_file_path
 from omni.isaac.lab.utils.dict import print_dict
 
 from omni.isaac.lab_tasks.rans.utils.plot_eval_multi import plot_episode_data_virtual
-from omni.isaac.lab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
+from omni.isaac.lab_tasks.utils import get_checkpoint_path
+from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
 
 
-def main():
+@hydra_task_config(args_cli.task, "rl_games_cfg_entry_point")
+def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+
+    # override configurations with non-hydra CLI arguments
+    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
+    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+
     """Play with RL-Games agent."""
 
     set_camera_view([100.0, 100.0, 100.0], [0.0, 0.0, 0.0])
-
-    # parse env configuration
-    env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
-    )
-    agent_cfg = load_cfg_from_registry(args_cli.task, "rl_games_cfg_entry_point")
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"])
@@ -128,7 +139,11 @@ def main():
     agent_cfg["params"]["load_path"] = resume_path
     print(f"[INFO]: Loading model checkpoint from: {agent_cfg['params']['load_path']}")
 
-    task_name = args_cli.task.split("-")[2]
+    if "Single" in args_cli.task:
+        task_name = env.env.cfg.task_name
+    else:
+        task_name = args_cli.task.split("-")[2]
+
     print_all_agents = True
     # set number of actors into agent config
     agent_cfg["params"]["config"]["num_actors"] = env.unwrapped.num_envs
@@ -156,6 +171,8 @@ def main():
     #   attempt to have complete control over environment stepping. However, this removes other
     #   operations such as masking that is used for multi-agent learning by RL-Games.
     # while simulation_app.is_running():
+
+    print("Evaluation started over ", horizon, " steps for ", args_cli.num_envs, " environments.")
     for _ in range(horizon):
         # run everything in inference mode
         # with torch.inference_mode():
@@ -175,6 +192,7 @@ def main():
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
+
     # Convert data to numpy arrays
     ep_data["obs"], ep_data["rews"], ep_data["act"] = map(np.array, (ep_data["obs"], ep_data["rews"], ep_data["act"]))
     save_dir = os.path.join(log_root_path, log_dir, f"eval_{args_cli.num_envs}_envs", task_name)

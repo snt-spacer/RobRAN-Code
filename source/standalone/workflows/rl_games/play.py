@@ -8,6 +8,7 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+import sys
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -29,9 +30,6 @@ parser.add_argument(
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
-# args_cli = parser.parse_args()
-import sys
-
 args_cli, hydra_args = parser.parse_known_args()
 # clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
@@ -75,13 +73,11 @@ from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesV
 @hydra_task_config(args_cli.task, "rl_games_cfg_entry_point")
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
     # Use `env_cfg` and `agent_cfg` directly where necessary.
-    """Play with RL-Games agent."""
-    # parse env configuration
-    # env_cfg = parse_env_cfg(
-    #     args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
-    # )
-    # agent_cfg = load_cfg_from_registry(args_cli.task, "rl_games_cfg_entry_point")
+    # override configurations with non-hydra CLI arguments
+    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
+    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
+    """Play with RL-Games agent."""
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2])
     log_root_path = os.path.abspath(log_root_path)
