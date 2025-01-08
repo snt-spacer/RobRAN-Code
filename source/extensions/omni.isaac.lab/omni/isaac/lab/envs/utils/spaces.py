@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -106,13 +106,15 @@ def serialize_space(space: SpaceType) -> str:
     if isinstance(space, gym.spaces.Discrete):
         return json.dumps({"type": "gymnasium", "space": "Discrete", "n": int(space.n)})
     elif isinstance(space, gym.spaces.Box):
-        return json.dumps({
-            "type": "gymnasium",
-            "space": "Box",
-            "low": space.low.tolist(),
-            "high": space.high.tolist(),
-            "shape": space.shape,
-        })
+        return json.dumps(
+            {
+                "type": "gymnasium",
+                "space": "Box",
+                "low": space.low.tolist(),
+                "high": space.high.tolist(),
+                "shape": space.shape,
+            }
+        )
     elif isinstance(space, gym.spaces.MultiDiscrete):
         return json.dumps({"type": "gymnasium", "space": "MultiDiscrete", "nvec": space.nvec.tolist()})
     elif isinstance(space, gym.spaces.Tuple):
