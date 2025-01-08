@@ -600,9 +600,7 @@ class Articulation(AssetBase):
         self._data.joint_velocity_limits = self.root_physx_view.get_dof_max_velocities().to(self.device)
         self._data.joint_velocity_limits[env_ids, joint_ids] = limits
         # set into simulation
-        self.root_physx_view.set_dof_max_velocities(
-            self._data.joint_velocity_limits.cpu(), indices=physx_env_ids.cpu()
-        )
+        self.root_physx_view.set_dof_max_velocities(self._data.joint_velocity_limits.cpu(), indices=physx_env_ids.cpu())
 
     def write_joint_effort_limit_to_sim(
         self,
@@ -691,9 +689,7 @@ class Articulation(AssetBase):
         # set into internal buffers
         self._data.joint_friction[env_ids, joint_ids] = joint_friction
         # set into simulation
-        self.root_physx_view.set_dof_friction_coefficients(
-            self._data.joint_friction.cpu(), indices=physx_env_ids.cpu()
-        )
+        self.root_physx_view.set_dof_friction_coefficients(self._data.joint_friction.cpu(), indices=physx_env_ids.cpu())
 
     def write_joint_limits_to_sim(
         self,
@@ -1198,9 +1194,7 @@ class Articulation(AssetBase):
             self._data.fixed_tendon_rest_length = torch.zeros(
                 self.num_instances, self.num_fixed_tendons, device=self.device
             )
-            self._data.fixed_tendon_offset = torch.zeros(
-                self.num_instances, self.num_fixed_tendons, device=self.device
-            )
+            self._data.fixed_tendon_offset = torch.zeros(self.num_instances, self.num_fixed_tendons, device=self.device)
 
         # -- other data
         self._data.soft_joint_pos_limits = torch.zeros(self.num_instances, self.num_joints, 2, device=self.device)
@@ -1306,9 +1300,7 @@ class Articulation(AssetBase):
         self._data.default_joint_stiffness = self.root_physx_view.get_dof_stiffnesses().to(self.device).clone()
         self._data.default_joint_damping = self.root_physx_view.get_dof_dampings().to(self.device).clone()
         self._data.default_joint_armature = self.root_physx_view.get_dof_armatures().to(self.device).clone()
-        self._data.default_joint_friction = (
-            self.root_physx_view.get_dof_friction_coefficients().to(self.device).clone()
-        )
+        self._data.default_joint_friction = self.root_physx_view.get_dof_friction_coefficients().to(self.device).clone()
 
         # iterate over all actuator configurations
         for actuator_name, actuator_cfg in self.cfg.actuators.items():
@@ -1520,19 +1512,17 @@ class Articulation(AssetBase):
         table.align["Name"] = "l"
         # add info on each term
         for index, name in enumerate(self.joint_names):
-            table.add_row(
-                [
-                    index,
-                    name,
-                    stiffnesses[index],
-                    dampings[index],
-                    armatures[index],
-                    frictions[index],
-                    position_limits[index],
-                    velocity_limits[index],
-                    effort_limits[index],
-                ]
-            )
+            table.add_row([
+                index,
+                name,
+                stiffnesses[index],
+                dampings[index],
+                armatures[index],
+                frictions[index],
+                position_limits[index],
+                velocity_limits[index],
+                effort_limits[index],
+            ])
         # convert table to string
         omni.log.info(f"Simulation parameters for joints in {self.cfg.prim_path}:\n" + table.get_string())
 
@@ -1560,16 +1550,14 @@ class Articulation(AssetBase):
             ]
             # add info on each term
             for index in range(self.num_fixed_tendons):
-                tendon_table.add_row(
-                    [
-                        index,
-                        ft_stiffnesses[index],
-                        ft_dampings[index],
-                        ft_limit_stiffnesses[index],
-                        ft_limits[index],
-                        ft_rest_lengths[index],
-                        ft_offsets[index],
-                    ]
-                )
+                tendon_table.add_row([
+                    index,
+                    ft_stiffnesses[index],
+                    ft_dampings[index],
+                    ft_limit_stiffnesses[index],
+                    ft_limits[index],
+                    ft_rest_lengths[index],
+                    ft_offsets[index],
+                ])
             # convert table to string
             omni.log.info(f"Simulation parameters for tendons in {self.cfg.prim_path}:\n" + tendon_table.get_string())
