@@ -114,9 +114,7 @@ class DifferentialInverseKinematicsAction(ActionTerm):
                 self._clip = torch.tensor([[-float("inf"), float("inf")]], device=self.device).repeat(
                     self.num_envs, self.action_dim, 1
                 )
-                index_list, _, value_list = string_utils.resolve_matching_names_values(
-                    self.cfg.clip, self._joint_names
-                )
+                index_list, _, value_list = string_utils.resolve_matching_names_values(self.cfg.clip, self._joint_names)
                 self._clip[:, index_list] = torch.tensor(value_list, device=self.device)
             else:
                 raise ValueError(f"Unsupported clip type: {type(cfg.clip)}. Supported types are dict.")

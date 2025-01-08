@@ -403,13 +403,9 @@ class TestRigidObjectCollection(unittest.TestCase):
 
                                 # change center of mass offset from link frame
                                 if with_offset:
-                                    offset = torch.tensor([0.1, 0.0, 0.0], device=device).repeat(
-                                        num_envs, num_cubes, 1
-                                    )
+                                    offset = torch.tensor([0.1, 0.0, 0.0], device=device).repeat(num_envs, num_cubes, 1)
                                 else:
-                                    offset = torch.tensor([0.0, 0.0, 0.0], device=device).repeat(
-                                        num_envs, num_cubes, 1
-                                    )
+                                    offset = torch.tensor([0.0, 0.0, 0.0], device=device).repeat(num_envs, num_cubes, 1)
 
                                 com = cube_object.reshape_view_to_data(cube_object.root_physx_view.get_coms())
                                 com[..., :3] = offset.to("cpu")
@@ -566,9 +562,7 @@ class TestRigidObjectCollection(unittest.TestCase):
                                         if state_location == "com":
                                             torch.testing.assert_close(rand_state, cube_object.data.object_com_state_w)
                                         elif state_location == "link":
-                                            torch.testing.assert_close(
-                                                rand_state, cube_object.data.object_link_state_w
-                                            )
+                                            torch.testing.assert_close(rand_state, cube_object.data.object_link_state_w)
 
     def test_reset_object_collection(self):
         """Test resetting the state of the rigid object."""

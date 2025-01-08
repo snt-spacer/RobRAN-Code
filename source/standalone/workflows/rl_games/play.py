@@ -79,9 +79,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     """Play with RL-Games agent."""
     # specify directory for logging experiments
-    log_root_path = os.path.join(
-        "logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2]
-    )
+    log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"], args_cli.task.split("-")[2])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     # find checkpoint
