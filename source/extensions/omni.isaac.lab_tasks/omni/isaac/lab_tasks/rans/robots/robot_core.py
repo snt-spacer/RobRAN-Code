@@ -147,14 +147,14 @@ class RobotCore:
         pose: torch.Tensor,
         env_ids: torch.Tensor | None = None,
     ) -> None:
-        self._robot.write_root_pose_to_sim(pose, env_ids)
+        self._robot.write_root_link_pose_to_sim(pose, env_ids)
 
     def set_velocity(
         self,
         velocity: torch.Tensor,
         env_ids: torch.Tensor | None = None,
     ) -> None:
-        self._robot.write_root_velocity_to_sim(velocity, env_ids)
+        self._robot.write_root_com_velocity_to_sim(velocity, env_ids)
 
     def set_initial_conditions(self, env_ids: torch.Tensor | None = None) -> None:
         raise NotImplementedError
@@ -313,6 +313,132 @@ class RobotCore:
         articulation root's actor frame.
         """
         return self._robot.data.root_ang_vel_b
+
+    #
+    # Derived Root Link Frame Properties
+    #
+
+    @property
+    def root_link_pos_w(self) -> torch.Tensor:
+        """Root link position in simulation world frame. Shape is (num_instances, 3).
+
+        This quantity is the position of the actor frame of the root rigid body relative to the world.
+        """
+        return self._robot.data.root_link_pos_w
+
+    @property
+    def root_link_quat_w(self) -> torch.Tensor:
+        """Root link orientation (w, x, y, z) in simulation world frame. Shape is (num_instances, 4).
+
+        This quantity is the orientation of the actor frame of the root rigid body.
+        """
+        return self._robot.data.root_link_quat_w
+
+    @property
+    def root_link_vel_w(self) -> torch.Tensor:
+        """Root link velocity in simulation world frame. Shape is (num_instances, 6).
+
+        This quantity contains the linear and angular velocities of the actor frame of the root
+        rigid body relative to the world.
+        """
+        return self._robot.data.root_link_vel_w
+
+    @property
+    def root_link_lin_vel_w(self) -> torch.Tensor:
+        """Root linear velocity in simulation world frame. Shape is (num_instances, 3).
+
+        This quantity is the linear velocity of the root rigid body's actor frame relative to the world.
+        """
+        return self._robot.data.root_link_lin_vel_w
+
+    @property
+    def root_link_ang_vel_w(self) -> torch.Tensor:
+        """Root link angular velocity in simulation world frame. Shape is (num_instances, 3).
+
+        This quantity is the angular velocity of the actor frame of the root rigid body relative to the world.
+        """
+        return self._robot.data.root_link_ang_vel_w
+
+    @property
+    def root_link_lin_vel_b(self) -> torch.Tensor:
+        """Root link linear velocity in base frame. Shape is (num_instances, 3).
+
+        This quantity is the linear velocity of the actor frame of the root rigid body frame with respect to the
+        rigid body's actor frame.
+        """
+        return self._robot.data.root_link_lin_vel_b
+
+    @property
+    def root_link_ang_vel_b(self) -> torch.Tensor:
+        """Root link angular velocity in base world frame. Shape is (num_instances, 3).
+
+        This quantity is the angular velocity of the actor frame of the root rigid body frame with respect to the
+        rigid body's actor frame.
+        """
+        return self._robot.data.root_link_ang_vel_b
+
+    #
+    # Root Center of Mass state properties
+    #
+
+    @property
+    def root_com_pos_w(self) -> torch.Tensor:
+        """Root center of mass position in simulation world frame. Shape is (num_instances, 3).
+
+        This quantity is the position of the actor frame of the root rigid body relative to the world.
+        """
+        return self._robot.data.root_com_pos_w
+
+    @property
+    def root_com_quat_w(self) -> torch.Tensor:
+        """Root center of mass orientation (w, x, y, z) in simulation world frame. Shape is (num_instances, 4).
+
+        This quantity is the orientation of the actor frame of the root rigid body relative to the world.
+        """
+        return self._robot.data.root_com_quat_w
+
+    @property
+    def root_com_vel_w(self) -> torch.Tensor:
+        """Root center of mass velocity in simulation world frame. Shape is (num_instances, 6).
+
+        This quantity contains the linear and angular velocities of the root rigid body's center of mass frame relative to the world.
+        """
+        return self._robot.data.root_com_vel_w
+
+    @property
+    def root_com_lin_vel_w(self) -> torch.Tensor:
+        """Root center of mass linear velocity in simulation world frame. Shape is (num_instances, 3).
+
+        This quantity is the linear velocity of the root rigid body's center of mass frame relative to the world.
+        """
+        return self._robot.data.root_com_lin_vel_w
+
+    @property
+    def root_com_ang_vel_w(self) -> torch.Tensor:
+        """Root center of mass angular velocity in simulation world frame. Shape is (num_instances, 3).
+
+        This quantity is the angular velocity of the root rigid body's center of mass frame relative to the world.
+        """
+
+        return self._robot.data.root_com_ang_vel_w
+
+    @property
+    def root_com_lin_vel_b(self) -> torch.Tensor:
+        """Root center of mass linear velocity in base frame. Shape is (num_instances, 3).
+
+        This quantity is the linear velocity of the root rigid body's center of mass frame with respect to the
+        rigid body's actor frame.
+        """
+        return self._robot.data.root_com_lin_vel_b
+
+    @property
+    def root_com_ang_vel_b(self) -> torch.Tensor:
+        """Root center of mass angular velocity in base world frame. Shape is (num_instances, 3).
+
+        This quantity is the angular velocity of the root rigid body's center of mass frame with respect to the
+        rigid body's actor frame.
+        """
+        return self._robot.data.root_com_ang_vel_b
 
     @property
     def body_pos_w(self) -> torch.Tensor:

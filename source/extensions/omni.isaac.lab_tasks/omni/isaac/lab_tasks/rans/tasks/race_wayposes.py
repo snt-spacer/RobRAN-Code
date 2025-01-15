@@ -143,15 +143,18 @@ class RaceWayposesTask(TaskCore):
 
         # position error
         self._position_error = (
-            self._target_positions[self._ALL_INDICES, self._target_index] - self._robot.root_pos_w[self._env_ids, :2]
+            self._target_positions[self._ALL_INDICES, self._target_index]
+            - self._robot.root_link_pos_w[self._env_ids, :2]
         )
         self._position_dist = torch.linalg.norm(self._position_error, dim=-1)
 
         # position error expressed as distance and angular error (to the position)
         heading = self._robot.heading_w[self._env_ids]
         target_heading_w = torch.atan2(
-            self._target_positions[self._ALL_INDICES, self._target_index, 1] - self._robot.root_pos_w[self._env_ids, 1],
-            self._target_positions[self._ALL_INDICES, self._target_index, 0] - self._robot.root_pos_w[self._env_ids, 0],
+            self._target_positions[self._ALL_INDICES, self._target_index, 1]
+            - self._robot.root_link_pos_w[self._env_ids, 1],
+            self._target_positions[self._ALL_INDICES, self._target_index, 0]
+            - self._robot.root_link_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
         heading_error = torch.atan2(
@@ -160,8 +163,8 @@ class RaceWayposesTask(TaskCore):
         )
 
         # Store in buffer
-        self._task_data[:, 0:2] = self._robot.root_lin_vel_b[self._env_ids, :2]
-        self._task_data[:, 2] = self._robot.root_ang_vel_w[self._env_ids, -1]
+        self._task_data[:, 0:2] = self._robot.root_com_lin_vel_b[self._env_ids, :2]
+        self._task_data[:, 2] = self._robot.root_com_ang_vel_w[self._env_ids, -1]
         self._task_data[:, 3] = self._position_dist
         self._task_data[:, 4] = torch.cos(target_heading_error)
         self._task_data[:, 5] = torch.sin(target_heading_error)
@@ -234,17 +237,19 @@ class RaceWayposesTask(TaskCore):
 
         # position error expressed as distance and angular error (to the position)
         target_heading_w = torch.atan2(
-            self._target_positions[self._ALL_INDICES, self._target_index, 1] - self._robot.root_pos_w[self._env_ids, 1],
-            self._target_positions[self._ALL_INDICES, self._target_index, 0] - self._robot.root_pos_w[self._env_ids, 0],
+            self._target_positions[self._ALL_INDICES, self._target_index, 1]
+            - self._robot.root_link_pos_w[self._env_ids, 1],
+            self._target_positions[self._ALL_INDICES, self._target_index, 0]
+            - self._robot.root_link_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
         target_heading_dist = torch.abs(target_heading_error)
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
         # normed linear velocity
-        linear_velocity = torch.linalg.norm(self._robot.root_vel_w[self._env_ids, :2], dim=-1)
+        linear_velocity = torch.linalg.norm(self._robot.root_com_vel_w[self._env_ids, :2], dim=-1)
         # normed angular velocity
-        angular_velocity = torch.abs(self._robot.root_vel_w[self._env_ids, -1])
+        angular_velocity = torch.abs(self._robot.root_com_vel_w[self._env_ids, -1])
         # progress
         progress_rew = self._previous_position_dist - self._position_dist
 
@@ -353,7 +358,7 @@ class RaceWayposesTask(TaskCore):
         # Make sure the position error and position dist are up to date after the reset
         self._position_error[env_ids] = (
             self._target_positions[env_ids, self._target_index[env_ids]]
-            - self._robot.root_pos_w[self._env_ids, :2][env_ids]
+            - self._robot.root_link_pos_w[self._env_ids, :2][env_ids]
         )
         self._position_dist[env_ids] = torch.linalg.norm(self._position_error[env_ids], dim=-1)
         self._previous_position_dist[env_ids] = self._position_dist[env_ids].clone()
@@ -375,7 +380,8 @@ class RaceWayposesTask(TaskCore):
 
         # Kill robots that would stray too far from the target.
         self._position_error = (
-            self._target_positions[self._ALL_INDICES, self._target_index] - self._robot.root_pos_w[self._env_ids, :2]
+            self._target_positions[self._ALL_INDICES, self._target_index]
+            - self._robot.root_link_pos_w[self._env_ids, :2]
         )
         self._previous_position_dist = self._position_dist.clone()
         self._position_dist = torch.linalg.norm(self._position_error, dim=-1)
@@ -620,4 +626,4 @@ class RaceWayposesTask(TaskCore):
             self.current_goals_visualizer.visualize(current_goals_pos, orientations=current_goals_quat)
 
         # Update the robot visualization. TODO Ideally we should lift the diamond a bit.
-        self.robot_pos_visualizer.visualize(self._robot.root_pos_w, self._robot.root_quat_w)
+        self.robot_pos_visualizer.visualize(self._robot.root_link_pos_w, self._robot.root_link_quat_w)

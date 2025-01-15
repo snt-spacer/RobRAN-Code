@@ -147,7 +147,7 @@ class PushBlockTask(TaskCore):
             torch.Tensor: The observation tensor."""
 
         # Position error between robot and block
-        self._position_robot_block_error = self._block_positions[:, :2] - self._robot.root_pos_w[self._env_ids, :2]
+        self._position_robot_block_error = self._block_positions[:, :2] - self._robot.root_link_pos_w[self._env_ids, :2]
         self._position_robot_block_dist = torch.norm(self._position_robot_block_error, dim=-1)
 
         # Position error between block and target
@@ -156,20 +156,22 @@ class PushBlockTask(TaskCore):
         self._position_block_target_dist = torch.norm(self._position_block_target_error, dim=-1)
 
         # Position error between robot and target
-        self._position_robot_target_error = self._target_positions[:, :2] - self._robot.root_pos_w[self._env_ids, :2]
+        self._position_robot_target_error = (
+            self._target_positions[:, :2] - self._robot.root_link_pos_w[self._env_ids, :2]
+        )
         self._position_robot_target_dist = torch.norm(self._position_robot_target_error, dim=-1)
 
         heading = self._robot.heading_w[self._env_ids]
         # Position error between robot and block expressed as distance and angular error (robot to block)
         block_heading_w = torch.atan2(
-            self._block_positions[:, 1] - self._robot.root_pos_w[self._env_ids, 1],
-            self._block_positions[:, 0] - self._robot.root_pos_w[self._env_ids, 0],
+            self._block_positions[:, 1] - self._robot.root_link_pos_w[self._env_ids, 1],
+            self._block_positions[:, 0] - self._robot.root_link_pos_w[self._env_ids, 0],
         )
         block_heading_error = torch.atan2(torch.sin(block_heading_w - heading), torch.cos(block_heading_w - heading))
         # Position error between robot and target expressed as distance and angular error (robot to target)
         target_heading_w = torch.atan2(
-            self._target_positions[:, 1] - self._robot.root_pos_w[self._env_ids, 1],
-            self._target_positions[:, 0] - self._robot.root_pos_w[self._env_ids, 0],
+            self._target_positions[:, 1] - self._robot.root_link_pos_w[self._env_ids, 1],
+            self._target_positions[:, 0] - self._robot.root_link_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
 
@@ -180,8 +182,8 @@ class PushBlockTask(TaskCore):
         self._task_data[:, 3] = torch.sin(block_heading_error)
         self._task_data[:, 4] = torch.cos(target_heading_error)
         self._task_data[:, 5] = torch.sin(target_heading_error)
-        self._task_data[:, 6:8] = self._robot.root_lin_vel_b[self._env_ids, :2]
-        self._task_data[:, 8] = self._robot.root_ang_vel_w[self._env_ids, -1]
+        self._task_data[:, 6:8] = self._robot.root_com_lin_vel_b[self._env_ids, :2]
+        self._task_data[:, 8] = self._robot.root_com_ang_vel_w[self._env_ids, -1]
 
         # Concatenate the task observations with the robot observations
         return torch.concat((self._task_data, self._robot.get_observations()), dim=-1)
@@ -225,7 +227,7 @@ class PushBlockTask(TaskCore):
         boundary_rew = torch.exp(-boundary_dist / self._task_cfg.boundary_exponential_reward_coeff)
 
         # linear velocity reward
-        linear_velocity = torch.norm(self._robot.root_vel_w[self._env_ids, :2], dim=-1)
+        linear_velocity = torch.norm(self._robot.root_com_vel_w[self._env_ids, :2], dim=-1)
         linear_velocity_rew = linear_velocity - self._task_cfg.linear_velocity_min_value
         linear_velocity_rew[linear_velocity_rew < 0] = 0
         linear_velocity_rew[
@@ -233,7 +235,7 @@ class PushBlockTask(TaskCore):
         ] = (self._task_cfg.linear_velocity_max_value - self._task_cfg.linear_velocity_min_value)
 
         # angular velocity reward
-        angular_velocity = torch.abs(self._robot.root_vel_w[self._env_ids, -1])
+        angular_velocity = torch.abs(self._robot.root_com_vel_w[self._env_ids, -1])
         angular_velocity_rew = angular_velocity - self._task_cfg.angular_velocity_min_value
         angular_velocity_rew[angular_velocity_rew < 0] = 0
         angular_velocity_rew[
@@ -243,7 +245,7 @@ class PushBlockTask(TaskCore):
 
         # position reward
         robot_block_position_rew = 1 - torch.clamp(
-            torch.linalg.norm(self._block_positions[:, :2] - self._robot.root_pos_w[self._env_ids, :2], dim=-1)
+            torch.linalg.norm(self._block_positions[:, :2] - self._robot.root_link_pos_w[self._env_ids, :2], dim=-1)
             / (self._task_cfg.max_delta_robot_position + EPS),
             min=0.0,
             max=1.0,
@@ -319,7 +321,7 @@ class PushBlockTask(TaskCore):
         # Make sure the position error and position dist are up to date after the reset
         # Position error between robot and block
         self._position_robot_block_error[env_ids] = (
-            self._block_positions[env_ids, :2] - self._robot.root_pos_w[self._env_ids, :2][env_ids]
+            self._block_positions[env_ids, :2] - self._robot.root_link_pos_w[self._env_ids, :2][env_ids]
         )
         self._position_robot_block_dist[env_ids] = torch.norm(self._position_robot_block_error[env_ids], dim=-1)
 
@@ -331,7 +333,7 @@ class PushBlockTask(TaskCore):
 
         # Position error between robot and target
         self._position_robot_target_error[env_ids] = (
-            self._target_positions[env_ids, :2] - self._robot.root_pos_w[self._env_ids, :2][env_ids]
+            self._target_positions[env_ids, :2] - self._robot.root_link_pos_w[self._env_ids, :2][env_ids]
         )
         self._position_robot_target_dist[env_ids] = torch.norm(self._position_robot_target_error[env_ids], dim=-1)
 
@@ -342,7 +344,7 @@ class PushBlockTask(TaskCore):
         Returns:
             torch.Tensor: Whether the platforms should be killed or not."""
 
-        self._position_error = self._target_positions[:, :2] - self._robot.root_pos_w[self._env_ids, :2]
+        self._position_error = self._target_positions[:, :2] - self._robot.root_link_pos_w[self._env_ids, :2]
         self._position_dist = torch.norm(self._position_error, dim=-1)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
         task_failed = torch.zeros_like(self._goal_reached, dtype=torch.long)
@@ -507,4 +509,4 @@ class PushBlockTask(TaskCore):
         """Updates the visual marker to the scene."""
 
         self.goal_pos_visualizer.visualize(self._markers_pos)
-        self.robot_pos_visualizer.visualize(self._robot.root_pos_w, self._robot.root_quat_w)
+        self.robot_pos_visualizer.visualize(self._robot.root_link_pos_w, self._robot.root_link_quat_w)

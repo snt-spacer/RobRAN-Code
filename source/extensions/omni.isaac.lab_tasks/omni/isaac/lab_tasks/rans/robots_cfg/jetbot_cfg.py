@@ -25,7 +25,7 @@ class JetbotRobotCfg(RobotCoreCfg):
     rew_action_rate_scale = -0.12
     rew_joint_accel_scale = -2.5e-6
 
-    wheel_scale = 50.0
+    wheel_scale = 1 / 0.0500
     """Multiplier for the wheel velocity. The action is in the range [-1, 1] and the radius of the wheel is 0.05m"""
 
     # Spaces
