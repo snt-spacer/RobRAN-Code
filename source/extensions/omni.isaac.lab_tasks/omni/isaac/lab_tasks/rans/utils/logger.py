@@ -81,13 +81,11 @@ class ScalarLogger:
     @property
     def get_step_logs(self) -> dict:
         """Get the step logs."""
-
         return self._step_logs
 
     @property
     def get_episode_logs(self) -> dict:
         """Get the episode logs."""
-
         return self._episode_logs
 
     def reset(self, env_ids: torch.Tensor, episode_length_buf: torch.Tensor) -> None:
@@ -124,7 +122,7 @@ class ScalarLogger:
         extras = dict()
         for rew_state_key in self._episode_logs.keys():
             for key in self._episode_logs[rew_state_key]:
-                extras[rew_state_key + "/" + key] = self._episode_logs[rew_state_key][key].mean().item()
+                extras[rew_state_key + "/" + key] = self._episode_logs[rew_state_key][key].mean()
 
         return extras
 
