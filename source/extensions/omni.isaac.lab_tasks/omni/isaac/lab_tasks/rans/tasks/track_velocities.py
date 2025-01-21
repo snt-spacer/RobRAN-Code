@@ -384,6 +384,7 @@ class TrackVelocitiesTask(TaskCore):
         initial_pose = torch.zeros((num_resets, 7), device=self._device, dtype=torch.float32)
         # The position is not randomized no point in doing it
         initial_pose[:, :2] = self._env_origins[env_ids, :2]
+        initial_pose[:, 2] = self._robot_origins[env_ids, 2]
         # The orientation is not randomized no point in doing it
         initial_pose[:, 3] = 1.0
 
@@ -451,7 +452,7 @@ class TrackVelocitiesTask(TaskCore):
         marker_orientation = torch.zeros((self._num_envs, 4), dtype=torch.float32, device=self._device)
         marker_scale = torch.ones((self._num_envs, 3), dtype=torch.float32, device=self._device)
         marker_pos[:, :2] = self._robot.root_link_pos_w[:, :2]
-        marker_pos[:, 2] = 0.5
+        marker_pos[:, 2] = self._robot._robot_cfg.marker_height
         marker_heading = self._robot.heading_w + torch.atan2(
             self._lateral_velocity_target, self._linear_velocity_target
         )
@@ -469,7 +470,7 @@ class TrackVelocitiesTask(TaskCore):
         )
         self.goal_linvel_visualizer.visualize(marker_pos, marker_orientation, marker_scale)
         # Update the target angular velocity marker
-        marker_pos[:, 2] = 0.5
+        marker_pos[:, 2] = self._robot._robot_cfg.marker_height
         marker_heading = self._robot.heading_w + math.pi / 2.0
         marker_orientation[:, 0] = torch.cos(marker_heading * 0.5)
         marker_orientation[:, 3] = torch.sin(marker_heading * 0.5)
@@ -477,7 +478,7 @@ class TrackVelocitiesTask(TaskCore):
         self.goal_angvel_visualizer.visualize(marker_pos, marker_orientation, marker_scale)
 
         # Update the robot velocity marker
-        marker_pos[:, 2] = 0.7
+        marker_pos[:, 2] = self._robot._robot_cfg.marker_height + 0.2
         if self._task_cfg.enable_lateral_velocity and self._task_cfg.enable_linear_velocity:
             marker_heading = self._robot.heading_w + torch.atan2(
                 self._robot.root_com_lin_vel_b[:, 1], self._robot.root_com_lin_vel_b[:, 0]
@@ -495,7 +496,7 @@ class TrackVelocitiesTask(TaskCore):
         )
         self.robot_linvel_visualizer.visualize(marker_pos, marker_orientation, marker_scale)
         # Update the robot angular velocity marker
-        marker_pos[:, 2] = 0.7
+        marker_pos[:, 2] = self._robot._robot_cfg.marker_height + 0.2
         marker_heading = self._robot.heading_w + math.pi / 2.0
         marker_orientation[:, 0] = torch.cos(marker_heading * 0.5)
         marker_orientation[:, 3] = torch.sin(marker_heading * 0.5)

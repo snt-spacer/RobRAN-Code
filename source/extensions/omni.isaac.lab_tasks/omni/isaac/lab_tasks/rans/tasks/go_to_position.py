@@ -373,4 +373,5 @@ class GoToPositionTask(TaskCore):
         """Updates the visual marker to the scene."""
 
         self.goal_pos_visualizer.visualize(self._markers_pos)
-        self.robot_pos_visualizer.visualize(self._robot.root_link_pos_w, self._robot.root_link_quat_w)
+        self._robot_marker_pos[:, :2] = self._robot.root_link_pos_w[:, :2]
+        self.robot_pos_visualizer.visualize(self._robot_marker_pos, self._robot.root_link_quat_w)

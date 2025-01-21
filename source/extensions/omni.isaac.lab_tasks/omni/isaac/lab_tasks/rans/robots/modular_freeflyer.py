@@ -3,72 +3,93 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import math
 import torch
 
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.utils import math as math_utils
 
-from omni.isaac.lab_tasks.rans import FloatingPlatformRobotCfg
+from omni.isaac.lab_tasks.rans import ModularFreeflyerRobotCfg
 
 from .robot_core import RobotCore
 
 
-class FloatingPlatformRobot(RobotCore):
-
+class ModularFreeflyerRobot(RobotCore):
     def __init__(
         self,
-        robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg(),
+        robot_cfg: ModularFreeflyerRobotCfg,
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
-    ):
+    ) -> None:
         super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
-        # Available for use robot_cfg.is_reaction_wheel,robot_cfg.split_thrust,robot_cfg.rew_reaction_wheel_scale
-        self._dim_robot_obs = self._robot_cfg.observation_space
-        self._dim_robot_act = self._robot_cfg.action_space
-        self._dim_gen_act = self._robot_cfg.gen_space
+        self._dim_robot_obs = 8
+        self._dim_robot_act = 8
+        self._dim_gen_act = 0
 
         # Buffers
         self.initialize_buffers()
 
-    def initialize_buffers(self, env_ids=None):
+    def initialize_buffers(self, env_ids=None) -> None:
         super().initialize_buffers(env_ids)
-        self._actions = torch.zeros((self._num_envs, self._dim_robot_act), device=self._device, dtype=torch.float32)
         self._previous_actions = torch.zeros(
-            (self._num_envs, self._dim_robot_act), device=self._device, dtype=torch.float32
+            (self._num_envs, self._dim_robot_act),
+            device=self._device,
+            dtype=torch.float32,
         )
-        self._thrust_action = torch.zeros(
-            (self._num_envs, self._robot_cfg.num_thrusters), device=self._device, dtype=torch.float32
+        self._thruster_action = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters),
+            device=self._device,
+            dtype=torch.float32,
         )
-        if self._robot_cfg.has_reaction_wheel:
-            self._reaction_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self._reaction_wheel_actions = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self._transforms = torch.zeros((self._num_envs, 3, 4), device=self._device, dtype=torch.float32)
+        self._thrust_forces = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters, 3),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._thrust_torques = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters, 3),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._thrust_positions = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters, 3),
+            device=self._device,
+            dtype=torch.float32,
+        )
 
-    def run_setup(self, robot: Articulation):
-        super().run_setup(robot)
-        self._thrusters_dof_idx, _ = self._robot.find_bodies(self._robot_cfg.thrusters_dof_name)
-        self._root_idx, _ = self._robot.find_bodies([self._robot_cfg.root_id_name])
+    def run_setup(self, robot: Articulation) -> None:
+        """Loads the robot into the task. After it has been loaded."""
 
-        if self._robot_cfg.has_reaction_wheel:
-            self._reaction_wheel_dof_idx, _ = self._robot.find_joints(self._robot_cfg.reaction_wheel_dof_name)
+        # Sets the articulation to be our overloaded articulation with improved force application
+        self._robot = robot
 
-    def create_logs(self):
+        # Get the indices of the lock joints
+        self._lock_ids, _ = self._robot.find_joints(
+            [self._robot_cfg.x_lock_name, self._robot_cfg.y_lock_name, self._robot_cfg.z_lock_name]
+        )
+        self._thrusters_ids, _ = self._robot.find_bodies("thruster_.*")
+        # Get the index of the root body (used to get the state of the robot)
+        self._root_idx = self._robot.find_bodies(self._robot_cfg.root_body_name)[0]
+        # Get the thrust generator
+        self._thrust_generator = ThrustGenerator(self._robot_cfg, self._num_envs, self._device)
+
+    def create_logs(self) -> None:
         super().create_logs()
 
-        self.scalar_logger.add_log("robot_state", "AVG/thrusters", "mean")
-        self.scalar_logger.add_log("robot_state", "AVG/reaction_wheel", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/thrust", "mean")
         self.scalar_logger.add_log("robot_state", "AVG/action_rate", "mean")
         self.scalar_logger.add_log("robot_state", "AVG/joint_acceleration", "mean")
         self.scalar_logger.add_log("robot_reward", "AVG/action_rate", "mean")
         self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
-        # print robot_data positions to validate in only moves on the x-y plane
-        # print(f"Robot data positions: {self.body_pos_w}")
-
         return self._actions
 
-    def compute_rewards(self):
+    def compute_rewards(self) -> torch.Tensor:
         # TODO: DT should be factored in?
 
         # Compute
@@ -96,80 +117,71 @@ class FloatingPlatformRobot(RobotCore):
         env_ids: torch.Tensor,
         gen_actions: torch.Tensor | None = None,
         env_seeds: torch.Tensor | None = None,
-    ):
+    ) -> None:
         super().reset(env_ids, gen_actions, env_seeds)
         self._previous_actions[env_ids] = 0
+        self._thrust_forces[env_ids] = 0
+        self._thrust_positions[env_ids] = 0
 
-    def set_initial_conditions(self, env_ids: torch.Tensor):
-        thrust_reset = torch.zeros_like(self._thrust_action)
-        self._robot.set_external_force_and_torque(
-            thrust_reset, thrust_reset, body_ids=self._thrusters_dof_idx, env_ids=env_ids
+    def set_initial_conditions(self, env_ids: torch.Tensor | None = None) -> None:
+        # Create zero tensor
+        zeros = torch.zeros(
+            (len(env_ids), len(self._lock_ids)),
+            device=self._device,
+            dtype=torch.float32,
         )
-        locking_joints = torch.zeros((len(env_ids), 3), device=self._device)
-        self._robot.set_joint_velocity_target(locking_joints, env_ids=env_ids)
-        self._robot.set_joint_position_target(locking_joints, env_ids=env_ids)
+        # Sets the joints to zero
+        self._robot.set_joint_position_target(zeros, joint_ids=self._lock_ids, env_ids=env_ids)
+        self._robot.set_joint_velocity_target(zeros, joint_ids=self._lock_ids, env_ids=env_ids)
 
-        if self._robot_cfg.has_reaction_wheel:
-            rw_reset = torch.zeros_like(self._reaction_wheel_action)
-            self._robot.set_joint_velocity_target(rw_reset, joint_ids=self._reaction_wheel_dof_idx, env_ids=env_ids)
-            self._robot.set_joint_effort_target(rw_reset, joint_ids=self._reaction_wheel_dof_idx, env_ids=env_ids)
-
-    def process_actions(self, actions: torch.Tensor):
-        # Expand to match num_envs x action_dim
+    def process_actions(self, actions: torch.Tensor) -> None:
+        # Clone the previous actions
         self._previous_actions = self._actions.clone()
+        # Clone the current actions
         self._actions = actions.clone()
 
-        # Calculate the number of active thrusters (those with a value of 1)
-        n_active_thrusters = torch.sum(actions[:, : self._robot_cfg.num_thrusters], dim=1, keepdim=True)
-        # Determine thrust scaling factor
-        if self._robot_cfg.split_thrust:
-            # Calculate thrust scale as max thrust divided by the number of active thrusters
-            thrust_scale = torch.where(
-                n_active_thrusters > 0,
-                self._robot_cfg.max_thrust / n_active_thrusters,
-                torch.tensor(0.0, device=actions.device),
-            )
+        # Assumes the action space is [-1, 1]
+        if self._robot_cfg.action_mode == "continuous":
+            self._thrust_actions = self._actions[:, : self._robot_cfg.num_thrusters]
+            self._thrust_actions = (self._thrust_actions + 1) / 2.0
+            self._reaction_wheel_actions = self._actions[:, -1]
         else:
-            thrust_scale = self._robot_cfg.max_thrust
+            self._thrust_actions = (self._actions[:, : self._robot_cfg.num_thrusters] > 0.0).float()
+            self._reaction_wheel_actions = self._actions[:, -1]
 
-        # Apply thrust to thrusters, based on whether reaction wheel is present
-        self._thrust_action = actions[:, : self._robot_cfg.num_thrusters].float() * thrust_scale
-        # transform the 2D thrust actions into 3D forces and torques with x and y components set to zero and z components based on the thrust actions
-        self._thrust_action = self._thrust_action.unsqueeze(2).expand(-1, -1, 3)
-        self._thrust_action = torch.cat(
-            (torch.zeros_like(self._thrust_action[:, :, :2]), self._thrust_action[:, :, 2:]), dim=2
+        # Log data
+        self.scalar_logger.log("robot_state", "AVG/thrust", torch.sum(self._thrust_actions, dim=-1))
+
+    def compute_physics(self) -> None:
+        self._thrust_positions, self._thrust_forces = self._thrust_generator.cast_actions_to_thrust(
+            self._thrust_actions
         )
 
-        if self._robot_cfg.has_reaction_wheel:
-            # Separate continuous control for reaction wheel
-            self._reaction_wheel_action = (
-                actions[:, self._robot_cfg.num_thrusters :] * self._robot_cfg.reaction_wheel_scale
-            )
-            self._reaction_wheel_action = self._reaction_wheel_action.unsqueeze(2).expand(-1, -1, 3)
+    def apply_actions(self) -> None:
+        self.compute_physics()
 
-        # Log data for monitoring
-        self.scalar_logger.log("robot_state", "AVG/thrusters", torch.linalg.norm(self._thrust_action[:, :, 2], dim=-1))
-        if self._robot_cfg.has_reaction_wheel:
-            self.scalar_logger.log("robot_state", "AVG/reaction_wheel", self._reaction_wheel_action[:, 0])
-
-    def compute_physics(self):
-        pass  # Model motor + ackermann steering here
-
-    def apply_actions(self):
         self._robot.set_external_force_and_torque(
-            self._thrust_action, torch.zeros_like(self._thrust_action), body_ids=self._thrusters_dof_idx
+            self._thrust_forces, self._thrust_torques, positions=self._thrust_positions, body_ids=self._thrusters_ids
         )
-        if self._robot_cfg.has_reaction_wheel:
-            self._robot.set_joint_effort_target(self._reaction_wheel_action, joint_ids=self._reaction_wheel_dof_idx)
+
+    def set_pose(
+        self,
+        pose: torch.Tensor,
+        env_ids: torch.Tensor | None = None,
+    ) -> None:
+        self._robot.write_root_pose_to_sim(pose, env_ids)
 
     def set_velocity(
         self,
         velocity: torch.Tensor,
         env_ids: torch.Tensor | None = None,
     ) -> None:
-        velocity = torch.cat([velocity[:, :2], velocity[:, -1].unsqueeze(-1)], dim=1)
-        position = torch.zeros_like(velocity)
-        self._robot.write_joint_state_to_sim(position, velocity, env_ids=env_ids)
+        zeros = torch.zeros(
+            (len(env_ids), len(self._lock_ids)),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._robot.write_joint_state_to_sim(zeros, zeros, joint_ids=self._lock_ids, env_ids=env_ids)
 
     ##
     # Derived base properties
@@ -381,3 +393,88 @@ class FloatingPlatformRobot(RobotCore):
         rigid body's actor frame.
         """
         return math_utils.quat_rotate_inverse(self.root_com_quat_w, self.root_com_ang_vel_w)
+
+
+class ThrustGenerator:
+    def __init__(self, robot_cfg: ModularFreeflyerRobotCfg, num_envs: int, device: str):
+
+        self._num_envs = num_envs
+        self._device = device
+        self._robot_cfg = robot_cfg
+
+        self.initialize_buffers()
+        self.get_transforms_from_cfg()
+
+    def initialize_buffers(self):
+        self._transforms2D = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters, 3, 3),
+            dtype=torch.float,
+            device=self._device,
+        )
+        self._transforms = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters, 5),
+            dtype=torch.float,
+            device=self._device,
+        )
+        self._thrust_force = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self.unit_vector = torch.zeros(
+            (self._num_envs, self._robot_cfg.num_thrusters, 2),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self.unit_vector[:, :, 0] = 1.0
+
+    def get_transforms_from_cfg(self):
+        assert (
+            len(self._robot_cfg.thruster_transforms) == self._robot_cfg.num_thrusters
+        ), "Number of thruster transforms does not match the number of thrusters"
+        # Transforms are stored in [x,y,theta,F] format, they need to be converted to 2D transforms, and a compact representation
+        for i, trsfrm in enumerate(self._robot_cfg.thruster_transforms):
+            # 2D transforms used to project the forces
+            self._transforms2D[:, i, 0, 0] = math.cos(trsfrm[2])
+            self._transforms2D[:, i, 0, 1] = math.sin(-trsfrm[2])
+            self._transforms2D[:, i, 1, 0] = math.sin(trsfrm[2])
+            self._transforms2D[:, i, 1, 1] = math.cos(trsfrm[2])
+            self._transforms2D[:, i, 2, 0] = trsfrm[0]
+            self._transforms2D[:, i, 2, 1] = trsfrm[1]
+            self._transforms2D[:, i, 2, 2] = 1.0
+            # Compact transform representation to inform the network
+            self._transforms[:, i, 0] = math.cos(trsfrm[2])
+            self._transforms[:, i, 1] = math.sin(trsfrm[2])
+            self._transforms[:, i, 2] = trsfrm[0]
+            self._transforms[:, i, 3] = trsfrm[1]
+            self._transforms[:, i, 4] = self._robot_cfg.thruster_max_thrust[i]
+            # Maximum thrust force
+            self._thrust_force[:, i] = self._robot_cfg.thruster_max_thrust[i]
+
+    def cast_actions_to_thrust(self, actions):
+        """
+        Projects the forces on the platform."""
+
+        rand_forces = actions * self._thrust_force
+        # Split transforms into translation and rotation
+        R = self._transforms2D[:, :, :2, :2].reshape(-1, 2, 2)
+        T = self._transforms2D[:, :, 2, :2].reshape(-1, 2)
+        # Create a zero tensor to add 3rd dimension
+        zero = torch.zeros((T.shape[0], 1), device=self._device, dtype=torch.float32)
+        # Generate positions
+        positions = torch.cat([T, zero], dim=-1)
+        # Project forces
+        force_vector = self.unit_vector * rand_forces.view(-1, self._robot_cfg.num_thrusters, 1)
+        rotated_forces = torch.matmul(R.reshape(-1, 2, 2), force_vector.view(-1, 2, 1))
+        projected_forces = torch.cat([rotated_forces[:, :, 0], zero], dim=-1)
+        return positions.reshape(-1, self._robot_cfg.num_thrusters, 3), projected_forces.reshape(
+            -1, self._robot_cfg.num_thrusters, 3
+        )
+
+    @property
+    def compact_transforms(self):
+        return self._transforms
+
+    @property
+    def transforms2D(self):
+        return self._transforms2D

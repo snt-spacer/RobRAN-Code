@@ -11,6 +11,7 @@ import math
 import omni.isaac.core.utils.prims as prim_utils
 import omni.isaac.core.utils.stage as stage_utils
 import omni.physx.scripts.utils as physx_utils
+from pxr import Sdf
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg
@@ -22,9 +23,9 @@ from omni.isaac.lab.utils import configclass
 class ModularFreeFlyer2DProps:
     num_thruster_pair: int = 4
     initial_offset: float = math.pi / 4
-    shape: str = "Sphere"
+    shape: str = "Cube"
     radius: float = 0.31
-    height: float = 0.6
+    height: float = 0.5
     width: float = 0.4
     depth: float = 0.4
     mass: float = 5.32
@@ -63,7 +64,7 @@ def generate_freeflyer(root_path: str, robot_cfg: ModularFreeFlyer2DProps) -> No
 
     # Create the root of the articulation
     stage = stage_utils.get_current_stage()
-    # root_prim = prim_utils.create_prim(root_path)
+    prim_utils.create_prim(root_path)
     body_path = root_path + "/body"
     joint_base_path = root_path + "/joints"
     schemas.define_articulation_root_properties(root_path, art_props)
@@ -92,6 +93,10 @@ def generate_freeflyer(root_path: str, robot_cfg: ModularFreeFlyer2DProps) -> No
             prim_type="Sphere",
             attributes=attributes,
         )
+    body_prim.CreateAttribute("refinementLevel", Sdf.ValueTypeNames.Int)
+    body_prim.GetAttribute("refinementLevel").Set(robot_cfg.refinement)
+    body_prim.CreateAttribute("refinementEnableOverride", Sdf.ValueTypeNames.Bool)
+    body_prim.GetAttribute("refinementEnableOverride").Set(True)
     physx_utils.setPhysics(prim=body_prim, kinematic=False)
     schemas.define_mass_properties(body_path, mass_props)
     schemas.define_collision_properties(body_path, collider_props)
@@ -174,7 +179,7 @@ def generate_freeflyer(root_path: str, robot_cfg: ModularFreeFlyer2DProps) -> No
 
 
 MODULAR_FREEFLYER_2D_CFG = ArticulationCfg(
-    spawn=sim_utils.FromCodeCfg(
+    spawn=sim_utils.RobotFromCodeCfg(
         robot_gen_func=generate_freeflyer,
         robot_gen_props=ModularFreeFlyer2DProps(),
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
@@ -193,7 +198,7 @@ MODULAR_FREEFLYER_2D_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.0),
+        pos=(0.0, 0.0, 0.5),
         joint_pos={
             "x_lock_joint": 0.0,
             "y_lock_joint": 0.0,

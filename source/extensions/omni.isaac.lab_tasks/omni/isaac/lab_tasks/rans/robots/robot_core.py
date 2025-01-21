@@ -377,9 +377,9 @@ class RobotCore:
         """
         return self._robot.data.root_link_ang_vel_b
 
-    #
-    # Root Center of Mass state properties
-    #
+    ##
+    # Derived CoM frame properties
+    ##
 
     @property
     def root_com_pos_w(self) -> torch.Tensor:
@@ -439,6 +439,10 @@ class RobotCore:
         rigid body's actor frame.
         """
         return self._robot.data.root_com_ang_vel_b
+
+    ##
+    # Derived Bodies Frame Properties
+    ##
 
     @property
     def body_pos_w(self) -> torch.Tensor:

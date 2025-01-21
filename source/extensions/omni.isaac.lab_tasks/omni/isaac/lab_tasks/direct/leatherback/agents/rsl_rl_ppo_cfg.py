@@ -13,11 +13,11 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 
 
 @configclass
-class CartpolePPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class LeatherbackPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 16
     max_iterations = 150
     save_interval = 50
-    experiment_name = "cartpole_direct"
+    experiment_name = "leatherback_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,

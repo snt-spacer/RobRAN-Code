@@ -4,15 +4,23 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # isort: off
-from .robots_cfg import (
+from .robots_cfg import (  # noqa: F401, F403
     FloatingPlatformRobotCfg,
     LeatherbackRobotCfg,
     RobotCoreCfg,
     JetbotRobotCfg,
+    ModularFreeflyerRobotCfg,
     ROBOT_CFG_FACTORY,
-)  # noqa: F401, F403
+)
 
-from .robots import FloatingPlatformRobot, LeatherbackRobot, RobotCore, JetbotRobot, ROBOT_FACTORY  # noqa: F401, F403
+from .robots import (  # noqa: F401, F403
+    FloatingPlatformRobot,
+    LeatherbackRobot,
+    RobotCore,
+    JetbotRobot,
+    ModularFreeflyerRobot,
+    ROBOT_FACTORY,
+)
 
 from .tasks_cfg import (  # noqa: F401, F403
     GoThroughPosesCfg,

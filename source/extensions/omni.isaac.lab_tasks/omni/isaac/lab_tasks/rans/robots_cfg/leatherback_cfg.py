@@ -18,6 +18,7 @@ class LeatherbackRobotCfg(RobotCoreCfg):
     """Core configuration for a RANS task."""
 
     robot_cfg: ArticulationCfg = LEATHERBACK_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    marker_height = 0.5
 
     throttle_dof_name = [
         "Wheel__Knuckle__Front_Left",

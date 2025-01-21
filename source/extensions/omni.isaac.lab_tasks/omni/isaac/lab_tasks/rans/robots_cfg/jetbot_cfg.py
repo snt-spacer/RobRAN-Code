@@ -16,6 +16,7 @@ class JetbotRobotCfg(RobotCoreCfg):
     """Core configuration for a RANS task."""
 
     robot_cfg: ArticulationCfg = JETBOT_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    marker_height = 0.5
 
     wheels_dof_names = [
         "left_wheel_joint",

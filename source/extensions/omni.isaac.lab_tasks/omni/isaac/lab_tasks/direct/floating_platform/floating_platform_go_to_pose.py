@@ -72,7 +72,6 @@ class FloatingPlatformGoToPoseEnv(DirectRLEnv):
         self.robot_api.run_setup(self.robot)
         self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
-        # Expand the robot's action space dimension to include num_envs
 
     def _configure_gym_env_spaces(self):
         """Configure the action and observation spaces for the Gym environment."""
@@ -101,7 +100,6 @@ class FloatingPlatformGoToPoseEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
         self.robot_api.process_actions(actions)
-        # print(f"Robots Pose: {self.robot_api.body_pos_w[:3]}")
 
     def _apply_action(self) -> None:
         self.robot_api.apply_actions()

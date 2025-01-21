@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import carb
 import omni.isaac.core.utils.prims as prim_utils
 from pxr import Usd
 
@@ -15,13 +14,13 @@ from omni.isaac.lab.sim import schemas
 from omni.isaac.lab.sim.utils import clone
 
 if TYPE_CHECKING:
-    from . import robots_from_code_cfg
+    from . import robot_from_code_cfg
 
 
 @clone
-def spawn_from_code(
+def spawn_robot_from_code(
     prim_path: str,
-    cfg: robots_from_code_cfg.FromCodeCfg,
+    cfg: robot_from_code_cfg.RobotFromCodeCfg,
     translation: tuple[float, float, float] | None = None,
     orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
@@ -55,7 +54,7 @@ def spawn_from_code(
         FileNotFoundError: If the USD file does not exist at the given path.
     """
     # spawn asset from the given usd file
-    return _spawn_from_code(prim_path, cfg, translation, orientation)
+    return _spawn_robot_from_code(prim_path, cfg, translation, orientation)
 
 
 """
@@ -63,42 +62,38 @@ Helper functions.
 """
 
 
-def _spawn_from_code(
+def _spawn_robot_from_code(
     prim_path: str,
-    cfg: robots_from_code_cfg.FromCodeCfg,
+    cfg: robot_from_code_cfg.RobotFromCodeCfg,
     translation: tuple[float, float, float] | None = None,
     orientation: tuple[float, float, float, float] | None = None,
 ) -> Usd.Prim:
-    """Spawn an asset from a USD file and override the settings with the given config.
+    """Spawn a robot using the function provided inside the config robot and override some of the settings with
+    the given config.
 
-    In case a prim already exists at the given prim path, then the function does not create a new prim
-    or throw an error that the prim already exists. Instead, it just takes the existing prim and overrides
-    the settings with the given config.
+    In case a prim already exists at the given prim path, then the function throws an exception.
 
     Args:
         prim_path: The prim path or pattern to spawn the asset at. If the prim path is a regex pattern,
             then the asset is spawned at all the matching prim paths.
-        usd_path: The path to the USD file to spawn the asset from.
         cfg: The configuration instance.
         translation: The translation to apply to the prim w.r.t. its parent prim. Defaults to None, in which
-            case the translation specified in the generated USD file is used.
+            case the translation specified in the generation function is used.
         orientation: The orientation in (w, x, y, z) to apply to the prim w.r.t. its parent prim. Defaults to None,
-            in which case the orientation specified in the generated USD file is used.
+            in which case the orientation specified in the generation function is used.
 
     Returns:
         The prim of the spawned asset.
 
     Raises:
-        FileNotFoundError: If the USD file does not exist at the given path.
+        ValueError: If a prim already exists at the given prim path.
     """
-    # check file path exists
-    # stage: Usd.Stage = stage_utils.get_current_stage()
 
     if not prim_utils.is_prim_path_valid(prim_path):
         # add prim as reference to stage
         cfg.robot_gen_func(prim_path, cfg.robot_gen_props)
     else:
-        carb.log_warn(f"A prim already exists at prim path: '{prim_path}'.")
+        raise ValueError(f"A prim already exists at prim path: '{prim_path}'.")
 
     # modify rigid body properties
     if cfg.rigid_props is not None:

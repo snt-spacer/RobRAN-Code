@@ -27,7 +27,7 @@ class TrackVelocitiesCfg(TaskCoreCfg):
     """Enable linear velocity goal. Defaults to True."""
     goal_min_lin_vel: float = 0.0
     """Minimal linear velocity goal in m/s. Defaults to 0.0 m/s. (a random sign is added)"""
-    goal_max_lin_vel: float = 2.0
+    goal_max_lin_vel: float = 1.0
     """Maximal linear velocity goal in m/s. Defaults to 2.0 m/s. (a random sign is added)"""
     enable_lateral_velocity: bool = False
     """Enable lateral velocity goal. Defaults to False."""
@@ -55,9 +55,9 @@ class TrackVelocitiesCfg(TaskCoreCfg):
     resample_after_steps_in_tolerance: int = 50
 
     # Reward Would be good to have a config for each reward type
-    lin_vel_exponential_reward_coeff: float = 0.25
-    lat_vel_exponential_reward_coeff: float = 0.25
-    ang_vel_exponential_reward_coeff: float = 0.25
+    lin_vel_exponential_reward_coeff: float = 0.5
+    lat_vel_exponential_reward_coeff: float = 0.5
+    ang_vel_exponential_reward_coeff: float = 0.5
     linear_velocity_weight: float = 0.5
     lateral_velocity_weight: float = 0.0
     angular_velocity_weight: float = 0.5

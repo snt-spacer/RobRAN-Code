@@ -669,4 +669,5 @@ class GoThroughPosesTask(TaskCore):
             self.current_goals_visualizer.visualize(current_goals_pos, orientations=current_goals_quat)
 
         # Update the robot visualization. TODO Ideally we should lift the diamond a bit.
-        self.robot_pos_visualizer.visualize(self._robot.root_link_pos_w, self._robot.root_link_quat_w)
+        self._robot_marker_pos[:, :2] = self._robot.root_link_pos_w[:, :2]
+        self.robot_pos_visualizer.visualize(self._robot_marker_pos, self._robot.root_link_quat_w)

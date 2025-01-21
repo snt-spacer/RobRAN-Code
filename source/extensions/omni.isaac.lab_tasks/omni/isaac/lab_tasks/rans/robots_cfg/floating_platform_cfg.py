@@ -16,12 +16,13 @@ class FloatingPlatformRobotCfg(RobotCoreCfg):
     """Core configuration for a RANS task."""
 
     robot_cfg: ArticulationCfg = FLOATING_PLATFORM_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    marker_height = 0.75
     has_reaction_wheel = False
     num_thrusters = 8
 
     thrusters_dof_name = [f"thruster_{i}" for i in range(1, num_thrusters + 1)]
     root_id_name = "Cylinder"
-    rew_action_rate_scale = -0.12
+    rew_action_rate_scale = -0.12 / 8
     rew_joint_accel_scale = -2.5e-6
 
     max_thrust = 1.0

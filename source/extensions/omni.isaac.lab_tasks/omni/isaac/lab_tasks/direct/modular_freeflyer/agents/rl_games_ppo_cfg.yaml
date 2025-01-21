@@ -14,13 +14,6 @@ params:
   model:
     name: continuous_a2c_logstd
 
-  wandb:
-    enabled: True
-    project: single
-    entity: spacer-rl
-    group: 'zeroG'
-    notes: ''
-
   # doesn't have this fine grained control but made it close
   network:
     name: actor_critic
@@ -50,7 +43,7 @@ params:
   load_path: '' # path to the checkpoint to load
 
   config:
-    name: single
+    name: freeflyer_direct
     env_name: rlgpu
     device: 'cuda:0'
     device_name: 'cuda:0'

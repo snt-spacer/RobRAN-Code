@@ -13,11 +13,11 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 
 
 @configclass
-class CartpolePPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class JetbotPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 16
     max_iterations = 150
     save_interval = 50
-    experiment_name = "single"
+    experiment_name = "jetbot_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,

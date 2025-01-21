@@ -103,6 +103,7 @@ class TaskCore:
             device=self._device,
             dtype=torch.float32,
         )
+        self._robot_marker_pos = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
 
     def run_setup(self, robot: RobotCore, envs_origin: torch.Tensor) -> None:
         """
@@ -115,6 +116,7 @@ class TaskCore:
         self._robot = robot
         self._env_origins = envs_origin.clone()
         self._robot_origins = self._robot._robot.data.default_root_state[:, :3].clone()
+        self._robot_marker_pos[:, 2] = self._robot._robot_cfg.marker_height
 
     def get_observations(self) -> torch.Tensor:
         raise NotImplementedError
