@@ -829,6 +829,90 @@ class TestRandomNumberGenerator(unittest.TestCase):
         output_2 = pesrng_1.sample_quaternion_torch(1)
         self.assertFalse(torch.equal(output_1, output_2))
 
+    ############################################################
+    # Test Unique integer sampling
+    ############################################################
+
+    def test_unique_integers_reproducibility(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        output_1 = pesrng_1.sample_unique_integers_torch(0, 100, 10)
+        output_2 = pesrng_2.sample_unique_integers_torch(0, 100, 10)
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_unique_integers_reproducibility_tensorized(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        min = torch.zeros((1000), dtype=torch.int32, device="cuda")
+        max = torch.ones((1000), dtype=torch.int32, device="cuda") * 100
+        output_1 = pesrng_1.sample_unique_integers_torch(min, max, 10)
+        output_2 = pesrng_2.sample_unique_integers_torch(min, max, 10)
+        self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_unique_integers_index_sampling(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        pesrng_2 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_2.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+
+        ids = torch.arange(10, dtype=torch.int32, device="cuda")
+        for i in range(100):
+            output_1 = pesrng_1.sample_unique_integers_torch(0, 100, 10, ids=ids)
+            output_2 = pesrng_2.sample_unique_integers_torch(0, 100, 10, ids=ids)
+            self.assertTrue(torch.equal(output_1, output_2))
+
+    def test_unique_integers_different_for_each_run(self):
+        pesrng_1 = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng_1.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+        output_1 = pesrng_1.sample_unique_integers_torch(0, 100, 10)
+        output_2 = pesrng_1.sample_unique_integers_torch(0, 100, 10)
+        self.assertFalse(torch.equal(output_1, output_2))
+
+    def test_unique_integers_catch_max_min(self):
+        pesrng = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+
+        with self.assertRaises(AssertionError):
+            pesrng.sample_unique_integers_torch(10, 0, 10)
+
+    def test_unique_integers_catch_minmax_num(self):
+        pesrng = PerEnvSeededRNG(42, 1000, "cuda")
+        pesrng.set_seeds(
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+            torch.arange(1000, dtype=torch.int32, device="cuda"),
+        )
+
+        with self.assertRaises(AssertionError):
+            pesrng.sample_unique_integers_torch(0, 100, 101)
+
 
 if __name__ == "__main__":
     run_tests()

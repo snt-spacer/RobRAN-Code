@@ -32,6 +32,9 @@ class PerEnvSeededRNG:
         self._new_states = wp.zeros(self._seeds.shape, dtype=wp.uint32, device=device)
         self._ALL_INDICES = wp.array(np.arange(num_envs), dtype=wp.int32, device=device)
 
+        self._use_numpy_rng = False
+        self._numpy_rng_is_initialized = False
+
     @property
     def seeds_warp(self) -> wp.array:
         """Get the seeds for each environment."""
@@ -78,6 +81,26 @@ class PerEnvSeededRNG:
             out *= i
         return out
 
+    def initialize_numpy_rng(self) -> None:
+        """Initialize the numpy random number generator."""
+
+        self._numpy_rngs = [np.random.default_rng(seed) for seed in self.seeds_numpy]
+
+        self._use_numpy_rng = True
+        self._numpy_rng_is_initialized = True
+
+    def set_numpy_rng_seeds(self, seeds: wp.array, ids: wp.array | None) -> None:
+        """When using distributions that are not yet supported by our custom warp kernels, we fall
+        back to numpy. This function sets the seeds for each environments."""
+        if ids is None:
+            ids = self._ALL_INDICES
+
+        ids = ids.numpy()
+        seeds = seeds.numpy()
+
+        for i, seed in enumerate(seeds):
+            self._numpy_rngs[i] = np.random.default_rng(seed)
+
     def set_seeds_warp(self, seeds: wp.array, ids: wp.array | None) -> None:
         """Set the seeds for each environment.
         Args:
@@ -94,6 +117,9 @@ class PerEnvSeededRNG:
             inputs=[seeds, self._seeds, self._states, ids],
             device=self._device,
         )
+
+        if self._use_numpy_rng:
+            self.set_numpy_rng_seeds(seeds, ids)
 
     def set_seeds(self, seeds: torch.Tensor, ids: torch.Tensor | None) -> None:
         """Set the seeds for each environment.
@@ -150,7 +176,11 @@ class PerEnvSeededRNG:
         return uniform(low, high, self._states, self._new_states, ids, self.to_tuple(shape), self._device)
 
     def sample_uniform_torch(
-        self, low: float | torch.Tensor, high: float | torch.Tensor, shape: tuple | int, ids: torch.Tensor | None = None
+        self,
+        low: float | torch.Tensor,
+        high: float | torch.Tensor,
+        shape: tuple | int,
+        ids: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Sample from a uniform distribution. Torch implementation.
         Args:
@@ -317,7 +347,11 @@ class PerEnvSeededRNG:
         return normal(mean, std, self._states, self._new_states, ids, self.to_tuple(shape), self._device)
 
     def sample_normal_torch(
-        self, mean: float | torch.Tensor, std: float | torch.Tensor, shape: tuple | int, ids: torch.Tensor | None = None
+        self,
+        mean: float | torch.Tensor,
+        std: float | torch.Tensor,
+        shape: tuple | int,
+        ids: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Sample from a normal distribution. Torch implementation.
         Args:
@@ -446,3 +480,88 @@ class PerEnvSeededRNG:
             ids = wp.array(ids.to(torch.int32), dtype=wp.int32, device=self._device)
         output = self.sample_quaternion_warp(shape, ids)
         return output.numpy()
+
+    def sample_unique_integers_numpy(
+        self, min: int | np.ndarray, max: int | np.ndarray, num: int, ids: np.ndarray | None = None
+    ) -> np.array:
+        """Sample unique integers. Numpy implementation, numpy backend.
+        Args:
+            min: The minimum value.
+            max: The maximum value.
+            num: The number of unique integers to sample.
+            ids: The ids of the environments.
+        Returns:
+            torch.Tensor: The sampled values. Shape (num_envs, num)."""
+
+        if self._numpy_rng_is_initialized is False:
+            self.initialize_numpy_rng()
+
+        if ids is None:
+            ids = self._ALL_INDICES.numpy()
+
+        if type(min) is np.ndarray:
+            assert type(max) is np.ndarray, "min and max must have the same type"
+            assert (min < max).all(), "min must be less than max"
+            assert (num <= max - min).all(), "num must be less than or equal to max - min"
+            outputs = [
+                self._numpy_rngs[id].choice(np.arange(min[i], max[i]), num, replace=False) for i, id in enumerate(ids)
+            ]
+
+        elif type(min) is int:
+            assert type(max) is int, "min and max must have the same type"
+            assert min < max, "min must be less than max"
+            assert num <= max - min, "num must be less than or equal to max - min"
+            outputs = [self._numpy_rngs[id].choice(np.arange(min, max), num, replace=False) for id in ids]
+
+        else:
+            raise ValueError("min and max must be either int or np.ndarray")
+
+        return np.array(outputs, dtype=np.int32)
+
+    def sample_unique_integers_torch(
+        self, min: int | torch.Tensor, max: int | torch.Tensor, num: int, ids: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        """Sample unique integers. Torch implementation, numpy backend.
+        Args:
+            min: The minimum value.
+            max: The maximum value.
+            num: The number of unique integers to sample.
+            ids: The ids of the environments.
+        Returns:
+            torch.Tensor: The sampled values. Shape (num_envs, num)."""
+
+        if isinstance(ids, torch.Tensor):
+            ids = ids.detach().cpu().numpy()
+
+        if isinstance(min, torch.Tensor):
+            min = min.detach().cpu().numpy()
+        if isinstance(max, torch.Tensor):
+            max = max.detach().cpu().numpy()
+
+        outputs = self.sample_unique_integers_numpy(min, max, num, ids)
+
+        return torch.from_numpy(outputs).to(self._device)
+
+    def sample_unique_integers_warp(
+        self, min: int | wp.array, max: int | wp.array, num: int, ids: wp.array | None = None
+    ) -> wp.array:
+        """Sample unique integers. Warp implementation, numpy backend.
+        Args:
+            min: The minimum value.
+            max: The maximum value.
+            num: The number of unique integers to sample.
+            ids: The ids of the environments.
+        Returns:
+            torch.Tensor: The sampled values. Shape (num_envs, num)."""
+
+        if isinstance(ids, wp.array):
+            ids = ids.numpy()
+
+        if isinstance(min, wp.array):
+            min = min.numpy()
+        if isinstance(max, wp.array):
+            max = max.numpy()
+
+        outputs = self.sample_unique_integers_numpy(min, max, num, ids)
+
+        return wp.array(outputs, dtype=wp.int32, device=self._device)
