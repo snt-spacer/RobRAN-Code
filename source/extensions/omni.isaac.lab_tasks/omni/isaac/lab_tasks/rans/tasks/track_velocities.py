@@ -280,19 +280,19 @@ class TrackVelocitiesTask(TaskCore):
                 self._gen_actions[env_ids, 0] * (self._task_cfg.goal_max_lin_vel - self._task_cfg.goal_min_lin_vel)
                 + self._task_cfg.goal_min_lin_vel
             ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
-            self._linear_velocity_desired[env_ids] = self._linear_velocity_target.clone()
+            self._linear_velocity_desired[env_ids] = self._linear_velocity_target[env_ids].clone()
         if self._task_cfg.enable_lateral_velocity:
             self._lateral_velocity_target[env_ids] = (
                 self._gen_actions[env_ids, 1] * (self._task_cfg.goal_max_lat_vel - self._task_cfg.goal_min_lat_vel)
                 + self._task_cfg.goal_min_lat_vel
             ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
-            self._lateral_velocity_desired[env_ids] = self._lateral_velocity_target.clone()
+            self._lateral_velocity_desired[env_ids] = self._lateral_velocity_target[env_ids].clone()
         if self._task_cfg.enable_angular_velocity:
             self._angular_velocity_target[env_ids] = (
                 self._gen_actions[env_ids, 2] * (self._task_cfg.goal_max_ang_vel - self._task_cfg.goal_min_ang_vel)
                 + self._task_cfg.goal_min_ang_vel
             ) * self._rng.sample_sign_torch("float", 1, ids=env_ids)
-            self._angular_velocity_desired[env_ids] = self._angular_velocity_target.clone()
+            self._angular_velocity_desired[env_ids] = self._angular_velocity_target[env_ids].clone()
 
         # Pick a random smoothing factor
         self._smoothing_factor[env_ids] = (

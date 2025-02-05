@@ -71,8 +71,8 @@ class FloatingPlatformRobot(RobotCore):
     def compute_rewards(self):
         # TODO: DT should be factored in?
 
-        # Compute
-        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+        # Compute (action rate knowing actions are binary activations)
+        action_rate = torch.sum(torch.abs(self._actions - self._previous_actions), dim=1)
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
