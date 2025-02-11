@@ -6,7 +6,7 @@ seed: 42
 models:
   separate: False
   policy:  # see gaussian_model parameters
-    class: GaussianMixin
+    class: MultiCategoricalMixin
     clip_actions: False
     clip_log_std: True
     min_log_std: -20.0

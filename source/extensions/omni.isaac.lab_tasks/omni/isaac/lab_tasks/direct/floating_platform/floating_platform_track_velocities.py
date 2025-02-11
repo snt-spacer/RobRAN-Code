@@ -83,8 +83,7 @@ class FloatingPlatformTrackVelocitiesEnv(DirectRLEnv):
         """Configure the action and observation spaces for the Gym environment."""
         # observation space (unbounded since we don't impose any limits)
         super()._configure_gym_env_spaces()
-        self.single_action_space = spaces.Tuple([spaces.Discrete(2)] * self.cfg.robot_cfg.num_thrusters)
-        self.action_space = vector.utils.batch_space(self.single_action_space, self.num_envs)
+        self.single_action_space, self.action_space = self.robot_api.configure_gym_env_spaces()
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)

@@ -11,7 +11,7 @@ from omni.isaac.lab.utils import math as math_utils
 from omni.isaac.lab_tasks.rans import FloatingPlatformRobotCfg
 
 from .robot_core import RobotCore
-
+from gymnasium import spaces, vector
 
 class FloatingPlatformRobot(RobotCore):
 
@@ -171,6 +171,12 @@ class FloatingPlatformRobot(RobotCore):
         position = torch.zeros_like(velocity)
         self._robot.write_joint_state_to_sim(position, velocity, env_ids=env_ids)
 
+    def configure_gym_env_spaces(self):
+        single_action_space = spaces.MultiDiscrete([2] * self._robot_cfg.num_thrusters)
+        action_space = vector.utils.batch_space(single_action_space, self._num_envs)
+
+        return single_action_space, action_space
+    
     ##
     # Derived base properties
     ##

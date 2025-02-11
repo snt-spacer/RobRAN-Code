@@ -18,7 +18,7 @@ from omni.isaac.lab.utils import configclass
 
 from omni.isaac.lab_tasks.rans import ROBOT_CFG_FACTORY, ROBOT_FACTORY, TASK_CFG_FACTORY, TASK_FACTORY
 
-
+from omni.isaac.lab.envs.utils.spaces import sample_space
 @configclass
 class SingleEnvCfg(DirectRLEnvCfg):
     # env
@@ -182,6 +182,13 @@ class SingleEnv(DirectRLEnv):
         super()._reset_idx(env_ids)
 
         self.task_api.reset(env_ids)
+
+    def _configure_gym_env_spaces(self):
+        """Configure the action and observation spaces for the Gym environment."""
+        # observation space (unbounded since we don't impose any limits)
+        super()._configure_gym_env_spaces()
+        self.single_action_space, self.action_space = self.robot_api.configure_gym_env_spaces()
+        self.actions = sample_space(self.single_action_space, self.sim.device, batch_size=self.num_envs, fill_value=0)
 
     def _set_debug_vis_impl(self, debug_vis: bool) -> None:
         if debug_vis:

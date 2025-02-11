@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import numpy as np
 import torch
 
 from omni.isaac.lab.assets import Articulation
@@ -10,6 +11,7 @@ from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab_tasks.rans import LeatherbackRobotCfg
 
 from .robot_core import RobotCore
+from gymnasium import spaces, vector
 
 
 class LeatherbackRobot(RobotCore):
@@ -119,3 +121,9 @@ class LeatherbackRobot(RobotCore):
     def apply_actions(self):
         self._robot.set_joint_velocity_target(self._throttle_action, joint_ids=self._throttle_dof_idx)
         self._robot.set_joint_position_target(self._steering_action, joint_ids=self._steering_dof_idx)
+
+    def configure_gym_env_spaces(self):
+        single_action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
+        action_space = vector.utils.batch_space(single_action_space, self._num_envs)
+
+        return single_action_space, action_space

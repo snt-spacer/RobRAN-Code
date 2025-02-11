@@ -40,7 +40,7 @@ parser.add_argument(
     "--algorithm",
     type=str,
     default="PPO",
-    choices=["PPO", "IPPO", "MAPPO"],
+    # choices=["PPO", "IPPO", "MAPPO"],
     help="The RL algorithm used for training the skrl agent.",
 )
 
