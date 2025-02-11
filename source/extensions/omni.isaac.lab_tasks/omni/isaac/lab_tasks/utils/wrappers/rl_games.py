@@ -38,12 +38,11 @@ import gym.spaces  # needed for rl-games incompatibility: https://github.com/Den
 import gymnasium
 import torch
 
+import omni.log as log
 from rl_games.common import env_configurations
 from rl_games.common.vecenv import IVecEnv
 
 from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv, VecEnvObs
-
-import omni.log as log
 
 """
 Vectorized environment wrapper.
@@ -172,7 +171,6 @@ class RlGamesVecEnvWrapper(IVecEnv):
         elif isinstance(action_space, gymnasium.spaces.MultiDiscrete):
             log.warn("MultiDiscrete action space is not supported. Using Tuple instead..")
             return gym.spaces.Tuple([gym.spaces.Discrete(n) for n in action_space.nvec])
-
 
         # return casted space in gym.spaces.Box (OpenAI Gym)
         # note: maybe should check if we are a sub-set of the actual space. don't do it right now since

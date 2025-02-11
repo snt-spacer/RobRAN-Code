@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import torch
 from collections.abc import Sequence
-from gymnasium import spaces, vector
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation

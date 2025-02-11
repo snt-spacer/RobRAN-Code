@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import torch
+from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.utils import math as math_utils
@@ -11,7 +12,7 @@ from omni.isaac.lab.utils import math as math_utils
 from omni.isaac.lab_tasks.rans import FloatingPlatformRobotCfg
 
 from .robot_core import RobotCore
-from gymnasium import spaces, vector
+
 
 class FloatingPlatformRobot(RobotCore):
 
@@ -176,7 +177,7 @@ class FloatingPlatformRobot(RobotCore):
         action_space = vector.utils.batch_space(single_action_space, self._num_envs)
 
         return single_action_space, action_space
-    
+
     ##
     # Derived base properties
     ##
