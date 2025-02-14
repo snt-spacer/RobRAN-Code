@@ -7,6 +7,7 @@ import math
 import torch
 
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_SPHERE_CFG, VisualizationMarkers
+from omni.isaac.lab.scene import InteractiveScene
 
 from omni.isaac.lab_tasks.rans import GoToPositionCfg
 
@@ -22,6 +23,7 @@ class GoToPositionTask(TaskCore):
 
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         task_cfg: GoToPositionCfg = GoToPositionCfg(),
         task_uid: int = 0,
         num_envs: int = 1,
@@ -39,10 +41,10 @@ class GoToPositionTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
+        super().__init__(scene=scene, task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
+
         # Task and reward parameters
         self._task_cfg = task_cfg
-
-        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Defines the observation and actions space sizes for this task
         self._dim_task_obs = self._task_cfg.observation_space
@@ -114,6 +116,9 @@ class GoToPositionTask(TaskCore):
         self._task_data[:, 2] = torch.sin(target_heading_error)
         self._task_data[:, 3:5] = self._robot.root_com_lin_vel_b[self._env_ids, :2]
         self._task_data[:, 5] = self._robot.root_com_ang_vel_w[self._env_ids, -1]
+
+        for randomizer in self.randomizers:
+            randomizer.observations(observations=self._task_data)
 
         # Concatenate the task observations with the robot observations
         return torch.concat((self._task_data, self._robot.get_observations()), dim=-1)

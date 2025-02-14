@@ -33,40 +33,40 @@ class SingleEnvCfg(DirectRLEnvCfg):
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
 
     # simulation
-    # sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
+    sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
     # Simulation
-    sim = SimulationCfg(
-        disable_contact_processing=True,
-        physx=sim_utils.PhysxCfg(
-            enable_ccd=True,
-            enable_stabilization=True,
-            bounce_threshold_velocity=0.0,
-            friction_correlation_distance=0.005,
-            min_velocity_iteration_count=2,
-            # GPU settings
-            gpu_temp_buffer_capacity=2 ** (24 - 4),
-            gpu_max_rigid_contact_count=2 ** (22 - 5),
-            gpu_max_rigid_patch_count=2 ** (13 - 3),
-            gpu_heap_capacity=2 ** (26 - 3),
-            gpu_found_lost_pairs_capacity=2 ** (18 - 3),
-            gpu_found_lost_aggregate_pairs_capacity=2 ** (10 - 2),
-            gpu_total_aggregate_pairs_capacity=2 ** (10 - 2),
-            gpu_max_soft_body_contacts=2 ** (20 - 5),
-            gpu_max_particle_contacts=2 ** (20 - 5),
-            gpu_collision_stack_size=2 ** (26 - 5),
-            gpu_max_num_partitions=8,
-        ),
-        render=sim_utils.RenderCfg(
-            enable_reflections=True,
-        ),
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            static_friction=1.0,
-            dynamic_friction=1.0,
-            restitution=0.0,
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-        ),
-    )
+    # sim = SimulationCfg(
+    #     disable_contact_processing=True,
+    #     physx=sim_utils.PhysxCfg(
+    #         enable_ccd=True,
+    #         enable_stabilization=True,
+    #         bounce_threshold_velocity=0.0,
+    #         friction_correlation_distance=0.005,
+    #         min_velocity_iteration_count=2,
+    #         # GPU settings
+    #         gpu_temp_buffer_capacity=2 ** (24 - 4),
+    #         gpu_max_rigid_contact_count=2 ** (22 - 5),
+    #         gpu_max_rigid_patch_count=2 ** (13 - 3),
+    #         gpu_heap_capacity=2 ** (26 - 3),
+    #         gpu_found_lost_pairs_capacity=2 ** (18 - 3),
+    #         gpu_found_lost_aggregate_pairs_capacity=2 ** (10 - 2),
+    #         gpu_total_aggregate_pairs_capacity=2 ** (10 - 2),
+    #         gpu_max_soft_body_contacts=2 ** (20 - 5),
+    #         gpu_max_particle_contacts=2 ** (20 - 5),
+    #         gpu_collision_stack_size=2 ** (26 - 5),
+    #         gpu_max_num_partitions=8,
+    #     ),
+    #     render=sim_utils.RenderCfg(
+    #         enable_reflections=True,
+    #     ),
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         static_friction=1.0,
+    #         dynamic_friction=1.0,
+    #         restitution=0.0,
+    #         friction_combine_mode="multiply",
+    #         restitution_combine_mode="multiply",
+    #     ),
+    # )
     debug_vis: bool = True
 
     action_space = 0
@@ -126,12 +126,22 @@ class SingleEnv(DirectRLEnv):
     def _setup_scene(self):
         self.robot = Articulation(self.robot_cfg.robot_cfg)
         self.robot_api = ROBOT_FACTORY(
-            self.cfg.robot_name, robot_cfg=self.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device
+            self.cfg.robot_name,
+            scene=self.scene,
+            robot_cfg=self.robot_cfg,
+            robot_uid=0,
+            num_envs=self.num_envs,
+            device=self.device,
         )
         self.task_api = TASK_FACTORY(
-            self.cfg.task_name, task_cfg=self.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device
+            self.cfg.task_name,
+            scene=self.scene,
+            task_cfg=self.task_cfg,
+            task_uid=0,
+            num_envs=self.num_envs,
+            device=self.device,
         )
-        self.task_api.register_rigid_objects(self.scene)
+        self.task_api.register_rigid_objects()
 
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())

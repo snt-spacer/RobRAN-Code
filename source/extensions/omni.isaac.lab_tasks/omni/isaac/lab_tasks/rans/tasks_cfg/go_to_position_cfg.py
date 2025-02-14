@@ -7,6 +7,8 @@ import math
 
 from omni.isaac.lab.utils import configclass
 
+from omni.isaac.lab_tasks.rans.domain_randomization import NoisyObservationsCfg
+
 from .task_core_cfg import TaskCoreCfg
 
 
@@ -57,6 +59,11 @@ class GoToPositionCfg(TaskCoreCfg):
     linear_velocity_weight: float = -0.05
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
+
+    # Randomization
+    noisy_observation_cfg: NoisyObservationsCfg = NoisyObservationsCfg(
+        enable=False, randomization_modes=["uniform"], slices=[0, (1, 3), (3, 5), 5], max_delta=[0.03, 0.01, 0.03, 0.01]
+    )
 
     # Spaces
     observation_space: int = 6

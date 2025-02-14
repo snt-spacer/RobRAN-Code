@@ -10,12 +10,22 @@ from omni.isaac.lab_assets.modular_freeflyer import MODULAR_FREEFLYER_2D_CFG
 from omni.isaac.lab.assets import ArticulationCfg
 from omni.isaac.lab.utils import configclass
 
+from omni.isaac.lab_tasks.rans.domain_randomization import (
+    ActionsRescalerCfg,
+    CoMRandomizationCfg,
+    MassRandomizationCfg,
+    NoisyActionsCfg,
+    WrenchRandomizationCfg,
+)
+
 from .robot_core_cfg import RobotCoreCfg
 
 
 @configclass
 class ModularFreeflyerRobotCfg(RobotCoreCfg):
     """Core configuration for a RANS task."""
+
+    robot_name: str = "modular_freeflyer"
 
     robot_cfg: ArticulationCfg = MODULAR_FREEFLYER_2D_CFG.replace(prim_path="/World/envs/env_.*/Robot")
     marker_height = 0.75
@@ -46,16 +56,48 @@ class ModularFreeflyerRobotCfg(RobotCoreCfg):
 
     split_thrust = True  # Split max thrust force among thrusters
 
+    # Randomization
+    mass_rand_cfg: MassRandomizationCfg = MassRandomizationCfg(
+        enable=False, randomization_modes=["uniform"], body_name="body", max_delta=0.25
+    )
+    com_rand_cfg: CoMRandomizationCfg = CoMRandomizationCfg(
+        enable=False, randomization_modes=["uniform"], body_name="body", max_delta=0.05
+    )
+    wrench_rand_cfg = WrenchRandomizationCfg(
+        enable=False,
+        randomization_modes=["constant_uniform"],
+        body_name="body",
+        uniform_force=(0, 0.25),
+        uniform_torque=(0, 0.05),
+        normal_force=(0, 0.25),
+        normal_torque=(0, 0.025),
+    )
+    noisy_actions_cfg: NoisyActionsCfg = NoisyActionsCfg(
+        enable=False,
+        randomization_modes=["uniform"],
+        slices=[(0, 8)],
+        max_delta=[0.1],
+        std=[0.025],
+        clip_actions=[(0, 1)],
+    )
+    action_rescaler_cfg: ActionsRescalerCfg = ActionsRescalerCfg(
+        enable=False,
+        randomization_modes=["uniform"],
+        slices=[(0, 8)],
+        rescaling_ranges=[(0.8, 1.0)],
+        clip_actions=[(0, 1)],
+    )
+
     if is_reaction_wheel:
         reaction_wheel_dof_name = [
             "reaction_wheel",
         ]
         reaction_wheel_scale = 0.1  # [Nm]
 
-    action_space = num_thrusters + int(is_reaction_wheel)
     observation_space = num_thrusters + int(is_reaction_wheel)
     state_space = 0
-    gen_space = 0
+    action_space = num_thrusters + int(is_reaction_wheel)
+    gen_space = 0  # TODO: Add the generative space from the randomization
 
     def __post_init__(self):
         assert len(self.thruster_transforms) == self.num_thrusters, (

@@ -8,6 +8,7 @@ import torch
 from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.scene import InteractiveScene
 
 from omni.isaac.lab_tasks.rans import LeatherbackRobotCfg
 
@@ -17,12 +18,13 @@ from .robot_core import RobotCore
 class LeatherbackRobot(RobotCore):
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         robot_cfg: LeatherbackRobotCfg = LeatherbackRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
     ):
-        super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
         self._dim_robot_obs = self._robot_cfg.observation_space
         self._dim_robot_act = self._robot_cfg.action_space
@@ -57,13 +59,13 @@ class LeatherbackRobot(RobotCore):
         self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
-        return self._actions
+        return self._unaltered_actions
 
     def compute_rewards(self):
         # TODO: DT should be factored in?
 
         # Compute
-        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+        action_rate = torch.sum(torch.square(self._unaltered_actions - self._previous_unaltered_actions), dim=1)
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
@@ -105,11 +107,37 @@ class LeatherbackRobot(RobotCore):
         self._robot.set_joint_velocity_target(throttle_reset, joint_ids=self._throttle_dof_idx, env_ids=env_ids)
         self._robot.set_joint_position_target(steering_reset, joint_ids=self._steering_dof_idx, env_ids=env_ids)
 
-    def process_actions(self, actions: torch.Tensor):
+    def process_actions(self, actions: torch.Tensor) -> None:
+        """Process the actions for the robot.
+
+        Expects the actions to be in the range [-1, 1].
+
+        - First, clip the actions to the action space limits. This is done to avoid violating the robot's limits.
+        - Second, apply the action randomizers to the actions. This is done to add noise to the actions, apply
+          different scaling factors to the actions, etc.
+        - Third, format the actions to send to the actuators.
+
+        Args:
+            actions (torch.Tensor): The actions to process."""
+
+        # Enforce action limits at the robot level
+        actions.clip_(min=-1.0, max=1.0)
+        # Store the unaltered actions, by default the robot should only observe the unaltered actions.
+        self._previous_unaltered_actions = self._unaltered_actions.clone()
+        self._unaltered_actions = actions.clone()
+
+        # Apply action randomizers
+        for randomizer in self.randomizers:
+            randomizer.actions(dt=self.scene.physics_dt, actions=actions)
+
         self._previous_actions = self._actions.clone()
-        self._actions = actions.clone()
-        self._throttle_action = actions[:, 0].repeat_interleave(4).reshape((-1, 4)) * self._robot_cfg.throttle_scale
-        self._steering_action = actions[:, 1].repeat_interleave(2).reshape((-1, 2)) * self._robot_cfg.steering_scale
+        self._actions = actions
+        self._throttle_action = (
+            self._actions[:, 0].repeat_interleave(4).reshape((-1, 4)) * self._robot_cfg.throttle_scale
+        )
+        self._steering_action = (
+            self._actions[:, 1].repeat_interleave(2).reshape((-1, 2)) * self._robot_cfg.steering_scale
+        )
 
         # Log data
         self.scalar_logger.log("robot_state", "AVG/throttle_action", self._throttle_action[:, 0])
@@ -119,6 +147,11 @@ class LeatherbackRobot(RobotCore):
         pass  # Model motor + ackermann steering here
 
     def apply_actions(self):
+        # Compute the physics
+        super().apply_actions()
+        for randomizer in self.randomizers:
+            randomizer.update(dt=self.scene.physics_dt, actions=self._actions)
+
         self._robot.set_joint_velocity_target(self._throttle_action, joint_ids=self._throttle_dof_idx)
         self._robot.set_joint_position_target(self._steering_action, joint_ids=self._steering_dof_idx)
 

@@ -7,6 +7,8 @@ import math
 
 from omni.isaac.lab.utils import configclass
 
+from omni.isaac.lab_tasks.rans.domain_randomization import NoisyObservationsCfg
+
 from .task_core_cfg import TaskCoreCfg
 
 
@@ -65,6 +67,14 @@ class PushBlockCfg(TaskCoreCfg):
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
     goal_reached_weight: float = 10.0
+
+    # Randomization
+    noisy_observation_cfg: NoisyObservationsCfg = NoisyObservationsCfg(
+        enable=False,
+        randomization_modes=["uniform"],
+        slices=[0, 1, (2, 4), (4, 6), (6, 8), 8],
+        max_delta=[0.03, 0.03, 0.01, 0.01, 0.03, 0.01],
+    )
 
     # Spaces
     observation_space: int = 9

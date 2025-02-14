@@ -8,8 +8,15 @@ from dataclasses import MISSING
 
 from omni.isaac.lab.scene import InteractiveScene
 
-from omni.isaac.lab_tasks.rans import RobotCore
-from omni.isaac.lab_tasks.rans.utils import PerEnvSeededRNG, ScalarLogger
+from omni.isaac.lab_tasks.rans import (
+    PerEnvSeededRNG,
+    RandomizationCore,
+    RandomizationCoreCfg,
+    RandomizerFactory,
+    RobotCore,
+    ScalarLogger,
+    TaskCoreCfg,
+)
 
 
 class TaskCore:
@@ -19,6 +26,7 @@ class TaskCore:
 
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         task_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -28,11 +36,15 @@ class TaskCore:
         The base class for the different subtasks.
 
         Args:
+            scene: The scene in which the task is run.
             task_uid: The unique id of the task.
             num_envs (int): The number of environments.
             device (str): The device on which the tensors are stored.
             env_ids: The ids of the environments used by this task."""
 
+        self.scene = scene
+
+        self._task_cfg = TaskCoreCfg()
         # Unique task identifier, used to differentiate between tasks with the same name
         self._task_uid = task_uid
         # Number of environments and device to be used
@@ -64,6 +76,23 @@ class TaskCore:
     @property
     def logs(self) -> dict:
         return self.scalar_logger.get_episode_logs
+
+    def get_randomizers(self) -> None:
+        """Collects the randomizers applied to the robot."""
+
+        self.randomizers: list[RandomizationCore] = []
+        for attr in self._task_cfg.__dir__():
+            if isinstance(getattr(self._task_cfg, attr), RandomizationCoreCfg):
+                self.randomizers.append(
+                    RandomizerFactory.create(
+                        getattr(self._task_cfg, attr),
+                        self._rng,
+                        self.scene,
+                        asset_name=self._robot._robot_cfg.robot_name,
+                        num_envs=self._num_envs,
+                        device=self._device,
+                    )
+                )
 
     def design_scene(self) -> None:
         """Adds objects to the scene."""
@@ -118,6 +147,11 @@ class TaskCore:
         self._robot_origins = self._robot._robot.data.default_root_state[:, :3].clone()
         self._robot_marker_pos[:, 2] = self._robot._robot_cfg.marker_height
 
+        self.get_randomizers()
+        # Run the setup functions of the randomizers
+        for randomizer in self.randomizers:
+            randomizer.setup()
+
     def get_observations(self) -> torch.Tensor:
         raise NotImplementedError
 
@@ -168,6 +202,10 @@ class TaskCore:
         else:
             self._gen_actions[env_ids] = gen_actions
 
+        # Reset the randomizers
+        for randomizer in self.randomizers:
+            randomizer.reset(env_ids)
+
         # Randomizes goals and initial conditions
         self.set_goals(env_ids)
         self.set_initial_conditions(env_ids)
@@ -187,5 +225,5 @@ class TaskCore:
     def update_task_visualization(self) -> None:
         raise NotImplementedError
 
-    def register_rigid_objects(self, scene: InteractiveScene) -> None:
+    def register_rigid_objects(self) -> None:
         pass

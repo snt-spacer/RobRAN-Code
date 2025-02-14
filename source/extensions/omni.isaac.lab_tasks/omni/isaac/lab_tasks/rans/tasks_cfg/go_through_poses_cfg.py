@@ -7,6 +7,8 @@ import math
 
 from omni.isaac.lab.utils import configclass
 
+from omni.isaac.lab_tasks.rans.domain_randomization import NoisyObservationsCfg
+
 from .task_core_cfg import TaskCoreCfg
 
 
@@ -98,6 +100,19 @@ class GoThroughPosesCfg(TaskCoreCfg):
     time_penalty: float = -0.0
     reached_bonus: float = 10.0
     progress_weight: float = 1.0
+
+    # Randomization
+    noisy_observation_cfg: NoisyObservationsCfg = NoisyObservationsCfg(
+        enable=False,
+        randomization_modes=["uniform"],
+        slices=[(0, 2), 2, 3, (3, 5), (5, 7)]
+        + sum(
+            [[7 + i * 3, (8 + i * 3, 10 + i * 3), (10 + i * 3, 12 + i * 3)] for i in range(num_subsequent_goals - 1)],
+            [],
+        ),
+        max_delta=[0.03, 0.01, 0.03, 0.01, 0.01]
+        + sum([[0.03, 0.01, 0.01] for _ in range(num_subsequent_goals - 1)], []),
+    )
 
     # Spaces
     observation_space: int = 3 + 5 * num_subsequent_goals

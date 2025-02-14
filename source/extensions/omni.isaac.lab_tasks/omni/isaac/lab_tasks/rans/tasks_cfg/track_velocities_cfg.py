@@ -5,6 +5,8 @@
 
 from omni.isaac.lab.utils import configclass
 
+from omni.isaac.lab_tasks.rans.domain_randomization import NoisyObservationsCfg
+
 from .task_core_cfg import TaskCoreCfg
 
 
@@ -65,6 +67,20 @@ class TrackVelocitiesCfg(TaskCoreCfg):
     # Visualization
     visualization_linear_velocity_scale: float = 1.0
     visualization_angular_velocity_scale: float = 2.5
+
+    # Randomization
+    noisy_observation_cfg: NoisyObservationsCfg = NoisyObservationsCfg(
+        enable=False,
+        randomization_modes=["uniform"],
+        slices=[
+            0,
+            1,
+            2,
+            (3, 5),
+            5,
+        ],
+        max_delta=[0.03, 0.03, 0.01, 0.03, 0.01],
+    )
 
     # Spaces
     observation_space: int = 6

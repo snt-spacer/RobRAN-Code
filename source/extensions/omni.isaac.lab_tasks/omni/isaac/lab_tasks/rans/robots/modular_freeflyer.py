@@ -8,6 +8,7 @@ import torch
 from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.scene import InteractiveScene
 from omni.isaac.lab.utils import math as math_utils
 
 from omni.isaac.lab_tasks.rans import ModularFreeflyerRobotCfg
@@ -18,16 +19,17 @@ from .robot_core import RobotCore
 class ModularFreeflyerRobot(RobotCore):
     def __init__(
         self,
-        robot_cfg: ModularFreeflyerRobotCfg,
+        scene: InteractiveScene | None = None,
+        robot_cfg: ModularFreeflyerRobotCfg = ModularFreeflyerRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
     ) -> None:
-        super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
-        self._dim_robot_obs = 8
-        self._dim_robot_act = 8
-        self._dim_gen_act = 0
+        self._dim_robot_obs = self._robot_cfg.observation_space
+        self._dim_robot_act = self._robot_cfg.action_space
+        self._dim_gen_act = self._robot_cfg.gen_space
 
         # Buffers
         self.initialize_buffers()
@@ -64,7 +66,7 @@ class ModularFreeflyerRobot(RobotCore):
 
     def run_setup(self, robot: Articulation) -> None:
         """Loads the robot into the task. After it has been loaded."""
-
+        super().run_setup(robot)
         # Sets the articulation to be our overloaded articulation with improved force application
         self._robot = robot
 
@@ -88,13 +90,13 @@ class ModularFreeflyerRobot(RobotCore):
         self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
-        return self._actions
+        return self._unaltered_actions
 
     def compute_rewards(self) -> torch.Tensor:
         # TODO: DT should be factored in?
 
         # Compute
-        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+        action_rate = torch.sum(torch.square(self._unaltered_actions - self._previous_unaltered_actions), dim=1)
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
@@ -136,10 +138,30 @@ class ModularFreeflyerRobot(RobotCore):
         self._robot.set_joint_velocity_target(zeros, joint_ids=self._lock_ids, env_ids=env_ids)
 
     def process_actions(self, actions: torch.Tensor) -> None:
-        # Clone the previous actions
+        """Process the actions for the robot.
+
+        Expects either binary actions: 0 or 1, or continuous actions: [0, 1].
+
+        - First, clip the actions to the action space limits. This is done to avoid violating the robot's limits.
+        - Second, apply the action randomizers to the actions. This is done to add noise to the actions, apply
+          different scaling factors to the actions, etc.
+        - Third, format the actions to send to the actuators.
+
+        Args:
+            actions (torch.Tensor): The actions to process."""
+
+        # Enforce action limits at the robot level
+        actions.clip_(min=0.0, max=1.0)
+        # Store the unaltered actions, by default the robot should only observe the unaltered actions.
+        self._previous_unaltered_actions = self._unaltered_actions.clone()
+        self._unaltered_actions = actions.clone()
+
+        # Apply action randomizers
+        for randomizer in self.randomizers:
+            randomizer.actions(dt=self.scene.physics_dt, actions=actions)
+
         self._previous_actions = self._actions.clone()
-        # Clone the current actions
-        self._actions = actions.clone()
+        self._actions = actions
 
         # Assumes the action space is [-1, 1]
         if self._robot_cfg.action_mode == "continuous":
@@ -159,7 +181,10 @@ class ModularFreeflyerRobot(RobotCore):
         )
 
     def apply_actions(self) -> None:
-        self.compute_physics()
+        # Compute the physics
+        super().apply_actions()
+        for randomizer in self.randomizers:
+            randomizer.update(dt=self.scene.physics_dt, actions=self._actions)
 
         self._robot.set_external_force_and_torque(
             self._thrust_forces, self._thrust_torques, positions=self._thrust_positions, body_ids=self._thrusters_ids

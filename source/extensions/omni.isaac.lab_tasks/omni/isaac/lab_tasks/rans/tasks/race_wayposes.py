@@ -7,6 +7,7 @@ import math
 import torch
 
 from omni.isaac.lab.markers import BICOLOR_DIAMOND_CFG, PIN_ARROW_CFG, VisualizationMarkers
+from omni.isaac.lab.scene import InteractiveScene
 from omni.isaac.lab.utils.math import sample_random_sign
 
 from omni.isaac.lab_tasks.rans import RaceWayposesCfg
@@ -24,6 +25,7 @@ class RaceWayposesTask(TaskCore):
 
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         task_cfg: RaceWayposesCfg = RaceWayposesCfg(),
         task_uid: int = 0,
         num_envs: int = 1,
@@ -41,7 +43,7 @@ class RaceWayposesTask(TaskCore):
             task_id: The id of the task.
             env_ids: The ids of the environments used by this task."""
 
-        super().__init__(task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
+        super().__init__(scene=scene, task_uid=task_uid, num_envs=num_envs, device=device, env_ids=env_ids)
 
         # Task and reward parameters
         self._task_cfg = task_cfg
@@ -216,6 +218,9 @@ class RaceWayposesTask(TaskCore):
             self._task_data[:, 10 + 5 * i] = torch.sin(target_heading_error)
             self._task_data[:, 11 + 5 * i] = torch.cos(heading_error)
             self._task_data[:, 12 + 5 * i] = torch.sin(heading_error)
+
+        for randomizer in self.randomizers:
+            randomizer.observations(observations=self._task_data)
 
         # Concatenate the task observations with the robot observations
         return torch.concat((self._task_data, self._robot.get_observations()), dim=-1)

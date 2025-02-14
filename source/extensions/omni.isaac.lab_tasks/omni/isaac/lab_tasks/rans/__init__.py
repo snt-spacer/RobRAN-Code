@@ -4,6 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # isort: off
+
+from .utils import TrackGenerator, PerEnvSeededRNG, ScalarLogger  # noqa: F401, F403
+from .domain_randomization import RandomizerFactory, RandomizationCoreCfg, RandomizationCore  # noqa: F401, F403
+
 from .robots_cfg import (  # noqa: F401, F403
     FloatingPlatformRobotCfg,
     LeatherbackRobotCfg,
@@ -47,5 +51,3 @@ from .tasks import (  # noqa: F401, F403
     PushBlockTask,
     TASK_FACTORY,
 )
-
-from .utils import TrackGenerator, PerEnvSeededRNG, ScalarLogger  # noqa: F401, F403

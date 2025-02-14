@@ -7,6 +7,7 @@ import torch
 from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.scene import InteractiveScene
 from omni.isaac.lab.utils import math as math_utils
 
 from omni.isaac.lab_tasks.rans import FloatingPlatformRobotCfg
@@ -18,12 +19,13 @@ class FloatingPlatformRobot(RobotCore):
 
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
     ):
-        super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
         # Available for use robot_cfg.is_reaction_wheel,robot_cfg.split_thrust,robot_cfg.rew_reaction_wheel_scale
         self._dim_robot_obs = self._robot_cfg.observation_space
@@ -67,13 +69,12 @@ class FloatingPlatformRobot(RobotCore):
         # print robot_data positions to validate in only moves on the x-y plane
         # print(f"Robot data positions: {self.body_pos_w}")
 
-        return self._actions
+        return self._unaltered_actions
 
     def compute_rewards(self):
         # TODO: DT should be factored in?
 
-        # Compute (action rate knowing actions are binary activations)
-        action_rate = torch.sum(torch.abs(self._actions - self._previous_actions), dim=1)
+        action_rate = torch.sum(torch.abs(self._unaltered_actions - self._previous_unaltered_actions), dim=1)
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
@@ -116,9 +117,31 @@ class FloatingPlatformRobot(RobotCore):
             self._robot.set_joint_effort_target(rw_reset, joint_ids=self._reaction_wheel_dof_idx, env_ids=env_ids)
 
     def process_actions(self, actions: torch.Tensor):
-        # Expand to match num_envs x action_dim
+        """Process the actions for the robot.
+
+        Expects either binary actions: 0 or 1, or continuous actions: [0, 1].
+
+        - First, clip the actions to the action space limits. This is done to avoid violating the robot's limits.
+        - Second, apply the action randomizers to the actions. This is done to add noise to the actions, apply
+          different scaling factors to the actions, etc.
+        - Third, format the actions to send to the actuators.
+
+        Args:
+            actions (torch.Tensor): The actions to process."""
+
+        # Enforce action limits at the robot level
+        actions = actions.float()
+        actions.clip_(min=0.0, max=1.0)
+        # Store the unaltered actions, by default the robot should only observe the unaltered actions.
+        self._previous_unaltered_actions = self._unaltered_actions.clone()
+        self._unaltered_actions = actions.clone()
+
+        # Apply action randomizers
+        for randomizer in self.randomizers:
+            randomizer.actions(dt=self.scene.physics_dt, actions=actions)
+
         self._previous_actions = self._actions.clone()
-        self._actions = actions.clone()
+        self._actions = actions
 
         # Calculate the number of active thrusters (those with a value of 1)
         n_active_thrusters = torch.sum(actions[:, : self._robot_cfg.num_thrusters], dim=1, keepdim=True)
@@ -157,6 +180,11 @@ class FloatingPlatformRobot(RobotCore):
         pass  # Model motor + ackermann steering here
 
     def apply_actions(self):
+        # Compute the physics
+        super().apply_actions()
+        for randomizer in self.randomizers:
+            randomizer.update(dt=self.scene.physics_dt, actions=self._actions)
+
         self._robot.set_external_force_and_torque(
             self._thrust_action, torch.zeros_like(self._thrust_action), body_ids=self._thrusters_dof_idx
         )

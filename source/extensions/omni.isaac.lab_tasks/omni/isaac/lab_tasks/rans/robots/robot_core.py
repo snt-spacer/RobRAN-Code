@@ -7,13 +7,22 @@ import torch
 from dataclasses import MISSING
 
 from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.scene import InteractiveScene
 
-from omni.isaac.lab_tasks.rans.utils import ScalarLogger
+from omni.isaac.lab_tasks.rans import (
+    RandomizationCore,
+    RandomizationCoreCfg,
+    RandomizerFactory,
+    RobotCoreCfg,
+    ScalarLogger,
+)
+from omni.isaac.lab_tasks.rans.utils import PerEnvSeededRNG
 
 
 class RobotCore:
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
@@ -26,6 +35,9 @@ class RobotCore:
             num_envs: The number of environments.
             device: The device on which the tensors are stored."""
 
+        self.scene = scene
+
+        self._robot_cfg = RobotCoreCfg()
         # Unique task identifier, used to differentiate between tasks with the same name
         self._robot_uid = robot_uid
         # Number of environments and device to be used
@@ -39,6 +51,10 @@ class RobotCore:
 
         # Robot
         self._robot: Articulation = MISSING
+
+        # RNG
+        seeds = torch.randint(0, 2**31, (self._num_envs,), dtype=torch.int32, device=self._device)
+        self._rng = PerEnvSeededRNG(seeds, self._num_envs, self._device)
 
         # Logs
         self.create_logs()
@@ -70,6 +86,23 @@ class RobotCore:
         """Returns the logs of the robot."""
         return self.scalar_logger.get_episode_logs
 
+    def get_randomizers(self) -> None:
+        """Collects the randomizers applied to the robot."""
+
+        self.randomizers: list[RandomizationCore] = []
+        for attr in self._robot_cfg.__dir__():
+            if isinstance(getattr(self._robot_cfg, attr), RandomizationCoreCfg):
+                self.randomizers.append(
+                    RandomizerFactory.create(
+                        getattr(self._robot_cfg, attr),
+                        self._rng,
+                        self.scene,
+                        asset_name=self._robot_cfg.robot_name,
+                        num_envs=self._num_envs,
+                        device=self._device,
+                    )
+                )
+
     def create_logs(self):
         """Creates the logs for the robot."""
         self.scalar_logger = ScalarLogger(self._num_envs, self._device, "robot")
@@ -97,10 +130,30 @@ class RobotCore:
             device=self._device,
             dtype=torch.float32,
         )
+        self._unaltered_actions = torch.zeros(
+            (self._num_envs, self._dim_robot_act),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._previous_actions = torch.zeros(
+            (self._num_envs, self._dim_robot_act),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._previous_unaltered_actions = torch.zeros(
+            (self._num_envs, self._dim_robot_act),
+            device=self._device,
+            dtype=torch.float32,
+        )
 
     def run_setup(self, robot: Articulation) -> None:
         """Loads the robot into the task. After it has been loaded."""
         self._robot = robot
+        # Collect the randomizers
+        self.get_randomizers()
+        # Run the setup functions of the randomizers
+        for randomizer in self.randomizers:
+            randomizer.setup()
 
     def get_observations(self):
         """Returns the observations of the robot."""
@@ -120,13 +173,10 @@ class RobotCore:
         gen_actions: torch.Tensor | None = None,
         env_seeds: torch.Tensor | None = None,
     ):
-        self._actions[env_ids] = 0
-
-        # Updates the task actions
-        if gen_actions is None:
-            self._gen_actions[env_ids] = torch.rand((len(env_ids), self.num_gen_actions), device=self._device)
-        else:
-            self._gen_actions[env_ids] = gen_actions
+        self._actions[env_ids].fill_(0)
+        self._previous_actions[env_ids].fill_(0)
+        self._unaltered_actions[env_ids].fill_(0)
+        self._previous_unaltered_actions[env_ids].fill_(0)
 
         # Updates the seed
         if env_seeds is None:
@@ -134,12 +184,36 @@ class RobotCore:
         else:
             self._seeds[env_ids] = env_seeds
 
+        # Update the RNG
+        self._rng.set_seeds(self._seeds[env_ids], env_ids)
+
+        # Updates the task actions
+        if gen_actions is None:
+            self._gen_actions[env_ids] = torch.rand((len(env_ids), self.num_gen_actions), device=self._device)
+        else:
+            self._gen_actions[env_ids] = gen_actions
+
+        # Reset the randomizers
+        for randomizer in self.randomizers:
+            randomizer.reset(env_ids)
+
         self.set_initial_conditions(env_ids)
 
-    def reset_logs(self, env_ids, episode_length_buf) -> None:
+    def reset_logs(self, env_ids: torch.Tensor, episode_length_buf: torch.Tensor) -> None:
+        """Resets the logs of the robot.
+
+        Args:
+            env_ids: The ids of the environments.
+            episode_length_buf: The length of the episode."""
+
         self.scalar_logger.reset(env_ids, episode_length_buf)
 
     def compute_logs(self) -> dict:
+        """Computes the logs of the robot.
+
+        Returns:
+            dict: The logs of the robot."""
+
         return self.scalar_logger.compute_extras()
 
     def set_pose(
@@ -159,26 +233,25 @@ class RobotCore:
     def set_initial_conditions(self, env_ids: torch.Tensor | None = None) -> None:
         raise NotImplementedError
 
-    def process_actions(self) -> None:
+    def process_actions(self, actions: torch.Tensor) -> None:
+        """Processes the actions of the robot. Called only once per "playing step". This means that if the robot is
+        playing every N other steps, this function will be called only once at the beginning
+
+        Args:
+            actions: The actions to be processed."""
+
         raise NotImplementedError
 
     def compute_physics(self) -> None:
+        """Computes the physics of the robot. Called after the actions have been processed for every time step.
+        Things like the buoyancy, aerodynamics, and others can be added here."""
+
         raise NotImplementedError
 
     def apply_actions(self) -> None:
-        raise NotImplementedError
-
-    def updateMass(self) -> None:
-        raise NotImplementedError
-
-    def updateInertia(self) -> None:
-        raise NotImplementedError
-
-    def updateCoM(self) -> None:
-        raise NotImplementedError
-
-    def updateFriction(self) -> None:
-        raise NotImplementedError
+        """Applies the actions to the robot. Called after the physics and actions have been computed/processed.
+        This is called for every single simulation step."""
+        self.compute_physics()
 
     # We wrap around the ArticulationData properties to make them modifiable from the
     # class that inherits from RobotCore. This is done so that we can have a unique interface

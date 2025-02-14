@@ -8,6 +8,7 @@ import torch
 from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.scene import InteractiveScene
 
 from omni.isaac.lab_tasks.rans import JetbotRobotCfg
 
@@ -17,12 +18,13 @@ from .robot_core import RobotCore
 class JetbotRobot(RobotCore):
     def __init__(
         self,
+        scene: InteractiveScene | None = None,
         robot_cfg: JetbotRobotCfg = JetbotRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         device: str = "cuda",
     ):
-        super().__init__(robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
         self._robot_cfg = robot_cfg
         self._dim_robot_obs = self._robot_cfg.observation_space
         self._dim_robot_act = self._robot_cfg.action_space
@@ -56,11 +58,11 @@ class JetbotRobot(RobotCore):
         self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
-        return self._actions
+        return self._unaltered_actions
 
     def compute_rewards(self):
         # Compute
-        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+        action_rate = torch.sum(torch.square(self._unaltered_actions - self._previous_unaltered_actions), dim=1)
         joint_accelerations = torch.sum(torch.square(self.joint_acc), dim=1)
 
         # Log data
@@ -96,11 +98,31 @@ class JetbotRobot(RobotCore):
         )
         self._robot.set_joint_velocity_target(wheels_reset, joint_ids=self._wheels_dof_idx, env_ids=env_ids)
 
-    def process_actions(self, actions: torch.Tensor):
+    def process_actions(self, actions: torch.Tensor) -> None:
+        """Process the actions for the robot.
+
+        - First, clip the actions to the action space limits. This is done to avoid violating the robot's limits.
+        - Second, apply the action randomizers to the actions. This is done to add noise to the actions, apply
+          different scaling factors to the actions, etc.
+        - Third, format the actions to send to the actuators.
+
+        Args:
+            actions (torch.Tensor): The actions to process."""
+
+        # Enforce action limits at the robot level
+        actions.clip_(min=-1.0, max=1.0)
+        # Store the unaltered actions, by default the robot should only observe the unaltered actions.
+        self._previous_unaltered_actions = self._unaltered_actions.clone()
+        self._unaltered_actions = actions.clone()
+
+        # Apply action randomizers
+        for randomizer in self.randomizers:
+            randomizer.actions(dt=self.scene.physics_dt, actions=actions)
+
         self._previous_actions = self._actions.clone()
-        self._actions = actions.clone()
-        self.left_wheel_action = actions[:, 0] * self._robot_cfg.wheel_scale
-        self.right_wheel_action = actions[:, 1] * self._robot_cfg.wheel_scale
+        self._actions = actions
+        self.left_wheel_action = self._actions[:, 0] * self._robot_cfg.wheel_scale
+        self.right_wheel_action = self._actions[:, 1] * self._robot_cfg.wheel_scale
 
         # Log data
         self.scalar_logger.log("robot_state", "AVG/left_wheel_action", self.left_wheel_action)
@@ -110,6 +132,12 @@ class JetbotRobot(RobotCore):
         pass  # Model motor
 
     def apply_actions(self):
+        # Compute the physics
+        super().apply_actions()
+        for randomizer in self.randomizers:
+            randomizer.update(dt=self.scene.physics_dt, actions=self._actions)
+
+        # Scale the actions
         wheel_action = torch.cat((self.left_wheel_action.unsqueeze(-1), self.right_wheel_action.unsqueeze(-1)), dim=1)
         self._robot.set_joint_velocity_target(wheel_action, joint_ids=self._wheels_dof_idx)
 
