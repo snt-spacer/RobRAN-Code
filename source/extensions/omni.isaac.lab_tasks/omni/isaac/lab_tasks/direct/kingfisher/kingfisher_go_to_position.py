@@ -11,72 +11,44 @@ from collections.abc import Sequence
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
-from omni.isaac.lab.envs.utils.spaces import sample_space
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 
-from omni.isaac.lab_tasks.rans import ROBOT_CFG_FACTORY, ROBOT_FACTORY, TASK_CFG_FACTORY, TASK_FACTORY
+from omni.isaac.lab_tasks.rans import GoToPositionCfg, GoToPositionTask, KingfisherRobot, KingfisherRobotCfg
 
 
 @configclass
-class SingleEnvCfg(DirectRLEnvCfg):
-    # env
-    decimation = 4
-    episode_length_s = 20.0
+class KingfisherGoToPositionEnvCfg(DirectRLEnvCfg):
 
-    robot_name = "Leatherback"
-    task_name = "GoToPosition"
+    # Env settings TODO: get from config or task.
+    decimation = 5
+    episode_length_s = 30.0
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
 
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
-    # Simulation
-    # sim = SimulationCfg(
-    #     disable_contact_processing=True,
-    #     physx=sim_utils.PhysxCfg(
-    #         enable_ccd=True,
-    #         enable_stabilization=True,
-    #         bounce_threshold_velocity=0.0,
-    #         friction_correlation_distance=0.005,
-    #         min_velocity_iteration_count=2,
-    #         # GPU settings
-    #         gpu_temp_buffer_capacity=2 ** (24 - 4),
-    #         gpu_max_rigid_contact_count=2 ** (22 - 5),
-    #         gpu_max_rigid_patch_count=2 ** (13 - 3),
-    #         gpu_heap_capacity=2 ** (26 - 3),
-    #         gpu_found_lost_pairs_capacity=2 ** (18 - 3),
-    #         gpu_found_lost_aggregate_pairs_capacity=2 ** (10 - 2),
-    #         gpu_total_aggregate_pairs_capacity=2 ** (10 - 2),
-    #         gpu_max_soft_body_contacts=2 ** (20 - 5),
-    #         gpu_max_particle_contacts=2 ** (20 - 5),
-    #         gpu_collision_stack_size=2 ** (26 - 5),
-    #         gpu_max_num_partitions=8,
-    #     ),
-    #     render=sim_utils.RenderCfg(
-    #         enable_reflections=True,
-    #     ),
-    #     physics_material=sim_utils.RigidBodyMaterialCfg(
-    #         static_friction=1.0,
-    #         dynamic_friction=1.0,
-    #         restitution=0.0,
-    #         friction_combine_mode="multiply",
-    #         restitution_combine_mode="multiply",
-    #     ),
-    # )
+
+    robot_cfg: KingfisherRobotCfg = KingfisherRobotCfg()
+    task_cfg: GoToPositionCfg = GoToPositionCfg(
+        maximum_robot_distance=15.0,
+        spawn_max_dist=10.0,
+        linear_velocity_weight=0.0,
+        angular_velocity_weight=-0.5,
+        angular_velocity_min_value=0.1,
+    )
     debug_vis: bool = True
 
-    action_space = 0
-    observation_space = 0
-    state_space = 0
-    gen_space = 0
+    action_space = robot_cfg.action_space + task_cfg.action_space
+    observation_space = robot_cfg.observation_space + task_cfg.observation_space
+    state_space = robot_cfg.state_space + task_cfg.state_space
+    gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
-class SingleEnv(DirectRLEnv):
-
+class KingfisherGoToPositionEnv(DirectRLEnv):
     # Workflow: Step
     #   - self._pre_physics_step
     #   - (Loop over N skipped steps)
@@ -98,51 +70,29 @@ class SingleEnv(DirectRLEnv):
     #   - (Check if noise is required)
     #       - self._add_noise
 
-    cfg: SingleEnvCfg
+    cfg: KingfisherGoToPositionEnvCfg
 
-    def __init__(
-        self,
-        cfg: SingleEnvCfg,
-        render_mode: str | None = None,
-        **kwargs,
-    ):
-        cfg = self.edit_cfg(cfg)
+    def __init__(self, cfg: KingfisherGoToPositionEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
         self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
-
-    def edit_cfg(self, cfg: SingleEnvCfg) -> SingleEnvCfg:
-        self.robot_cfg = ROBOT_CFG_FACTORY(cfg.robot_name)
-        self.task_cfg = TASK_CFG_FACTORY(cfg.task_name)
-
-        cfg.action_space = self.robot_cfg.action_space + self.task_cfg.action_space
-        cfg.observation_space = self.robot_cfg.observation_space + self.task_cfg.observation_space
-        cfg.state_space = self.robot_cfg.state_space + self.task_cfg.state_space
-        cfg.gen_space = self.robot_cfg.gen_space + self.task_cfg.gen_space
-        return cfg
+        # Expand the robot's action space dimension to include num_envs
 
     def _setup_scene(self):
-        self.robot = Articulation(self.robot_cfg.robot_cfg)
-        self.robot_api = ROBOT_FACTORY(
-            self.cfg.robot_name,
-            scene=self.scene,
-            robot_cfg=self.robot_cfg,
+        self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
+        self.robot_api = KingfisherRobot(
+            self.scene,
+            self.cfg.robot_cfg,
             robot_uid=0,
             num_envs=self.num_envs,
             decimation=self.cfg.decimation,
             device=self.device,
         )
-        self.task_api = TASK_FACTORY(
-            self.cfg.task_name,
-            scene=self.scene,
-            task_cfg=self.task_cfg,
-            task_uid=0,
-            num_envs=self.num_envs,
-            device=self.device,
+        self.task_api = GoToPositionTask(
+            self.scene, self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device
         )
-        self.task_api.register_rigid_objects()
 
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
@@ -150,7 +100,7 @@ class SingleEnv(DirectRLEnv):
         self.scene.clone_environments(copy_from_source=False)
         self.scene.filter_collisions(global_prim_paths=[])
         # add articultion to scene
-        self.scene.articulations[self.cfg.robot_name] = self.robot
+        self.scene.articulations[self.cfg.robot_cfg.robot_name] = self.robot
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
@@ -182,6 +132,12 @@ class SingleEnv(DirectRLEnv):
         if (env_ids is None) or (len(env_ids) == self.num_envs):
             env_ids = self.robot._ALL_INDICES
 
+        if self.common_step_counter < 48 * 200:
+            scale = self.common_step_counter / (48 * 200)
+            gen_actions = torch.ones((len(env_ids), self.cfg.gen_space), device=self.device) * scale
+        else:
+            gen_actions = None
+
         # Logging
         self.task_api.reset_logs(env_ids, self.episode_length_buf)
         task_extras = self.task_api.compute_logs()
@@ -193,14 +149,7 @@ class SingleEnv(DirectRLEnv):
 
         super()._reset_idx(env_ids)
 
-        self.task_api.reset(env_ids)
-
-    def _configure_gym_env_spaces(self):
-        """Configure the action and observation spaces for the Gym environment."""
-        # observation space (unbounded since we don't impose any limits)
-        super()._configure_gym_env_spaces()
-        self.single_action_space, self.action_space = self.robot_api.configure_gym_env_spaces()
-        self.actions = sample_space(self.single_action_space, self.sim.device, batch_size=self.num_envs, fill_value=0)
+        self.task_api.reset(env_ids, gen_actions=gen_actions)
 
     def _set_debug_vis_impl(self, debug_vis: bool) -> None:
         if debug_vis:

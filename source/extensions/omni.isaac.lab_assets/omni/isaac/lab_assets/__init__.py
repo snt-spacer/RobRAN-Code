@@ -35,6 +35,7 @@ from .floating_platform import *
 from .franka import *
 from .humanoid import *
 from .jetbot import *
+from .kingfisher import *
 from .kinova import *
 from .leatherback import *
 from .leatherback_full import *

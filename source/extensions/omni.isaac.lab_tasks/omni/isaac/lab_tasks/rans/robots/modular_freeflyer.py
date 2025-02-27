@@ -23,6 +23,7 @@ class ModularFreeflyerRobot(RobotCore):
         robot_cfg: ModularFreeflyerRobotCfg = ModularFreeflyerRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
+        decimation: int = 6,
         device: str = "cuda",
     ) -> None:
         super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)

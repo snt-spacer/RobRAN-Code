@@ -25,6 +25,7 @@ class RobotCore:
         scene: InteractiveScene | None = None,
         robot_uid: int = 0,
         num_envs: int = 1,
+        decimation: int = 1,
         device: str = "cuda",
     ):
         """Initializes the robot core.
@@ -35,7 +36,7 @@ class RobotCore:
             num_envs: The number of environments.
             device: The device on which the tensors are stored."""
 
-        self.scene = scene
+        self.scene: InteractiveScene = scene
 
         self._robot_cfg = RobotCoreCfg()
         # Unique task identifier, used to differentiate between tasks with the same name
@@ -51,6 +52,11 @@ class RobotCore:
 
         # Robot
         self._robot: Articulation = MISSING
+
+        # Physics and step dt. `physics_dt` is the dt of the physics engine, `step_dt` is the dt with the decimation
+        # factored in.
+        self._physics_dt = self.scene.physics_dt
+        self._step_dt = self.scene.physics_dt * decimation
 
         # RNG
         seeds = torch.randint(0, 2**31, (self._num_envs,), dtype=torch.int32, device=self._device)

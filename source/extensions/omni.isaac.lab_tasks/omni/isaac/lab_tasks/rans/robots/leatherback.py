@@ -22,6 +22,7 @@ class LeatherbackRobot(RobotCore):
         robot_cfg: LeatherbackRobotCfg = LeatherbackRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
+        decimation: int = 4,
         device: str = "cuda",
     ):
         super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)

@@ -76,7 +76,9 @@ class GoToPositionTask(TaskCore):
         self.scalar_logger.add_log("task_state", "AVG/absolute_angular_velocity", "mean")
         self.scalar_logger.add_log("task_state", "EMA/position_distance", "ema")
         self.scalar_logger.add_log("task_state", "EMA/boundary_distance", "ema")
+        self.scalar_logger.add_log("task_state", "AVG/target_heading_error", "mean")
         self.scalar_logger.add_log("task_reward", "AVG/position", "mean")
+        self.scalar_logger.add_log("task_reward", "AVG/heading", "mean")
         self.scalar_logger.add_log("task_reward", "AVG/linear_velocity", "mean")
         self.scalar_logger.add_log("task_reward", "AVG/angular_velocity", "mean")
         self.scalar_logger.add_log("task_reward", "AVG/boundary", "mean")
@@ -159,14 +161,34 @@ class GoToPositionTask(TaskCore):
         # normed angular velocity
         angular_velocity = torch.abs(self._robot.root_com_vel_w[self._env_ids, -1])
 
+        # Compute the heading to the target
+        heading = self._robot.heading_w[self._env_ids]
+        target_heading_w = torch.atan2(
+            self._target_positions[:, 1] - self._robot.root_link_pos_w[self._env_ids, 1],
+            self._target_positions[:, 0] - self._robot.root_link_pos_w[self._env_ids, 0],
+        )
+        target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
+
         # Update logs
         self.scalar_logger.log("task_state", "EMA/position_distance", self._position_dist)
         self.scalar_logger.log("task_state", "EMA/boundary_distance", boundary_dist)
         self.scalar_logger.log("task_state", "AVG/normed_linear_velocity", linear_velocity)
         self.scalar_logger.log("task_state", "AVG/absolute_angular_velocity", linear_velocity)
+        self.scalar_logger.log("task_state", "AVG/target_heading_error", target_heading_error)
 
         # position reward
         position_rew = torch.exp(-self._position_dist / self._task_cfg.position_exponential_reward_coeff)
+        # heading reward + distance scaling
+        dist_scaling = (
+            torch.clamp(
+                self._position_dist, self._task_cfg.min_heading_dist_scaler, self._task_cfg.max_heading_dist_scaler
+            )
+            - self._task_cfg.min_heading_dist_scaler
+        ) / (self._task_cfg.max_heading_dist_scaler - self._task_cfg.min_heading_dist_scaler)
+        heading_rew = (
+            torch.exp(-torch.abs(target_heading_error) / self._task_cfg.heading_exponential_reward_coeff) * dist_scaling
+        )
+
         # linear velocity reward
         linear_velocity_rew = linear_velocity - self._task_cfg.linear_velocity_min_value
         linear_velocity_rew[linear_velocity_rew < 0] = 0
@@ -190,6 +212,7 @@ class GoToPositionTask(TaskCore):
 
         # Update logs for rewards
         self.scalar_logger.log("task_reward", "AVG/position", position_rew)
+        self.scalar_logger.log("task_reward", "AVG/heading", heading_rew)
         self.scalar_logger.log("task_reward", "AVG/linear_velocity", linear_velocity_rew)
         self.scalar_logger.log("task_reward", "AVG/angular_velocity", angular_velocity_rew)
         self.scalar_logger.log("task_reward", "AVG/boundary", boundary_rew)
@@ -197,6 +220,7 @@ class GoToPositionTask(TaskCore):
         # Return the reward by combining the different components and adding the robot rewards
         return (
             position_rew * self._task_cfg.position_weight
+            + heading_rew * self._task_cfg.heading_weight
             + linear_velocity_rew * self._task_cfg.linear_velocity_weight
             + angular_velocity_rew * self._task_cfg.angular_velocity_weight
             + boundary_rew * self._task_cfg.boundary_weight

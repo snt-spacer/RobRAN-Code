@@ -23,6 +23,7 @@ class FloatingPlatformRobot(RobotCore):
         robot_cfg: FloatingPlatformRobotCfg = FloatingPlatformRobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
+        decimation: int = 6,
         device: str = "cuda",
     ):
         super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
@@ -66,9 +67,6 @@ class FloatingPlatformRobot(RobotCore):
         self.scalar_logger.add_log("robot_reward", "AVG/joint_acceleration", "mean")
 
     def get_observations(self) -> torch.Tensor:
-        # print robot_data positions to validate in only moves on the x-y plane
-        # print(f"Robot data positions: {self.body_pos_w}")
-
         return self._unaltered_actions
 
     def compute_rewards(self):

@@ -14,6 +14,7 @@ from .robots_cfg import (  # noqa: F401, F403
     RobotCoreCfg,
     JetbotRobotCfg,
     ModularFreeflyerRobotCfg,
+    KingfisherRobotCfg,
     ROBOT_CFG_FACTORY,
 )
 
@@ -23,6 +24,7 @@ from .robots import (  # noqa: F401, F403
     RobotCore,
     JetbotRobot,
     ModularFreeflyerRobot,
+    KingfisherRobot,
     ROBOT_FACTORY,
 )
 
