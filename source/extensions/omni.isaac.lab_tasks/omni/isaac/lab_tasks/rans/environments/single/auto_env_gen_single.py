@@ -23,7 +23,7 @@ from omni.isaac.lab_tasks.rans import ROBOT_CFG_FACTORY, ROBOT_FACTORY, TASK_CFG
 @configclass
 class SingleEnvCfg(DirectRLEnvCfg):
     # env
-    decimation = 4
+    decimation = 6
     episode_length_s = 20.0
 
     robot_name = "Leatherback"

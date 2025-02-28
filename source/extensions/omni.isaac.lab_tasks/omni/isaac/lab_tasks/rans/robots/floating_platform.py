@@ -26,7 +26,7 @@ class FloatingPlatformRobot(RobotCore):
         decimation: int = 6,
         device: str = "cuda",
     ):
-        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, decimation=decimation, device=device)
         self._robot_cfg = robot_cfg
         # Available for use robot_cfg.is_reaction_wheel,robot_cfg.split_thrust,robot_cfg.rew_reaction_wheel_scale
         self._dim_robot_obs = self._robot_cfg.observation_space

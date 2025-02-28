@@ -4,10 +4,10 @@ seed: 42
 # Models are instantiated using skrl's model instantiator utility
 # https://skrl.readthedocs.io/en/latest/api/utils/model_instantiators.html
 models:
-  separate: True
+  separate: False
   policy:  # see gaussian_model parameters
-    class: GaussianMixin
-    clip_actions: True
+    class: MultiCategoricalMixin
+    clip_actions: False
     clip_log_std: True
     min_log_std: -20.0
     max_log_std: 2.0
@@ -15,16 +15,16 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [64, 32, 32]
+        layers: [32, 32]
         activations: elu
-    output: tanh(ACTIONS)
+    output: ACTIONS
   value:  # see deterministic_model parameters
     class: DeterministicMixin
     clip_actions: False
     network:
       - name: net
         input: STATES
-        layers: [64, 32, 32]
+        layers: [32, 32]
         activations: elu
     output: ONE
 
@@ -66,21 +66,15 @@ agent:
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
-    directory: "single"
+    directory: "turtlebot2_direct"
     experiment_name: ""
     write_interval: auto
     checkpoint_interval: auto
-    wandb: True             # whether to use Weights & Biases
-    wandb_kwargs:          # wandb kwargs (see https://docs.wandb.ai/ref/python/init)
-      project: single
-      entity: spacer-rl
-      group: 'zeroG'
-      notes: ''
 
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 32000
+  timesteps: 4800
   environment_info: log

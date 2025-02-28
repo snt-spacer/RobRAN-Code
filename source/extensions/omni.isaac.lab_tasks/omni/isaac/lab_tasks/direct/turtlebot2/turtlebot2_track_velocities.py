@@ -16,19 +16,14 @@ from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 
-from omni.isaac.lab_tasks.rans import (
-    ModularFreeflyerRobot,
-    ModularFreeflyerRobotCfg,
-    TrackVelocitiesCfg,
-    TrackVelocitiesTask,
-)
+from omni.isaac.lab_tasks.rans import TrackVelocitiesCfg, TrackVelocitiesTask, TurtleBot2Robot, TurtleBot2RobotCfg
 
 
 @configclass
-class ModularFreeflyerTrackVelocitiesEnvCfg(DirectRLEnvCfg):
+class TurtleBot2TrackVelocitiesEnvCfg(DirectRLEnvCfg):
     # env
-    decimation = 4
-    episode_length_s = 20.0
+    decimation = 6
+    episode_length_s = 30.0
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
@@ -36,8 +31,18 @@ class ModularFreeflyerTrackVelocitiesEnvCfg(DirectRLEnvCfg):
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
 
-    robot_cfg: ModularFreeflyerRobotCfg = ModularFreeflyerRobotCfg()
-    task_cfg: TrackVelocitiesCfg = TrackVelocitiesCfg()
+    robot_cfg: TurtleBot2RobotCfg = TurtleBot2RobotCfg()
+    task_cfg: TrackVelocitiesCfg = TrackVelocitiesCfg(
+        enable_linear_velocity=True,
+        goal_min_lin_vel=0.0,
+        goal_max_lin_vel=0.45,
+        enable_lateral_velocity=False,
+        goal_min_lat_vel=0.0,
+        goal_max_lat_vel=0.0,
+        enable_angular_velocity=True,
+        goal_min_ang_vel=0.0,
+        goal_max_ang_vel=0.9,
+    )
     debug_vis: bool = True
 
     action_space = robot_cfg.action_space + task_cfg.action_space
@@ -46,7 +51,7 @@ class ModularFreeflyerTrackVelocitiesEnvCfg(DirectRLEnvCfg):
     gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
-class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
+class TurtleBot2TrackVelocitiesEnv(DirectRLEnv):
     # Workflow: Step
     #   - self._pre_physics_step
     #   - (Loop over N skipped steps)
@@ -68,23 +73,25 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
     #   - (Check if noise is required)
     #       - self._add_noise
 
-    cfg: ModularFreeflyerTrackVelocitiesEnvCfg
+    cfg: TurtleBot2TrackVelocitiesEnvCfg
 
-    def __init__(
-        self,
-        cfg: ModularFreeflyerTrackVelocitiesEnvCfg,
-        render_mode: str | None = None,
-        **kwargs,
-    ):
+    def __init__(self, cfg: TurtleBot2TrackVelocitiesEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         self.env_seeds = torch.randint(0, 100000, (self.num_envs,), dtype=torch.int32, device=self.device)
         self.robot_api.run_setup(self.robot)
         self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
+        # Expand the robot's action space dimension to include num_envs
+
+    def _configure_gym_env_spaces(self):
+        """Configure the action and observation spaces for the Gym environment."""
+        # observation space (unbounded since we don't impose any limits)
+        super()._configure_gym_env_spaces()
+        self.single_action_space, self.action_space = self.robot_api.configure_gym_env_spaces()
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
-        self.robot_api = ModularFreeflyerRobot(
+        self.robot_api = TurtleBot2Robot(
             self.scene,
             self.cfg.robot_cfg,
             robot_uid=0,
@@ -109,6 +116,7 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
         self.robot_api.process_actions(actions)
+        # print(f"Robots Pose: {self.robot_api.body_pos_w[:3]}")
 
     def _apply_action(self) -> None:
         self.robot_api.apply_actions()
@@ -133,6 +141,16 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if (env_ids is None) or (len(env_ids) == self.num_envs):
             env_ids = self.robot._ALL_INDICES
+
+        # Logging
+        self.task_api.reset_logs(env_ids, self.episode_length_buf)
+        task_extras = self.task_api.compute_logs()
+        self.robot_api.reset_logs(env_ids, self.episode_length_buf)
+        robot_extras = self.robot_api.compute_logs()
+        self.extras["log"] = dict()
+        self.extras["log"].update(task_extras)
+        self.extras["log"].update(robot_extras)
+
         super()._reset_idx(env_ids)
 
         self.task_api.reset(env_ids)

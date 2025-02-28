@@ -26,7 +26,7 @@ class ModularFreeflyerRobot(RobotCore):
         decimation: int = 6,
         device: str = "cuda",
     ) -> None:
-        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, decimation=decimation, device=device)
         self._robot_cfg = robot_cfg
         self._dim_robot_obs = self._robot_cfg.observation_space
         self._dim_robot_act = self._robot_cfg.action_space

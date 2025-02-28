@@ -80,7 +80,12 @@ class ModularFreeflyerGoToPoseEnv(DirectRLEnv):
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
         self.robot_api = ModularFreeflyerRobot(
-            self.scene, self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device
+            self.scene,
+            self.cfg.robot_cfg,
+            robot_uid=0,
+            num_envs=self.num_envs,
+            decimation=self.cfg.decimation,
+            device=self.device,
         )
         self.task_api = GoToPoseTask(
             self.scene, self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device

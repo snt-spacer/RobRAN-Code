@@ -64,6 +64,10 @@ class GoToPositionCfg(TaskCoreCfg):
     angular_velocity_weight: float = -0.05
     boundary_weight: float = -10.0
 
+    min_heading_dist_scaler: float = 0.5
+    max_heading_dist_scaler: float = 2.5
+    heading_weight: float = 0.25
+
     # Randomization
     noisy_observation_cfg: NoisyObservationsCfg = NoisyObservationsCfg(
         enable=False, randomization_modes=["uniform"], slices=[0, (1, 3), (3, 5), 5], max_delta=[0.03, 0.01, 0.03, 0.01]

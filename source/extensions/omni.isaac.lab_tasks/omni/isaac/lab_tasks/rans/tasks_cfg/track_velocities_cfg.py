@@ -29,7 +29,7 @@ class TrackVelocitiesCfg(TaskCoreCfg):
     """Enable linear velocity goal. Defaults to True."""
     goal_min_lin_vel: float = 0.0
     """Minimal linear velocity goal in m/s. Defaults to 0.0 m/s. (a random sign is added)"""
-    goal_max_lin_vel: float = 1.0
+    goal_max_lin_vel: float = 0.45
     """Maximal linear velocity goal in m/s. Defaults to 2.0 m/s. (a random sign is added)"""
     enable_lateral_velocity: bool = False
     """Enable lateral velocity goal. Defaults to False."""
@@ -41,7 +41,7 @@ class TrackVelocitiesCfg(TaskCoreCfg):
     """Enable angular velocity goal. Defaults to True."""
     goal_min_ang_vel: float = 0.0
     """Minimal angular velocity goal in rad/s. Defaults to 0.0 rad/s. (a random sign is added)"""
-    goal_max_ang_vel: float = 0.4
+    goal_max_ang_vel: float = 0.9
     """Maximal angular velocity goal in rad/s. Defaults to 0.4 rad/s. (a random sign is added)"""
 
     # Settings

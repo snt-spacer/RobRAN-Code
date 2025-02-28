@@ -10,22 +10,22 @@ from gymnasium import spaces, vector
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.scene import InteractiveScene
 
-from omni.isaac.lab_tasks.rans import JetbotRobotCfg
+from omni.isaac.lab_tasks.rans import TurtleBot2RobotCfg
 
 from .robot_core import RobotCore
 
 
-class JetbotRobot(RobotCore):
+class TurtleBot2Robot(RobotCore):
     def __init__(
         self,
         scene: InteractiveScene | None = None,
-        robot_cfg: JetbotRobotCfg = JetbotRobotCfg(),
+        robot_cfg: TurtleBot2RobotCfg = TurtleBot2RobotCfg(),
         robot_uid: int = 0,
         num_envs: int = 1,
         decimation: int = 4,
         device: str = "cuda",
     ):
-        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, decimation=decimation device=device)
+        super().__init__(scene=scene, robot_uid=robot_uid, num_envs=num_envs, decimation=decimation, device=device)
         self._robot_cfg = robot_cfg
         self._dim_robot_obs = self._robot_cfg.observation_space
         self._dim_robot_act = self._robot_cfg.action_space
@@ -41,8 +41,8 @@ class JetbotRobot(RobotCore):
             device=self._device,
             dtype=torch.float32,
         )
-        self.left_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
-        self.right_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self.linear_velocity_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
+        self.angular_velocity_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
 
     def run_setup(self, robot: Articulation):
         super().run_setup(robot)
@@ -51,8 +51,8 @@ class JetbotRobot(RobotCore):
     def create_logs(self):
         super().create_logs()
 
-        self.scalar_logger.add_log("robot_state", "AVG/left_wheel_action", "mean")
-        self.scalar_logger.add_log("robot_state", "AVG/right_wheel_action", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/linear_velocity_action", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/angular_velocity_action", "mean")
         self.scalar_logger.add_log("robot_state", "AVG/action_rate", "mean")
         self.scalar_logger.add_log("robot_state", "AVG/joint_acceleration", "mean")
         self.scalar_logger.add_log("robot_reward", "AVG/action_rate", "mean")
@@ -121,13 +121,22 @@ class JetbotRobot(RobotCore):
             randomizer.actions(dt=self.scene.physics_dt, actions=actions)
 
         self._previous_actions = self._actions.clone()
-        self._actions = actions
-        self.left_wheel_action = self._actions[:, 0] * self._robot_cfg.wheel_scale
-        self.right_wheel_action = self._actions[:, 1] * self._robot_cfg.wheel_scale
+
+        self._actions = torch.clamp(actions - self._previous_actions, -0.2, 0.2) + self._previous_actions
+
+        linear_vel_scaled = self._actions[:, 0] * self._robot_cfg.max_speed
+        angular_vel_scaled = self._actions[:, 1] * self._robot_cfg.max_rotational_speed
+
+        self.left_wheel_target_velocity = (
+            linear_vel_scaled + angular_vel_scaled * self._robot_cfg.offset_wheel_space_radius
+        ) / self._robot_cfg.wheel_radius
+        self.right_wheel_target_velocity = (
+            linear_vel_scaled - angular_vel_scaled * self._robot_cfg.offset_wheel_space_radius
+        ) / self._robot_cfg.wheel_radius
 
         # Log data
-        self.scalar_logger.log("robot_state", "AVG/left_wheel_action", self.left_wheel_action)
-        self.scalar_logger.log("robot_state", "AVG/right_wheel_action", self.right_wheel_action)
+        self.scalar_logger.log("robot_state", "AVG/linear_velocity_action", self._actions[:, 0])
+        self.scalar_logger.log("robot_state", "AVG/angular_velocity_action", self._actions[:, 1])
 
     def compute_physics(self):
         pass  # Model motor
@@ -139,7 +148,9 @@ class JetbotRobot(RobotCore):
             randomizer.update(dt=self.scene.physics_dt, actions=self._actions)
 
         # Scale the actions
-        wheel_action = torch.cat((self.left_wheel_action.unsqueeze(-1), self.right_wheel_action.unsqueeze(-1)), dim=1)
+        wheel_action = torch.cat(
+            (self.left_wheel_target_velocity.unsqueeze(-1), self.right_wheel_target_velocity.unsqueeze(-1)), dim=1
+        )
         self._robot.set_joint_velocity_target(wheel_action, joint_ids=self._wheels_dof_idx)
 
     def configure_gym_env_spaces(self):

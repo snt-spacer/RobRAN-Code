@@ -16,28 +16,23 @@ from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
 
-from omni.isaac.lab_tasks.rans import (
-    ModularFreeflyerRobot,
-    ModularFreeflyerRobotCfg,
-    TrackVelocitiesCfg,
-    TrackVelocitiesTask,
-)
+from omni.isaac.lab_tasks.rans import GoThroughPosesCfg, GoThroughPosesTask, TurtleBot2Robot, TurtleBot2RobotCfg
 
 
 @configclass
-class ModularFreeflyerTrackVelocitiesEnvCfg(DirectRLEnvCfg):
+class TurtleBot2GoThroughPosesEnvCfg(DirectRLEnvCfg):
     # env
-    decimation = 4
-    episode_length_s = 20.0
+    decimation = 6
+    episode_length_s = 30.0
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=7.5, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=20.0, replicate_physics=True)
 
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 60.0, render_interval=decimation)
 
-    robot_cfg: ModularFreeflyerRobotCfg = ModularFreeflyerRobotCfg()
-    task_cfg: TrackVelocitiesCfg = TrackVelocitiesCfg()
+    robot_cfg: TurtleBot2RobotCfg = TurtleBot2RobotCfg()
+    task_cfg: GoThroughPosesCfg = GoThroughPosesCfg()
     debug_vis: bool = True
 
     action_space = robot_cfg.action_space + task_cfg.action_space
@@ -46,7 +41,7 @@ class ModularFreeflyerTrackVelocitiesEnvCfg(DirectRLEnvCfg):
     gen_space = robot_cfg.gen_space + task_cfg.gen_space
 
 
-class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
+class TurtleBot2GoThroughPosesEnv(DirectRLEnv):
     # Workflow: Step
     #   - self._pre_physics_step
     #   - (Loop over N skipped steps)
@@ -68,11 +63,11 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
     #   - (Check if noise is required)
     #       - self._add_noise
 
-    cfg: ModularFreeflyerTrackVelocitiesEnvCfg
+    cfg: TurtleBot2GoThroughPosesEnvCfg
 
     def __init__(
         self,
-        cfg: ModularFreeflyerTrackVelocitiesEnvCfg,
+        cfg: TurtleBot2GoThroughPosesEnvCfg,
         render_mode: str | None = None,
         **kwargs,
     ):
@@ -84,7 +79,7 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
-        self.robot_api = ModularFreeflyerRobot(
+        self.robot_api = TurtleBot2Robot(
             self.scene,
             self.cfg.robot_cfg,
             robot_uid=0,
@@ -92,7 +87,7 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
             decimation=self.cfg.decimation,
             device=self.device,
         )
-        self.task_api = TrackVelocitiesTask(
+        self.task_api = GoThroughPosesTask(
             self.scene, self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device
         )
 
@@ -133,6 +128,16 @@ class ModularFreeflyerTrackVelocitiesEnv(DirectRLEnv):
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if (env_ids is None) or (len(env_ids) == self.num_envs):
             env_ids = self.robot._ALL_INDICES
+
+        # Logging
+        self.task_api.reset_logs(env_ids, self.episode_length_buf)
+        task_extras = self.task_api.compute_logs()
+        self.robot_api.reset_logs(env_ids, self.episode_length_buf)
+        robot_extras = self.robot_api.compute_logs()
+        self.extras["log"] = dict()
+        self.extras["log"].update(task_extras)
+        self.extras["log"].update(robot_extras)
+
         super()._reset_idx(env_ids)
 
         self.task_api.reset(env_ids)

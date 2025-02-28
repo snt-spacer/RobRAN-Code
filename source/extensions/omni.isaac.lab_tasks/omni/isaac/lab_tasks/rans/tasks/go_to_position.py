@@ -69,9 +69,7 @@ class GoToPositionTask(TaskCore):
     def create_logs(self) -> None:
         """
         Creates a dictionary to store the training statistics for the task."""
-
         super().create_logs()
-
         self.scalar_logger.add_log("task_state", "AVG/normed_linear_velocity", "mean")
         self.scalar_logger.add_log("task_state", "AVG/absolute_angular_velocity", "mean")
         self.scalar_logger.add_log("task_state", "EMA/position_distance", "ema")
@@ -128,16 +126,13 @@ class GoToPositionTask(TaskCore):
     def compute_rewards(self) -> torch.Tensor:
         """
         Computes the reward for the current state of the robot.
-
         The observation is given in the robot's frame. The task provides 3 elements:
         - The position of the object in the robot's frame. It is expressed as the distance between the robot and
             the target position, and the angle between the robot's heading and the target position.
         - The linear velocity of the robot in the robot's frame.
         - The angular velocity of the robot in the robot's frame.
-
         Angle measurements are converted to a cosine and a sine to avoid discontinuities in 0 and 2pi.
         This provides a continuous representation of the angle.
-
         The observation tensor is composed of the following elements:
         - self._task_data[:, 0]: The distance between the robot and the target position.
         - self._task_data[:, 1]: The cosine of the angle between the robot's heading and the target position.
@@ -145,22 +140,18 @@ class GoToPositionTask(TaskCore):
         - self._task_data[:, 3]: The linear velocity of the robot along the x-axis.
         - self._task_data[:, 4]: The linear velocity of the robot along the y-axis.
         - self._task_data[:, 5]: The angular velocity of the robot.
-
         Args:
             current_state (torch.Tensor): The current state of the robot.
             actions (torch.Tensor): The actions taken by the robot.
             step (int, optional): The current step. Defaults to 0.
-
         Returns:
             torch.Tensor: The reward for the current state of the robot."""
-
         # boundary distance
         boundary_dist = torch.abs(self._task_cfg.maximum_robot_distance - self._position_dist)
         # normed linear velocity
         linear_velocity = torch.norm(self._robot.root_com_vel_w[self._env_ids, :2], dim=-1)
         # normed angular velocity
         angular_velocity = torch.abs(self._robot.root_com_vel_w[self._env_ids, -1])
-
         # Compute the heading to the target
         heading = self._robot.heading_w[self._env_ids]
         target_heading_w = torch.atan2(
@@ -168,7 +159,6 @@ class GoToPositionTask(TaskCore):
             self._target_positions[:, 0] - self._robot.root_link_pos_w[self._env_ids, 0],
         )
         target_heading_error = torch.atan2(torch.sin(target_heading_w - heading), torch.cos(target_heading_w - heading))
-
         # Update logs
         self.scalar_logger.log("task_state", "EMA/position_distance", self._position_dist)
         self.scalar_logger.log("task_state", "EMA/boundary_distance", boundary_dist)
@@ -188,7 +178,6 @@ class GoToPositionTask(TaskCore):
         heading_rew = (
             torch.exp(-torch.abs(target_heading_error) / self._task_cfg.heading_exponential_reward_coeff) * dist_scaling
         )
-
         # linear velocity reward
         linear_velocity_rew = linear_velocity - self._task_cfg.linear_velocity_min_value
         linear_velocity_rew[linear_velocity_rew < 0] = 0
@@ -204,19 +193,16 @@ class GoToPositionTask(TaskCore):
         ] = (self._task_cfg.angular_velocity_max_value - self._task_cfg.angular_velocity_min_value)
         # boundary rew
         boundary_rew = torch.exp(-boundary_dist / self._task_cfg.boundary_exponential_reward_coeff)
-
         # Checks if the goal is reached
         goal_is_reached = (self._position_dist < self._task_cfg.position_tolerance).int()
         self._goal_reached *= goal_is_reached  # if not set the value to 0
         self._goal_reached += goal_is_reached  # if it is add 1
-
         # Update logs for rewards
         self.scalar_logger.log("task_reward", "AVG/position", position_rew)
         self.scalar_logger.log("task_reward", "AVG/heading", heading_rew)
         self.scalar_logger.log("task_reward", "AVG/linear_velocity", linear_velocity_rew)
         self.scalar_logger.log("task_reward", "AVG/angular_velocity", angular_velocity_rew)
         self.scalar_logger.log("task_reward", "AVG/boundary", boundary_rew)
-
         # Return the reward by combining the different components and adding the robot rewards
         return (
             position_rew * self._task_cfg.position_weight

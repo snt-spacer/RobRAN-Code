@@ -15,6 +15,7 @@ from .robots_cfg import (  # noqa: F401, F403
     JetbotRobotCfg,
     ModularFreeflyerRobotCfg,
     KingfisherRobotCfg,
+    TurtleBot2RobotCfg,
     ROBOT_CFG_FACTORY,
 )
 
@@ -25,6 +26,7 @@ from .robots import (  # noqa: F401, F403
     JetbotRobot,
     ModularFreeflyerRobot,
     KingfisherRobot,
+    TurtleBot2Robot,
     ROBOT_FACTORY,
 )
 
