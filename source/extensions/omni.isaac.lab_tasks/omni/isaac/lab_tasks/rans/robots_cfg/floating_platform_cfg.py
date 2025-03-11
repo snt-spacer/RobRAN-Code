@@ -6,6 +6,7 @@
 from omni.isaac.lab_assets.floating_platform import FLOATING_PLATFORM_CFG
 
 from omni.isaac.lab.assets import ArticulationCfg
+from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
 from omni.isaac.lab_tasks.rans.domain_randomization import (
@@ -77,6 +78,14 @@ class FloatingPlatformRobotCfg(RobotCoreCfg):
             "reaction_wheel",
         ]
         reaction_wheel_scale = 0.1  # [Nm]
+
+    # Sensors
+    body_contact_forces: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/base_link/Cylinder",
+        update_period=0.0,
+        history_length=3,
+        debug_vis=True,
+    )
 
     # Spaces
     observation_space: int = num_thrusters + 1 * has_reaction_wheel

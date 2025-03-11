@@ -40,10 +40,12 @@ from .tasks_cfg import (  # noqa: F401, F403
     TaskCoreCfg,
     TrackVelocitiesCfg,
     PushBlockCfg,
+    GoToPositionWithObstaclesCfg,
     TASK_CFG_FACTORY,
 )
 
 from .tasks import (  # noqa: F401, F403
+    TaskCore,
     GoThroughPosesTask,
     GoThroughPositionsTask,
     GoToPoseTask,
@@ -53,5 +55,8 @@ from .tasks import (  # noqa: F401, F403
     TaskCore,
     TrackVelocitiesTask,
     PushBlockTask,
+    GoToPositionWithObstaclesTask,
     TASK_FACTORY,
 )
+
+from .utils import TrackGenerator, PerEnvSeededRNG, ScalarLogger, ObjectStorage  # noqa: F401, F403

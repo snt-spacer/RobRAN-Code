@@ -9,6 +9,7 @@ from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.scene import InteractiveScene
+from omni.isaac.lab.sensors import ContactSensor
 
 from omni.isaac.lab_tasks.rans import LeatherbackRobotCfg
 
@@ -155,6 +156,18 @@ class LeatherbackRobot(RobotCore):
 
         self._robot.set_joint_velocity_target(self._throttle_action, joint_ids=self._throttle_dof_idx)
         self._robot.set_joint_position_target(self._steering_action, joint_ids=self._steering_dof_idx)
+
+    def activateSensors(self, sensor_type: str, filter: list):
+        if sensor_type == "contacts":
+            self._robot_cfg.contact_sensor_active = True
+            if len(filter) > 0:
+                self._robot_cfg.chassis_contact_forces.filter_prim_paths_expr = filter
+
+    def register_sensors(self) -> None:
+        # Contact sensor
+        if self._robot_cfg.contact_sensor_active:
+            self.scene.sensors["robot_contacts"] = ContactSensor(self._robot_cfg.chassis_contact_forces)
+            self.contacts: ContactSensor = self.scene["robot_contacts"]
 
     def configure_gym_env_spaces(self):
         single_action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)

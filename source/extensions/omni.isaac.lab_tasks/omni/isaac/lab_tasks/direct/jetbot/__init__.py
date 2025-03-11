@@ -10,6 +10,10 @@ from .jetbot_go_through_poses_env import JetbotGoThroughPosesEnv, JetbotGoThroug
 from .jetbot_go_through_positions_env import JetbotGoThroughPositionsEnv, JetbotGoThroughPositionsEnvCfg
 from .jetbot_go_to_pose_env import JetbotGoToPoseEnv, JetbotGoToPoseEnvCfg
 from .jetbot_go_to_position_env import JetbotGoToPositionEnv, JetbotGoToPositionEnvCfg
+from .jetbot_go_to_position_with_obstacles_env import (
+    JetbotGoToPositionWithObstaclesEnv,
+    JetbotGoToPositionWithObstaclesEnvCfg,
+)
 from .jetbot_push_block_env import JetbotPushBlockEnv, JetbotPushBlockEnvCfg
 from .jetbot_track_velocities_env import JetbotTrackVelocitiesEnv, JetbotTrackVelocitiesEnvCfg
 
@@ -90,6 +94,19 @@ gym.register(
         "env_cfg_entry_point": JetbotPushBlockEnvCfg,
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:JetbotPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+    },
+)
+
+
+gym.register(
+    id="Isaac-Jetbot-GoToPositionWithObstacles-Direct-v0",
+    entry_point="omni.isaac.lab_tasks.direct.jetbot:JetbotGoToPositionWithObstaclesEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": JetbotGoToPositionWithObstaclesEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
     },

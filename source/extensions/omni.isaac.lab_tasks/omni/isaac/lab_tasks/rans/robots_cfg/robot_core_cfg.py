@@ -16,3 +16,6 @@ class RobotCoreCfg:
 
     ema_coeff: float = 0.9
     """Exponential moving average coefficient used to update some of the logs."""
+
+    contact_sensor_active: bool = False
+    """Flag to enable the contact sensor."""

@@ -79,6 +79,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rl_games import RlGamesGpuEnv, RlGamesV
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = "rl_games_cfg_entry_point" if algorithm in ["ppo"] else f"rl_games_{algorithm}_cfg_entry_point"
 
+
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
     """Train with RL-Games agent."""

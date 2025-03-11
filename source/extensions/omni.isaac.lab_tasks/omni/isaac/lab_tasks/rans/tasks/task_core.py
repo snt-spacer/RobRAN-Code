@@ -227,3 +227,9 @@ class TaskCore:
 
     def register_rigid_objects(self) -> None:
         pass
+
+    def register_sensors(self, scene: InteractiveScene) -> None:
+        pass
+
+    def register_robot(self, robot: RobotCore) -> None:
+        pass

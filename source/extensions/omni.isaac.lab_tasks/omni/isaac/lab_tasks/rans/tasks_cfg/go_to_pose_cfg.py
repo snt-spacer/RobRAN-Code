@@ -67,8 +67,8 @@ class GoToPoseCfg(TaskCoreCfg):
     """Reset the environment after n steps in tolerance. Defaults to 100 steps."""
 
     # Reward
-    position_exponential_reward_coeff: float = 1.0
-    heading_exponential_reward_coeff: float = 0.5
+    position_exponential_reward_coeff: float = 1
+    heading_exponential_reward_coeff: float = 1
     linear_velocity_min_value: float = 0.5
     linear_velocity_max_value: float = 2.0
     angular_velocity_min_value: float = 0.5

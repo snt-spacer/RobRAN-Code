@@ -259,6 +259,21 @@ class RobotCore:
         This is called for every single simulation step."""
         self.compute_physics()
 
+    def updateFriction(self) -> None:
+        raise NotImplementedError
+
+    def activateSensors(self, sensor_type: str, filter: list) -> None:
+        raise NotImplementedError
+
+    def register_rigid_objects(self) -> None:
+        raise NotImplementedError
+
+    def register_sensors(self) -> None:
+        raise NotImplementedError
+
+    def configure_gym_env_spaces(self) -> None:
+        raise NotImplementedError
+
     # We wrap around the ArticulationData properties to make them modifiable from the
     # class that inherits from RobotCore. This is done so that we can have a unique interface
     # for all the robots that we create.

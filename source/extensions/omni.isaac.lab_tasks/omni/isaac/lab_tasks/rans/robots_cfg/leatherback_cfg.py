@@ -6,6 +6,7 @@
 import math
 
 from omni.isaac.lab.assets import ArticulationCfg
+from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
 from omni.isaac.lab_tasks.rans.domain_randomization import (
@@ -40,6 +41,7 @@ class LeatherbackRobotCfg(RobotCoreCfg):
         "Knuckle__Upright__Front_Left",
     ]
 
+    rew_energy_penalty = -0.025
     rew_action_rate_scale = -0.12
     rew_joint_accel_scale = -2.5e-6
 
@@ -75,6 +77,12 @@ class LeatherbackRobotCfg(RobotCoreCfg):
         clip_actions=[(-1, 1), (-1, 1)],
     )
 
+    chassis_contact_forces: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/Rigid_Bodies/Chassis",
+        update_period=0.0,
+        history_length=3,
+        debug_vis=True,
+    )
     # Spaces
     observation_space: int = 2
     state_space: int = 0

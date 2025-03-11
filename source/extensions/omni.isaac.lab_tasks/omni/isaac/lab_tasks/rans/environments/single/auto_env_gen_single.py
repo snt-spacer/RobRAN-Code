@@ -112,6 +112,14 @@ class SingleEnv(DirectRLEnv):
         self.robot_api.run_setup(self.robot)
         self.task_api.run_setup(self.robot_api, self.scene.env_origins)
         self.set_debug_vis(self.cfg.debug_vis)
+        self.task_api.register_rigid_objects()
+
+    def _configure_gym_env_spaces(self):
+        """Configure the action and observation spaces for the Gym environment."""
+        # observation space (unbounded since we don't impose any limits)
+        super()._configure_gym_env_spaces()
+        self.single_action_space, self.action_space = self.robot_api.configure_gym_env_spaces()
+        self.actions = sample_space(self.single_action_space, self.sim.device, batch_size=self.num_envs, fill_value=0)
 
     def edit_cfg(self, cfg: SingleEnvCfg) -> SingleEnvCfg:
         self.robot_cfg = ROBOT_CFG_FACTORY(cfg.robot_name)
@@ -142,7 +150,9 @@ class SingleEnv(DirectRLEnv):
             num_envs=self.num_envs,
             device=self.device,
         )
-        self.task_api.register_rigid_objects()
+
+        self.task_api.register_robot(self.robot_api)
+        self.task_api.register_sensors()
 
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
@@ -194,13 +204,6 @@ class SingleEnv(DirectRLEnv):
         super()._reset_idx(env_ids)
 
         self.task_api.reset(env_ids)
-
-    def _configure_gym_env_spaces(self):
-        """Configure the action and observation spaces for the Gym environment."""
-        # observation space (unbounded since we don't impose any limits)
-        super()._configure_gym_env_spaces()
-        self.single_action_space, self.action_space = self.robot_api.configure_gym_env_spaces()
-        self.actions = sample_space(self.single_action_space, self.sim.device, batch_size=self.num_envs, fill_value=0)
 
     def _set_debug_vis_impl(self, debug_vis: bool) -> None:
         if debug_vis:

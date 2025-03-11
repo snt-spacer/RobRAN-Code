@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from omni.isaac.lab.assets import ArticulationCfg
+from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 
 from omni.isaac.lab_tasks.rans.domain_randomization import (
@@ -32,10 +33,7 @@ class JetbotRobotCfg(RobotCoreCfg):
         "right_wheel_joint",
     ]
 
-    rew_action_rate_scale = -0.12
-    rew_joint_accel_scale = -2.5e-6
-
-    wheel_scale = 1 / 0.0500
+    wheel_scale = 1 / 0.05  # Vmax = 1.0m/s, wheel radius is 0.05m
     """Multiplier for the wheel velocity. The action is in the range [-1, 1] and the radius of the wheel is 0.05m"""
 
     # Randomization
@@ -65,4 +63,17 @@ class JetbotRobotCfg(RobotCoreCfg):
     observation_space: int = 2
     state_space: int = 0
     action_space: int = 2
-    gen_space: int = 0  # TODO: Add the generative space from the randomization
+    gen_space: int = 0
+
+    # Sensors
+    chassis_contact_forces: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/chassis",
+        update_period=0.0,
+        history_length=3,
+        debug_vis=True,
+    )
+
+    # Reward
+    rew_energy_penalty = -0.025
+    rew_action_rate_scale = -0.12
+    rew_joint_accel_scale = -2.5e-6

@@ -9,6 +9,7 @@ from gymnasium import spaces, vector
 
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.scene import InteractiveScene
+from omni.isaac.lab.sensors import ContactSensor
 
 from omni.isaac.lab_tasks.rans import JetbotRobotCfg
 
@@ -111,6 +112,7 @@ class JetbotRobot(RobotCore):
             actions (torch.Tensor): The actions to process."""
 
         # Enforce action limits at the robot level
+        actions = actions.float()
         actions.clip_(min=-1.0, max=1.0)
         # Store the unaltered actions, by default the robot should only observe the unaltered actions.
         self._previous_unaltered_actions = self._unaltered_actions.clone()
@@ -141,6 +143,18 @@ class JetbotRobot(RobotCore):
         # Scale the actions
         wheel_action = torch.cat((self.left_wheel_action.unsqueeze(-1), self.right_wheel_action.unsqueeze(-1)), dim=1)
         self._robot.set_joint_velocity_target(wheel_action, joint_ids=self._wheels_dof_idx)
+
+    def activateSensors(self, sensor_type: str, filter: list):
+        if sensor_type == "contacts":
+            self._robot_cfg.contact_sensor_active = True
+            if len(filter) > 0:
+                self._robot_cfg.chassis_contact_forces.filter_prim_paths_expr = filter
+
+    def register_sensors(self) -> None:
+        # Contact sensor
+        if self._robot_cfg.contact_sensor_active:
+            self.scene.sensors["robot_contacts"] = ContactSensor(self._robot_cfg.chassis_contact_forces)
+            self.contacts: ContactSensor = self.scene["robot_contacts"]
 
     def configure_gym_env_spaces(self):
         single_action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)

@@ -15,7 +15,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [64, 32, 32]
+        layers: [128, 64, 32]
         activations: elu
     output: tanh(ACTIONS)
   value:  # see deterministic_model parameters
@@ -24,7 +24,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [64, 32, 32]
+        layers: [128, 64, 32]
         activations: elu
     output: ONE
 
