@@ -29,7 +29,7 @@ class KingfisherRobotCfg(RobotCoreCfg):
     robot_cfg: ArticulationCfg = KINGFISHER_CFG.replace(prim_path="/World/envs/env_.*/Robot")
 
     num_thrusters: int = 2
-    robot_name: str = "kingfisher"
+    robot_name: str = "Kingfisher"
     thrusters_dof_name: list[str] = ["thruster_left", "thruster_right"]
     root_id_name: str = "base_link"
     marker_height: float = 0.5

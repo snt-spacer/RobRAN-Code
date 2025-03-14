@@ -129,7 +129,7 @@ class FloatingPlatformRobot(RobotCore):
             actions (torch.Tensor): The actions to process."""
 
         # Enforce action limits at the robot level
-        actions = actions.float()
+        actions = actions.float() # RuntimeError: result type Float can't be cast to the desired output type long int
         actions.clip_(min=0.0, max=1.0)
         # Store the unaltered actions, by default the robot should only observe the unaltered actions.
         self._previous_unaltered_actions = self._unaltered_actions.clone()
