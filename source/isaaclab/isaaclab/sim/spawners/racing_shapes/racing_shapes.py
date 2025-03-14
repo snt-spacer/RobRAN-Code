@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import isaacsim.core.utils.prims as prim_utils 
+import isaacsim.core.utils.prims as prim_utils
 from pxr import Usd
 
 from isaaclab.sim import schemas

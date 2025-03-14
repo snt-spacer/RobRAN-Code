@@ -15,7 +15,7 @@ from . import agents
 # Register Gym environments.
 ##
 
-gym.register( 
+gym.register(
     id="Isaac-FloatingPlatform-GoToPosition-Direct-v0",
     entry_point=f"{__name__}.floating_platform_go_to_position_env:FloatingPlatformGoToPositionEnv",
     disable_env_checker=True,
@@ -46,7 +46,9 @@ gym.register(
     entry_point=f"{__name__}.floating_platform_track_velocities_env:FloatingPlatformTrackVelocitiesEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.floating_platform_track_velocities_env:FloatingPlatformTrackVelocitiesEnvCfg",
+        "env_cfg_entry_point": (
+            f"{__name__}.floating_platform_track_velocities_env:FloatingPlatformTrackVelocitiesEnvCfg"
+        ),
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FloatingPlatformPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
@@ -59,7 +61,9 @@ gym.register(
     entry_point=f"{__name__}.floating_platform_go_through_positions_env:FloatingPlatformGoThroughPositionsEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.floating_platform_go_through_positions_env:FloatingPlatformGoThroughPositionsEnvCfg",
+        "env_cfg_entry_point": (
+            f"{__name__}.floating_platform_go_through_positions_env:FloatingPlatformGoThroughPositionsEnvCfg"
+        ),
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FloatingPlatformPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
@@ -72,7 +76,9 @@ gym.register(
     entry_point=f"{__name__}.floating_platform_go_through_poses_env:FloatingPlatformGoThroughPosesEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.floating_platform_go_through_poses_env:FloatingPlatformGoThroughPosesEnvCfg",
+        "env_cfg_entry_point": (
+            f"{__name__}.floating_platform_go_through_poses_env:FloatingPlatformGoThroughPosesEnvCfg"
+        ),
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FloatingPlatformPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",

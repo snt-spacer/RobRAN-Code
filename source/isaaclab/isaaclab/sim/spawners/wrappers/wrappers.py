@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import carb
 import isaacsim.core.utils.prims as prim_utils
 import isaacsim.core.utils.stage as stage_utils
-from pxr import Sdf, Usd
+from pxr import Gf, Sdf, Usd
 
 import isaaclab.sim as sim_utils
 from isaaclab.sim.spawners.from_files import UsdFileCfg
@@ -175,6 +175,7 @@ def spawn_multi_usd_file(
 
     # call the original function
     return spawn_multi_asset(prim_path, multi_asset_cfg, translation, orientation)
+
 
 def spawn_many_asset(
     prim_path: str,

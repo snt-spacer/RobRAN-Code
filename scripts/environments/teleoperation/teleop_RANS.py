@@ -46,10 +46,10 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import torch
 
+from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
+
 from isaaclab.devices import Se3Gamepad, Se3Keyboard, Se3SpaceMouse
 from isaaclab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg
-
-from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"

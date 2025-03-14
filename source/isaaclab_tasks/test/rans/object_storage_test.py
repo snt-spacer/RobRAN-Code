@@ -15,8 +15,6 @@ import unittest
 
 from isaaclab_tasks.rans.utils.object_storage import ObjectStorage
 
-from isaaclab_tasks.rans.utils import PerEnvSeededRNG
-
 
 class TestObjectStorage(unittest.TestCase):
     def __init__(self, methodName="runTest"):

@@ -209,7 +209,6 @@ class Articulation(AssetBase):
                     is_global=False,
                 )
 
-
         # apply actuator models
         self._apply_actuator_model()
         # write actions into simulation

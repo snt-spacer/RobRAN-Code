@@ -46,7 +46,9 @@ gym.register(
     entry_point=f"{__name__}.modular_freeflyer_track_velocities_env:ModularFreeflyerTrackVelocitiesEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.modular_freeflyer_track_velocities_env:ModularFreeflyerTrackVelocitiesEnvCfg",
+        "env_cfg_entry_point": (
+            f"{__name__}.modular_freeflyer_track_velocities_env:ModularFreeflyerTrackVelocitiesEnvCfg"
+        ),
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ModularFreeflyerPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
@@ -59,7 +61,9 @@ gym.register(
     entry_point=f"{__name__}.modular_freeflyer_go_through_positions_env:ModularFreeflyerGoThroughPositionsEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.modular_freeflyer_go_through_positions_env:ModularFreeflyerGoThroughPositionsEnvCfg",
+        "env_cfg_entry_point": (
+            f"{__name__}.modular_freeflyer_go_through_positions_env:ModularFreeflyerGoThroughPositionsEnvCfg"
+        ),
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ModularFreeflyerPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
@@ -72,7 +76,9 @@ gym.register(
     entry_point=f"{__name__}.modular_freeflyer_go_through_poses_env:ModularFreeflyerGoThroughPosesEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.modular_freeflyer_go_through_poses_env:ModularFreeflyerGoThroughPosesEnvCfg",
+        "env_cfg_entry_point": (
+            f"{__name__}.modular_freeflyer_go_through_poses_env:ModularFreeflyerGoThroughPosesEnvCfg"
+        ),
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ModularFreeflyerPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",

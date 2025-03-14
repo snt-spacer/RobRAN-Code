@@ -16,12 +16,7 @@ from isaaclab.sim import SimulationCfg
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils import configclass
 
-from isaaclab_tasks.rans import (
-    FloatingPlatformRobot,
-    FloatingPlatformRobotCfg,
-    TrackVelocitiesCfg,
-    TrackVelocitiesTask,
-)
+from isaaclab_tasks.rans import FloatingPlatformRobot, FloatingPlatformRobotCfg, TrackVelocitiesCfg, TrackVelocitiesTask
 
 
 @configclass

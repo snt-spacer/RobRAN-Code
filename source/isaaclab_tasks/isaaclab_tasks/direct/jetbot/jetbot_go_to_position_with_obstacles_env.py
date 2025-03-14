@@ -11,12 +11,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils import configclass
 
-from isaaclab_tasks.rans import (
-    GoToPositionWithObstaclesCfg,
-    GoToPositionWithObstaclesTask,
-    JetbotRobot,
-    JetbotRobotCfg,
-)
+from isaaclab_tasks.rans import GoToPositionWithObstaclesCfg, GoToPositionWithObstaclesTask, JetbotRobot, JetbotRobotCfg
 
 from .jetbot_go_to_position_env import JetbotGoToPositionEnv, JetbotGoToPositionEnvCfg
 
@@ -68,18 +63,10 @@ class JetbotGoToPositionWithObstaclesEnv(JetbotGoToPositionEnv):
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg.robot_cfg)
         self.robot_api = JetbotRobot(
-            scene=self.scene,
-            robot_cfg=self.cfg.robot_cfg, 
-            robot_uid=0, 
-            num_envs=self.num_envs, 
-            device=self.device
+            scene=self.scene, robot_cfg=self.cfg.robot_cfg, robot_uid=0, num_envs=self.num_envs, device=self.device
         )
         self.task_api = GoToPositionWithObstaclesTask(
-            scene=self.scene,
-            task_cfg=self.cfg.task_cfg, 
-            task_uid=0, 
-            num_envs=self.num_envs, 
-            device=self.device
+            scene=self.scene, task_cfg=self.cfg.task_cfg, task_uid=0, num_envs=self.num_envs, device=self.device
         )
 
         self.task_api.register_robot(self.robot_api)
