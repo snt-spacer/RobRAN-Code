@@ -33,6 +33,7 @@ ISAAC_NUCLEUS_DIR = f"{NUCLEUS_ASSET_ROOT_DIR}/Isaac"
 ISAACLAB_NUCLEUS_DIR = f"{ISAAC_NUCLEUS_DIR}/IsaacLab"
 """Path to the ``Isaac/IsaacLab`` directory on the NVIDIA Nucleus Server."""
 
+
 def get_local_path() -> str:
     """Returns the local.
 
