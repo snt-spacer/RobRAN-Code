@@ -815,6 +815,7 @@ class TestArticulation(unittest.TestCase):
         for case in range(5):
             with self.subTest(case=case):
                 with build_simulation_context(device=device, add_ground_plane=False, auto_add_lighting=True) as sim:
+                    sim._app_control_on_stop_handle = None
                     if case == 0:
                         num_articulations = 1
                     else:
@@ -976,6 +977,7 @@ class TestArticulation(unittest.TestCase):
         for case in range(5):
             with self.subTest(case=case):
                 with build_simulation_context(device=device, add_ground_plane=False, auto_add_lighting=True) as sim:
+                    sim._app_control_on_stop_handle = None
                     if case == 0:
                         num_articulations = 1
                     else:
