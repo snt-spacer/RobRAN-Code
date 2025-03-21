@@ -52,9 +52,6 @@ class KingfisherRobot(RobotCore):
         self._previous_actions = torch.zeros(
             (self._num_envs, self._dim_robot_act), device=self._device, dtype=torch.float32
         )
-        self._thrust_action = torch.zeros(
-            (self._num_envs, self._robot_cfg.num_thrusters), device=self._device, dtype=torch.float32
-        )
         self._hydrostatic_force = torch.zeros((self._num_envs, 1, 6), device=self._device, dtype=torch.float32)
         self._hydrodynamic_force = torch.zeros((self._num_envs, 1, 6), device=self._device, dtype=torch.float32)
         self._thruster_force = torch.zeros((self._num_envs, 1, 6), device=self._device, dtype=torch.float32)
@@ -120,10 +117,6 @@ class KingfisherRobot(RobotCore):
         self._thruster_dynamics.reset()
 
     def set_initial_conditions(self, env_ids: torch.Tensor | None = None):
-        thrust_reset = torch.zeros_like(self._thrust_action)
-        self._robot.set_external_force_and_torque(
-            thrust_reset, thrust_reset, body_ids=self._thrusters_dof_idx, env_ids=env_ids
-        )
         locking_joints = torch.zeros((len(env_ids), 1), device=self._device)
 
         self._robot.set_joint_velocity_target(locking_joints, env_ids=env_ids)
