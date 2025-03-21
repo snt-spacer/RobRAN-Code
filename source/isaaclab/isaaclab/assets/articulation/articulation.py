@@ -182,16 +182,6 @@ class Articulation(AssetBase):
         """
         # write external wrench
         if self.has_external_wrench:
-            self.root_physx_view.apply_forces_and_torques_at_position(
-                force_data=self._external_force_b.view(-1, 3),
-                torque_data=self._external_torque_b.view(-1, 3),
-                position_data=None,
-                indices=self._ALL_INDICES,
-                is_global=False,
-            )
-
-        # write external wrench
-        if self.has_external_wrench:
             if self.uses_external_wrench_positions:
                 self.root_physx_view.apply_forces_and_torques_at_position(
                     force_data=self._external_force_b.view(-1, 3),
