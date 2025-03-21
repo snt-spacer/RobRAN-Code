@@ -193,7 +193,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         if "Single" in args_cli.task:
             name = agent_cfg["params"]["config"]["name"]
             agent_cfg["params"]["wandb"]["project"] = args_cli.task.split("-")[2] + "-" + name
-            experiment_name = f"{name}-{date_str}"
+            experiment_name = f"{date_str}_{name}_{algorithm}_rlgames"
 
         wandb.init(
             project=agent_cfg["params"]["wandb"]["project"],

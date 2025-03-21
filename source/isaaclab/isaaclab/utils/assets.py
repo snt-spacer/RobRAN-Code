@@ -42,8 +42,7 @@ def get_local_path() -> str:
 
     import isaaclab
 
-    path = os.path.abspath(isaaclab.__file__)
-    path = path.split(".")[0]
+    path = os.path.abspath(isaaclab.__file__).split("source")[0]
     return path
 
 
