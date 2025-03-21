@@ -33,7 +33,21 @@ ISAAC_NUCLEUS_DIR = f"{NUCLEUS_ASSET_ROOT_DIR}/Isaac"
 ISAACLAB_NUCLEUS_DIR = f"{ISAAC_NUCLEUS_DIR}/IsaacLab"
 """Path to the ``Isaac/IsaacLab`` directory on the NVIDIA Nucleus Server."""
 
-REPO_ROOT_PATH = "/workspace/isaaclab"
+def get_local_path() -> str:
+    """Returns the local.
+
+    Returns:
+        The local path.
+    """
+
+    import isaaclab
+
+    path = os.path.abspath(isaaclab.__file__)
+    path = path.split(".")[0]
+    return path
+
+
+REPO_ROOT_PATH = get_local_path()
 """Path to the root of the IsaacLab repository."""
 
 
