@@ -44,7 +44,7 @@ class FloatingPlatformRobot(RobotCore):
             (self._num_envs, self._dim_robot_act), device=self._device, dtype=torch.float32
         )
         self._thrust_action = torch.zeros(
-            (self._num_envs, self._robot_cfg.num_thrusters), device=self._device, dtype=torch.float32
+            (self._num_envs, self._robot_cfg.num_thrusters, 3), device=self._device, dtype=torch.float32
         )
         if self._robot_cfg.has_reaction_wheel:
             self._reaction_wheel_action = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
@@ -102,10 +102,10 @@ class FloatingPlatformRobot(RobotCore):
         self._previous_actions[env_ids] = 0
 
     def set_initial_conditions(self, env_ids: torch.Tensor):
-        thrust_reset = torch.zeros_like(self._thrust_action)
-        self._robot.set_external_force_and_torque(
-            thrust_reset, thrust_reset, body_ids=self._thrusters_dof_idx, env_ids=env_ids
-        )
+        # thrust_reset = torch.zeros_like(self._thrust_action)
+        # self._robot.set_external_force_and_torque(
+        #    thrust_reset, thrust_reset, body_ids=self._thrusters_dof_idx, env_ids=env_ids
+        # )
         locking_joints = torch.zeros((len(env_ids), 3), device=self._device)
         self._robot.set_joint_velocity_target(locking_joints, env_ids=env_ids)
         self._robot.set_joint_position_target(locking_joints, env_ids=env_ids)
@@ -156,12 +156,12 @@ class FloatingPlatformRobot(RobotCore):
             thrust_scale = self._robot_cfg.max_thrust
 
         # Apply thrust to thrusters, based on whether reaction wheel is present
-        self._thrust_action = actions[:, : self._robot_cfg.num_thrusters].float() * thrust_scale
+        self._thrust_action[:, :, -1] = actions[:, : self._robot_cfg.num_thrusters].float() * thrust_scale
         # transform the 2D thrust actions into 3D forces and torques with x and y components set to zero and z components based on the thrust actions
-        self._thrust_action = self._thrust_action.unsqueeze(2).expand(-1, -1, 3)
-        self._thrust_action = torch.cat(
-            (torch.zeros_like(self._thrust_action[:, :, :2]), self._thrust_action[:, :, 2:]), dim=2
-        )
+        # self._thrust_action = self._thrust_action.unsqueeze(2).expand(-1, -1, 3)
+        # self._thrust_action = torch.cat(
+        #    (torch.zeros_like(self._thrust_action[:, :, :2]), self._thrust_action[:, :, 2:]), dim=2
+        # )
 
         if self._robot_cfg.has_reaction_wheel:
             # Separate continuous control for reaction wheel
