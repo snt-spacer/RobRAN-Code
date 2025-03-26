@@ -16,6 +16,7 @@ from .go_to_pose import GoToPoseTask  # noqa: F401, F403
 from .go_to_position import GoToPositionTask  # noqa: F401, F403
 from .go_to_position_with_obstacles import GoToPositionWithObstaclesTask  # noqa: F401, F403
 from .push_block import PushBlockTask  # noqa: F401, F403
+from .race_gates import RaceGatesTask  # noqa: F401, F403
 from .race_waypoints import RaceWaypointsTask  # noqa: F401, F403
 from .race_wayposes import RaceWayposesTask  # noqa: F401, F403
 from .task_core import TaskCore  # noqa: F401, F403
@@ -31,3 +32,4 @@ TASK_FACTORY.register("RaceWaypoints", RaceWaypointsTask)
 TASK_FACTORY.register("RaceWayposes", RaceWayposesTask)
 TASK_FACTORY.register("TrackVelocities", TrackVelocitiesTask)
 TASK_FACTORY.register("GoToPositionWithObstacles", GoToPositionWithObstaclesTask)
+TASK_FACTORY.register("RaceGates", RaceGatesTask)

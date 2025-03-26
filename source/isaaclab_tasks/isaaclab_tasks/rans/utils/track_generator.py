@@ -8,6 +8,8 @@ import numpy as np
 import torch
 from scipy.special import binom
 
+from . import PerEnvSeededRNG
+
 
 def bernstein(n, k, t):
     return binom(n, k) * t**k * (1.0 - t) ** (n - k)
@@ -28,6 +30,7 @@ class TrackGenerator:
         rad: float = 0.2,
         edgy: float = 0.0,
         device: str = "cuda",
+        rng: PerEnvSeededRNG | None = None,
     ) -> None:
         """Initializes the TrackGenerator.
 
@@ -54,6 +57,10 @@ class TrackGenerator:
         self._rad = rad
         self._edgy = edgy
         self._device = device
+        if rng is None:
+            raise ValueError("A random number generator must be provided.")
+        self._rng = rng
+
         self._num_points_per_segment = num_points_per_segment
 
         # Compute the angle between the two segments map it to [0, 1]
@@ -86,7 +93,7 @@ class TrackGenerator:
         points = torch.gather(points, 1, ids.unsqueeze(-1).expand(-1, -1, points.size(2)))
         return points
 
-    def get_random_points(self, num_envs: int, seeds=0) -> torch.Tensor:
+    def get_random_points(self, ids: torch.Tensor | None = None) -> torch.Tensor:
         """Create n random points in the unit square, which are at least *mindst* apart, then scale them.
 
         Args:
@@ -99,15 +106,19 @@ class TrackGenerator:
 
         # This creates an artificial grid to sample from
         # Generate equal probability weights for each cell in the grid
-        weights = torch.ones((num_envs, self._num_cells * self._num_cells), device=self._device)
+        # weights = torch.ones((num_envs, self._num_cells * self._num_cells), device=self._device)
         # Using a multinomial distribution, sample N cells without replacement
-        ids = torch.multinomial(weights, num_samples=self._max_num_points, replacement=False)
+        cell_idxs = self._rng.sample_unique_integers_torch(
+            0, self._num_cells * self._num_cells, self._max_num_points, ids=ids
+        )
+        # ids = torch.multinomial(weights, num_samples=self._max_num_points, replacement=False)
         # Compute the x and y coordinates of the sampled cells
-        x = ids % self._num_cells
-        y = ids // self._num_cells
+        x = cell_idxs % self._num_cells
+        y = cell_idxs // self._num_cells
         # Add noise to the coordinates so that the problem becomes continuous
-        noise = torch.rand((num_envs, self._max_num_points, 2), device=self._device) * self._min_point_distance
-        xy = torch.stack([x, y], dim=2) * self._min_point_distance * 2 + noise - 0.5
+        noise = self._rng.sample_uniform_torch(-0.5, 0.5, (self._max_num_points, 2), ids=ids)
+        # torch.rand((num_envs, self._max_num_points, 2), device=self._device) * self._min_point_distance
+        xy = torch.stack([x, y], dim=2) * self._min_point_distance * 2 + noise  # - 0.5
         return xy * self._scale
 
     @staticmethod
@@ -149,7 +160,9 @@ class TrackGenerator:
         ang = self._p * ang1 + (1 - self._p) * ang2 + (torch.abs(ang2 - ang1) > np.pi) * np.pi
         return points[:, :-1], ang
 
-    def get_curve_tangents_non_fixed_points(self, points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_curve_tangents_non_fixed_points(
+        self, points: torch.Tensor, rng_ids: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Given a set of points, compute the tangents of the curve that passes through them.
         Unlike get_curve_tangents, this function will prune a random number of points from the input points tensor.
         The method to achieve this is convoluted, if we were looping around all the tensor elements it would be straight
@@ -197,13 +210,15 @@ class TrackGenerator:
         # 2.a. First we pick a random number of points to prune, between 0 and max_points_to_prune
         # It's expressed as a fixed shape tensor to enable batch operations.
         # Using a multinomial distribution here would result in an uneven distribution of the number of points pruned.
-        num = torch.randint(0, max_points_to_prune, (points.shape[0],), device=self._device)
+        num = self._rng.sample_integer_torch(0, max_points_to_prune, (1,), ids=rng_ids)
+        # num = torch.randint(0, max_points_to_prune, (points.shape[0],), device=self._device)
         x = torch.arange(max_points_to_prune, device=self._device).unsqueeze(0).expand(points.shape[0], -1)
         pruning_mask = torch.ones((points.shape[0], max_points_to_prune), device=self._device, dtype=torch.int)
         pruning_mask[x > num.unsqueeze(1)] = 0
         # 2.b. We then sample the ids to prune
-        weights = torch.ones((points.shape[0], points.shape[1] - 1), device=self._device)
-        ids_to_prune = torch.multinomial(weights, num_samples=max_points_to_prune, replacement=False)
+        ids_to_prune = self._rng.sample_unique_integers_torch(
+            0, self._max_num_points - 1, max_points_to_prune, ids=rng_ids
+        ).long()
         # 2.c. We then multiply the two so that points that don't have to be pruned are set to the maximum number of points + 1
         # This way we can easily filter them out later
         final_ids_to_prune = pruning_mask * ids_to_prune + (1 - pruning_mask) * (self._max_num_points - 1)
@@ -439,7 +454,10 @@ class TrackGenerator:
         return points, tangents, num_points_per_track, curve
 
     def generate_tracks_points(
-        self, num_tracks: int, prev_points: torch.Tensor | None = None
+        self,
+        ids: torch.Tensor | None = None,
+        prev_points: torch.Tensor | None = None,
+        prev_ids: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """Generate random tracks but only return the points.
 
@@ -451,36 +469,41 @@ class TrackGenerator:
             A tuple containing the points and the tangents.
             The points are a 3D tensor of shape [num_tracks, num_points, 2].
             The tangents are a 2D tensor of shape [num_tracks, num_points]."""
-        # Generate twice as many tracks as needed.
-        # This is because some tracks may be discarded if they do not meet the minimum angle requirement.
-        num_tracks_tmp = num_tracks * 2
-        if num_tracks_tmp < 100:
-            num_tracks_tmp = 100
+
+        # Generate an ordered set of ids
+        if prev_ids is None:
+            prev_ids = torch.arange(0, len(ids), device=self._device)
         # Generate random points
-        points = self.get_random_points(num_tracks_tmp)
+        points = self.get_random_points(ids=ids)
         # Check if the angles created by the different segments are greater than the minimum angle allowed
         angles = self.compute_angle_unsorted(points)
         keep = torch.prod(angles > self._min_angle, dim=1) != 0
-        # Keep only the tracks that meet the minimum angle requirement
-        points = points[keep]
-        # Get the number of points in the previous batch
+        # Assign the newly generated points to the correct ids
         if prev_points is not None:
-            num_prev = prev_points.shape[0]
-            points = torch.cat([prev_points, points], dim=0)
+            prev_points[prev_ids] = points
         else:
-            num_prev = 0
-        # If the number of points is less than the number of tracks, generate more points
-        tangents = None
-        if (keep.sum() + num_prev) < num_tracks:
-            points, tangents = self.generate_tracks_points(num_tracks, prev_points=points)
-        # If the number of points is greater than the number of tracks, discard the extra points
-        if (keep.sum() + num_prev) >= num_tracks:
-            points = points[:num_tracks]
-            points, tangents = self.get_curve_tangents(points)
-        return points, tangents
+            prev_points = points
+        # Get the local ids that need to be regenerated
+        prev_ids = prev_ids[torch.logical_not(keep)]
+        # Get the global ids that need to be regenerated
+        ids_to_regenerate = ids[torch.logical_not(keep)]
+
+        # Check if we are done
+        if keep.sum() == len(ids):
+            prev_points, tangents = self.get_curve_tangents(prev_points)
+        else:
+            prev_point, tangents = self.generate_tracks_points(
+                ids_to_regenerate.clone(), prev_points=prev_points.clone(), prev_ids=prev_ids.clone()
+            )
+
+        return prev_points, tangents
 
     def generate_tracks_points_non_fixed_points(
-        self, num_tracks: int, prev_points: torch.Tensor | None = None
+        self,
+        ids: torch.Tensor,
+        prev_points: torch.Tensor | None = None,
+        prev_ids: torch.Tensor | None = None,
+        og_ids: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
         """Generate random tracks but only return the points.
         Unlike generate_tracks_points, this function will prune a random number of points from the input points tensor.
@@ -494,33 +517,32 @@ class TrackGenerator:
             The points are a 3D tensor of shape [num_tracks, num_points, 2].
             The tangents are a 2D tensor of shape [num_tracks, num_points].
             The number of points per track is a 1D tensor of shape [num_tracks]."""
-        # Generate twice as many tracks as needed.
-        # This is because some tracks may be discarded if they do not meet the minimum angle requirement.
-        num_tracks_tmp = num_tracks * 2
-        if num_tracks_tmp < 100:
-            num_tracks_tmp = 100
-        # Generate random points
-        points = self.get_random_points(num_tracks_tmp)
+        # Generate an ordered set of ids
+        if prev_ids is None:
+            prev_ids = torch.arange(0, len(ids), device=self._device)
+            og_ids = ids.clone()
+        points = self.get_random_points(ids=ids)
         # Check if the angles created by the different segments are greater than the minimum angle allowed
         angles = self.compute_angle_unsorted(points)
         keep = torch.prod(angles > self._min_angle, dim=1) != 0
-        # Keep only the tracks that meet the minimum angle requirement
-        points = points[keep]
-        # Get the number of points in the previous batch
+        # Assign the newly generated points to the correct ids
         if prev_points is not None:
-            num_prev = prev_points.shape[0]
-            points = torch.cat([prev_points, points], dim=0)
+            prev_points[prev_ids] = points
         else:
-            num_prev = 0
-        # If the number of points is less than the number of tracks, generate more points
-        tangents = None
-        num_points_per_track = None
-        if (keep.sum() + num_prev) < num_tracks:
-            points, tangents, num_points_per_track = self.generate_tracks_points_non_fixed_points(
-                num_tracks, prev_points=points
+            prev_points = points
+        # Get the local ids that need to be regenerated
+        prev_ids = prev_ids[torch.logical_not(keep)]
+        # Get the global ids that need to be regenerated
+        ids_to_regenerate = ids[torch.logical_not(keep)]
+
+        # Check if we are done
+        if keep.sum() == len(ids):
+            prev_points, tangents, num_points_per_track = self.get_curve_tangents_non_fixed_points(
+                prev_points, rng_ids=og_ids
             )
-        # If the number of points is greater than the number of tracks, discard the extra points
-        if (keep.sum() + num_prev) >= num_tracks:
-            points = points[:num_tracks]
-            points, tangents, num_points_per_track = self.get_curve_tangents_non_fixed_points(points)
-        return points, tangents, num_points_per_track
+        else:
+            prev_points, tangents, num_points_per_track = self.generate_tracks_points_non_fixed_points(
+                ids_to_regenerate.clone(), prev_points=prev_points.clone(), prev_ids=prev_ids.clone(), og_ids=og_ids
+            )
+
+        return prev_points, tangents, num_points_per_track

@@ -268,6 +268,14 @@ class RobotCore:
     def configure_gym_env_spaces(self) -> None:
         raise NotImplementedError
 
+    @property
+    def eval_data(self) -> dict:
+        raise NotImplementedError
+
+    @property
+    def eval_data_keys(self) -> list[str]:
+        raise NotImplementedError
+
     # We wrap around the ArticulationData properties to make them modifiable from the
     # class that inherits from RobotCore. This is done so that we can have a unique interface
     # for all the robots that we create.

@@ -37,8 +37,8 @@ params:
           val: 0
         fixed_sigma: True
     mlp:
-      units: [64, 64]
-      activation: tanh
+      units: [128,128]
+      activation: elu
       d2rl: False
 
       initializer:
@@ -59,6 +59,7 @@ params:
     mixed_precision: False
     normalize_input: True
     normalize_value: True
+    value_bootstrap: True
     num_actors: -1  # configured from the script (based on num_envs)
     reward_shaper:
       scale_value: 0.1

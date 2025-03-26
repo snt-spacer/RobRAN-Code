@@ -70,6 +70,12 @@ agent:
     experiment_name: ""
     write_interval: auto
     checkpoint_interval: auto
+    wandb: True             # whether to use Weights & Biases
+    wandb_kwargs:          # wandb kwargs (see https://docs.wandb.ai/ref/python/init)
+      project: leatherback_direct
+      entity: spacer-rl
+      group: 'zeroG'
+      notes: ''
 
 
 # Sequential trainer

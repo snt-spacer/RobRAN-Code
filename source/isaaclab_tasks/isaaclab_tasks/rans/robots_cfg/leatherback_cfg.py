@@ -41,9 +41,9 @@ class LeatherbackRobotCfg(RobotCoreCfg):
         "Knuckle__Upright__Front_Left",
     ]
 
-    rew_energy_penalty = -0.025
+    rew_energy_penalty = 0  # -0.025
     rew_action_rate_scale = -0.12
-    rew_joint_accel_scale = -2.5e-6
+    rew_joint_accel_scale = 0  # -2.5e-6
 
     steering_scale = math.pi / 4.0
     """Multiplier for the steering position. The action is in the range [-1, 1]"""

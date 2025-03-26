@@ -174,3 +174,18 @@ class LeatherbackRobot(RobotCore):
         action_space = vector.utils.batch_space(single_action_space, self._num_envs)
 
         return single_action_space, action_space
+
+    @property
+    def eval_data_keys(self) -> list[str]:
+        return ["position", "heading", "linear_velocity", "angular_velocity", "throttle", "steering"]
+
+    @property
+    def eval_data(self) -> dict:
+        return {
+            "position": self.root_pos_w,
+            "heading": self.heading_w,
+            "linear_velocity": self.root_lin_vel_b,
+            "angular_velocity": self.root_ang_vel_b,
+            "throttle": self._throttle_action,
+            "steering": self._steering_action,
+        }

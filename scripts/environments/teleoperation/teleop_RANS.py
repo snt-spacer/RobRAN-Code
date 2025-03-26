@@ -20,6 +20,7 @@ parser.add_argument(
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--teleop_device", type=str, default="keyboard", help="Device for interacting with environment")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--robot_name", type=str, default=None, help="Name of the robot.")
 parser.add_argument("--sensitivity", type=float, default=1.0, help="Sensitivity factor.")
 parser.add_argument(
     "--algorithm",
@@ -53,38 +54,43 @@ from isaaclab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg
 
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
+a = 0.99
+b = 0.90
 
 
-def pre_process_actions(delta_pose: torch.Tensor, gripper_command: bool) -> torch.Tensor:
+def pre_process_actions(prev_action: torch.Tensor, delta_pose: torch.Tensor, gripper_command: bool) -> torch.Tensor:
     """Pre-process actions for the environment."""
     # compute actions based on environment
     if "Reach" in args_cli.task:
         # note: reach is the only one that uses a different action space
         # compute actions
         return delta_pose
-    elif "Jetbot" in hydra_args[0]:
-        if delta_pose[0][0] > 0:
-            return torch.tensor([[1, 1]], device=delta_pose.device)
-        elif delta_pose[0][0] < 0:
-            return torch.tensor([[-1, -1]], device=delta_pose.device)
-        elif delta_pose[0][1] > 0:
-            return torch.tensor([[-0.25, 0.25]], device=delta_pose.device)
-        elif delta_pose[0][1] < 0:
-            return torch.tensor([[0.25, -0.25]], device=delta_pose.device)
-        else:
-            return torch.tensor([[0, 0]], device=delta_pose.device)
-    elif "Leatherback" in hydra_args[0]:
-        action = torch.tensor([[0, 0]], device=delta_pose.device)
-
-        if delta_pose[0][0] > 0:
-            action += torch.tensor([[1, 0]], device=delta_pose.device)
-        if delta_pose[0][0] < 0:
-            action += torch.tensor([[-1, 0]], device=delta_pose.device)
-        if delta_pose[0][1] > 0:
-            action += torch.tensor([[0, 1]], device=delta_pose.device)
-        if delta_pose[0][1] < 0:
-            action += torch.tensor([[0, -1]], device=delta_pose.device)
-        return action
+    elif args_cli.robot_name == "Jetbot":
+        if delta_pose[0][0] > 0:  # forward
+            prev_action = prev_action * 0.9 + torch.tensor([[1, 1]], device=delta_pose.device) * 0.01
+        elif delta_pose[0][0] < 0:  # backward
+            prev_action = prev_action * 0.9 + torch.tensor([[-1, -1]], device=delta_pose.device) * 0.01
+        elif delta_pose[0][1] > 0:  # left
+            prev_action = prev_action * 0.9 + torch.tensor([[-1, 1]], device=delta_pose.device) * 0.01
+        elif delta_pose[0][1] < 0:  # right
+            prev_action = prev_action * 0.9 + torch.tensor([[1, -1]], device=delta_pose.device) * 0.01
+        if gripper_command:
+            prev_action.fill_(0)
+        prev_action.clamp_(-1, 1)
+        return prev_action
+    elif args_cli.robot_name == "Leatherback":
+        if delta_pose[0][0] > 0:  # forward
+            prev_action[:, 0] = prev_action[:, 0] * a + 1 * (1 - a)
+        if delta_pose[0][0] < 0:  # backward
+            prev_action[:, 0] = prev_action[:, 0] * a - 1 * (1 - a)
+        if delta_pose[0][1] > 0:  # left
+            prev_action[:, 1] = prev_action[:, 1] * b + 1 * (1 - b)
+        if delta_pose[0][1] < 0:  # right
+            prev_action[:, 1] = prev_action[:, 1] * b - 1 * (1 - b)
+        if gripper_command:
+            prev_action.fill_(0)
+        prev_action.clamp_(-1, 1)
+        return prev_action
     else:
         # resolve gripper command
         gripper_vel = torch.zeros(delta_pose.shape[0], 1, device=delta_pose.device)
@@ -130,7 +136,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # reset environment
     env.reset()
     teleop_interface.reset()
-
+    prev_action = torch.zeros((1, 2), device=env.unwrapped.device)
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -141,9 +147,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # convert to torch
             delta_pose = torch.tensor(delta_pose, device=env.unwrapped.device).repeat(env.unwrapped.num_envs, 1)
             # pre-process actions
-            actions = pre_process_actions(delta_pose, gripper_command)
+            prev_action = pre_process_actions(prev_action, delta_pose, gripper_command)
             # apply actions
-            env.step(actions)
+            env.step(prev_action)
 
     # close the simulator
     env.close()

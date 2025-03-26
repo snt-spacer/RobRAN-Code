@@ -233,3 +233,11 @@ class TaskCore:
 
     def register_robot(self, robot: RobotCore) -> None:
         pass
+
+    @property
+    def eval_data(self) -> dict:
+        raise NotImplementedError
+
+    @property
+    def eval_data_keys(self) -> list[str]:
+        raise NotImplementedError
