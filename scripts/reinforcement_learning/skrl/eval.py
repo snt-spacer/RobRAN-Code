@@ -3,12 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""
-Script to play a checkpoint of an RL agent from skrl.
-
-Visit the skrl documentation (https://skrl.readthedocs.io) to see the examples structured in
-a more user-friendly way.
-"""
+"""Script to play a checkpoint if an RL agent from skrl."""
 
 """Launch Isaac Sim Simulator first."""
 
@@ -28,11 +23,6 @@ parser.add_argument("--num_envs", type=int, default=None, help="Number of enviro
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint.")
 parser.add_argument(
-    "--use_pretrained_checkpoint",
-    action="store_true",
-    help="Use the pre-trained checkpoint from Nucleus.",
-)
-parser.add_argument(
     "--ml_framework",
     type=str,
     default="torch",
@@ -43,20 +33,20 @@ parser.add_argument(
     "--algorithm",
     type=str,
     default="PPO",
-    # choices=["AMP", "PPO", "IPPO", "MAPPO"],
+    # choices=["PPO", "IPPO", "MAPPO"],
     help="The RL algorithm used for training the skrl agent.",
 )
-parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
 args_cli, hydra_args = parser.parse_known_args()
+# clear out sys.argv for Hydra
+sys.argv = [sys.argv[0]] + hydra_args
+
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
-
-# clear out sys.argv for Hydra
-sys.argv = [sys.argv[0]] + hydra_args
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -65,15 +55,15 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
+import numpy as np
 import os
-import time
 import torch
 
 import skrl
 from packaging import version
 
 # check for minimum supported skrl version
-SKRL_VERSION = "1.4.1"
+SKRL_VERSION = "1.3.0"
 if version.parse(skrl.__version__) < version.parse(SKRL_VERSION):
     skrl.logger.error(
         f"Unsupported skrl version: {skrl.__version__}. "
@@ -94,11 +84,12 @@ from isaaclab.envs import (
     multi_agent_to_single_agent,
 )
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
-import isaaclab_tasks  # noqa: F401
+from isaaclab_tasks.rans.utils.perf_metrics import PerformanceMetrics
+from isaaclab_tasks.rans.utils.performance_evaluator import PerformanceEvaluator
+from isaaclab_tasks.rans.utils.plot_eval_multi import plot_episode_data_virtual
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
@@ -109,6 +100,11 @@ agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"sk
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+
+    # override configurations with non-hydra CLI arguments
+    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
+    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+
     """Play with skrl agent."""
     # configure the ML framework into the global skrl variable
     if args_cli.ml_framework.startswith("jax"):
@@ -116,7 +112,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
-
     experiment_cfg = agent_cfg
 
     # create isaac environment
@@ -140,24 +135,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     # get checkpoint path
-    if args_cli.use_pretrained_checkpoint:
-        resume_path = get_published_pretrained_checkpoint("skrl", args_cli.task)
-        if not resume_path:
-            print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
-            return
-    elif args_cli.checkpoint:
+    if args_cli.checkpoint:
         resume_path = os.path.abspath(args_cli.checkpoint)
     else:
         resume_path = get_checkpoint_path(
             log_root_path, run_dir=f".*_{algorithm}_{args_cli.ml_framework}", other_dirs=["checkpoints"]
         )
     log_dir = os.path.dirname(os.path.dirname(resume_path))
-
-    # get environment (physics) dt for real-time evaluation
-    try:
-        dt = env.physics_dt
-    except AttributeError:
-        dt = env.unwrapped.physics_dt
 
     # wrap for video recording
     if args_cli.video:
@@ -182,39 +166,74 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = Runner(env, experiment_cfg)
 
     print(f"[INFO] Loading model checkpoint from: {resume_path}")
+    if "Single" in args_cli.task:
+        task_name = env.env.cfg.task_name
+    else:
+        task_name = args_cli.task.split("-")[2]
+
+    print_all_agents = False
+
     runner.agent.load(resume_path)
     # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
+
+    # Declare dictionary to store obs, actions, and rewards
+    ep_data = {"act": [], "obs": [], "rews": [], "dones": [], "terminations": []}
+
+    # #if horizon is an argument, use it, otherwise use 250
+    # if hasattr(env.env.cfg, "horizon"):
+    #     horizon = env.env.cfg.horizon
+    # else:
+    horizon = 1000
 
     # reset environment
     obs, _ = env.reset()
     timestep = 0
     # simulate environment
-    while simulation_app.is_running():
-        start_time = time.time()
+    # while simulation_app.is_running():
+    print("Evaluation started over ", horizon, " steps for ", args_cli.num_envs, " environments.")
 
-        # run everything in inference mode
+    for _ in range(horizon):  # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            outputs = runner.agent.act(obs, timestep=0, timesteps=0)
-            # - multi-agent (deterministic) actions
-            if hasattr(env, "possible_agents"):
-                actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
-            # - single-agent (deterministic) actions
-            else:
-                actions = outputs[-1].get("mean_actions", outputs[0])
+            actions = runner.agent.act(obs, timestep=0, timesteps=0)[0]
             # env stepping
-            obs, _, _, _, _ = env.step(actions)
+            obs, rews, dones, terminations, _ = env.step(actions)
+            ep_data["act"].append(actions.cpu().numpy())
+            ep_data["obs"].append(obs.cpu().numpy())
+            ep_data["rews"].append(rews.cpu().numpy())
+            ep_data["dones"].append(dones.cpu().numpy())
+            ep_data["terminations"].append(terminations.cpu().numpy())
+
         if args_cli.video:
             timestep += 1
-            # exit the play loop after recording one video
+            # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
 
-        # time delay for real-time evaluation
-        sleep_time = dt - (time.time() - start_time)
-        if args_cli.real_time and sleep_time > 0:
-            time.sleep(sleep_time)
+    # Convert data to numpy arrays
+    ep_data["rews"] = np.array(ep_data["rews"]).squeeze(axis=-1)
+    ep_data["obs"], ep_data["rews"], ep_data["act"] = map(np.array, (ep_data["obs"], ep_data["rews"], ep_data["act"]))
+
+    save_dir = os.path.join(log_root_path, log_dir, f"eval_{args_cli.num_envs}_envs", task_name)
+    print("Saving plots in ", save_dir)
+    # Plot the episode data
+    if print_all_agents:
+        print("Plotting data for all agents.")
+        plot_episode_data_virtual(
+            ep_data,
+            save_dir=save_dir,
+            task=task_name,
+            all_agents=print_all_agents,
+        )
+    # Run performance evaluation
+    evaluator = PerformanceEvaluator(task_name, env.env.cfg.robot_name, ep_data, horizon)
+    evaluator = PerformanceMetrics(
+        task_name, env.env.cfg.robot_name, ep_data, horizon, plot_metrics=True, save_path=save_dir
+    )
+    evaluator.compute_basic_metrics()
+    results = evaluator.evaluate()
+    print_dict(results, nesting=4)
 
     # close the simulator
     env.close()

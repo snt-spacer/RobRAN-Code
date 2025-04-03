@@ -83,7 +83,7 @@ def plot_episode_data_virtual(ep_data: dict, save_dir: str, all_agents: bool = F
         task_metrics = []
 
         task_metrics = []
-        all_phi_headings = []
+        all_cos_sin_phi_headings = []
 
         if task == "GoToPosition":
             task_metrics = [
@@ -104,7 +104,7 @@ def plot_episode_data_virtual(ep_data: dict, save_dir: str, all_agents: bool = F
             ]
             all_distances = state_history[:, :, 0]
             all_cos_sin_headings = state_history[:, :, 1:3]
-            all_phi_headings = state_history[:, :, 3:4]
+            all_cos_sin_phi_headings = state_history[:, :, 3:5]
         elif task == "TrackVelocities":
             task_metrics = [
                 plot_distance_TrackXYVelocity,
@@ -133,12 +133,12 @@ def plot_episode_data_virtual(ep_data: dict, save_dir: str, all_agents: bool = F
         args = {
             "all_distances": all_distances,
             "all_cos_sin_headings": all_cos_sin_headings,
-            "all_phi_headings": all_phi_headings,
+            "all_cos_sin_phi_headings": all_cos_sin_phi_headings,
             "best_agent": best_agent,
             "worst_agent": worst_agent,
             "rand_agent": rand_agent,
             "fig_count": fig_count,
-            "save_dir": save_dir,
+            "save_dir": save_dir + "/",
             "reward_history": reward_history,
             "control_history": control_history,
             "state_history": state_history,
@@ -362,7 +362,7 @@ def plot_distance_GoToPose(
 
 def plot_all_distances_GoToPose(
     all_distances: np.ndarray,
-    all_phi_headings: np.ndarray,
+    all_cos_sin_phi_headings: np.ndarray,
     state_history: np.ndarray,
     tgrid: np.ndarray,
     save_dir: str,
@@ -373,8 +373,9 @@ def plot_all_distances_GoToPose(
     Plot all distances over all episodes."""
 
     all_position_distances = all_distances
-    all_heading_distances = np.arctan2(state_history[:, :, 9].flatten(), state_history[:, :, 8].flatten())
-    all_heading_distances = all_phi_headings
+    all_phi_heading_distances = np.arctan2(
+        all_cos_sin_phi_headings[:, :, 1], all_cos_sin_phi_headings[:, :, 0]
+    )  # target heading error
 
     fig_count += 1
     fig, ax = plt.subplots()
@@ -396,17 +397,17 @@ def plot_all_distances_GoToPose(
     fig_count += 1
     fig, ax = plt.subplots()
     cmap = plt.colormaps["tab20"]
-    for j in range(all_heading_distances.shape[1]):
+    for j in range(all_phi_heading_distances.shape[1]):
         ax.plot(
             tgrid,
-            all_heading_distances[:, j],
+            all_phi_heading_distances[:, j],
             alpha=1.0,
             color=cmap(j % cmap.N),
             linewidth=1.0,
         )
     plt.xlabel("Time steps")
     plt.ylabel("Distance [rad]")
-    plt.title(f"All distances over {all_heading_distances.shape[1]} episodes")
+    plt.title(f"All distances over {all_phi_heading_distances.shape[1]} episodes")
     plt.grid()
     plt.savefig(save_dir + "all_heading_distances")
     return fig_count
@@ -813,7 +814,7 @@ def plot_actions_histogram(control_history: np.ndarray, save_dir: str, fig_count
     freq = pd.DataFrame(
         data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]),
         columns=[f"T{i + 1}" for i in range(control_history.shape[2])],
-    )
+    ).astype(float)
     mean_freq = freq.mean()
     plt.bar(mean_freq.index, mean_freq.values)
     plt.title(f"Mean number of thrusts in {control_history.shape[0]} episodes")
@@ -838,7 +839,7 @@ def plot_actions_box_plot(control_history: np.ndarray, save_dir: str, fig_count:
     freq = pd.DataFrame(
         data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]),
         columns=[f"T{i + 1}" for i in range(control_history.shape[2])],
-    )
+    ).astype(float)
     sns.boxplot(data=freq, orient="h")
     plt.title(f"Mean number of thrusts in {control_history.shape[0]} episodes")
     plt.savefig(save_dir + "actions_boxplot")
@@ -853,12 +854,18 @@ def plot_trajectories_GoToXY(
     """
     Plot trajectories of all agents in 2D space."""
 
-    # from vectorial distance and angles to cartesian coordinates
+    # store initial heading of robot wrt to target
+    initial_heading = np.arctan2(all_cos_sin_headings[0, :, 1], all_cos_sin_headings[0, :, 0])
+    # store initial distance
+    initial_distance = all_distances[0, :]
+    # convert the headings using the initial heading
+    all_headings = np.arctan2(all_cos_sin_headings[:, :, 1], all_cos_sin_headings[:, :, 0]) - initial_heading
+    all_headings = np.unwrap(all_headings, axis=0)
+    # now generate the trajectories combining distances and headings
     positions = np.zeros((all_distances.shape[0], all_distances.shape[1], 2))
-    for i in range(all_distances.shape[0]):
-        for j in range(all_distances.shape[1]):
-            positions[i, j, 0] = all_distances[i, j] * all_cos_sin_headings[i, j, 0]
-            positions[i, j, 1] = all_distances[i, j] * all_cos_sin_headings[i, j, 1]
+    positions[:, :, 0] = (all_distances[:, :] - initial_distance) * np.cos(all_headings)
+    positions[:, :, 1] = (all_distances[:, :] - initial_distance) * np.sin(all_headings)
+
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
@@ -928,7 +935,15 @@ def plot_one_episode(
     ang_vel = []
 
     if task == "GoToPosition":
-        task_data_label = ["error_x", "error_y"]
+        task_data_label = [
+            "dist_to_target",
+            "cos_error_heading",
+            "sin_error_heading",
+            "lin_vel_x",
+            "lin_vel_y",
+            "ang_vel",
+            "prev_action",
+        ]
         task_metrics = [
             # plot_single_xy_position,
             # plot_single_xy_position_error,
@@ -942,10 +957,15 @@ def plot_one_episode(
 
     elif task == "GoToPose":
         task_data_label = [
-            "error_x",
-            "error_y",
+            "dist_to_target",
             "cos_error_heading",
             "sin_error_heading",
+            "cos_error_phi",
+            "sin_error_phi",
+            "lin_vel_x",
+            "lin_vel_y",
+            "ang_vel",
+            "prev_action",
         ]
         task_metrics = [
             # plot_single_xy_position,
@@ -963,7 +983,7 @@ def plot_one_episode(
         ang_vel = state_history[:, 7:8]
 
     elif task == "TrackVelocities":
-        task_data_label = ["error_vx", "error_vy"]
+        task_data_label = ["error_vx", "error_vy", "error_omega", "lin_vel_x", "lin_vel_y", "ang_vel", "prev_action"]
         task_metrics = [
             plot_single_TrackXYVelocity_distance_to_target,
             plot_single_TrackXYVelocity_log_distance_to_target,
@@ -976,20 +996,53 @@ def plot_one_episode(
         ang_vel = state_history[:, 5:6]
 
     elif task == "GoThrouhPositions":
-        task_data_label = ["error_vx", "error_vy", "error_omega"]
+        task_data_label = [
+            "lin_vel_x",
+            "lin_vel_y",
+            "ang_vel",
+            "dist_to_target",
+            "cos_error_heading",
+            "sin_error_heading",
+            "dist_to_target_2",
+            "cos_error_heading_2",
+            "sin_error_heading_2",
+            "prev_action",
+        ]
         task_metrics = []
         lin_vel = state_history[:, :2]
         ang_vel = state_history[:, 2:3]
         dist = state_history[:, 3]
         cos_sin_heading = state_history[:, 4:6]
+        # self._task_data[:, 0] = The linear velocity of the robot along the x-axis.
+        # self._task_data[:, 1] = The linear velocity of the robot along the y-axis.
+        # self._task_data[:, 2] = The angular velocity of the robot.
+        # self._task_data[:, 3] = The distance between the robot and the target position.
+        # self._task_data[:, 4] = The cosine of the angle between the robot's heading and the target position.
+        # self._task_data[:, 5] = The sine of the angle between the robot's heading and the target position.
+        # self._task_data[:, 6] = The cosine of the angle between the robot's heading and the target heading.
+        # self._task_data[:, 7] = The sine of the angle between the robot's heading and the target heading.
+        # self._task_data[:, 8 + i*5] = The distance between the n th and the n+1 th goal.
+        # self._task_data[:, 9 + i*5] = The cosine of the angle between the n th goal and the n+1 th goal's position.
+        # self._task_data[:, 10 + i*5] = The sine of the angle between the n th goal and the n+1 th goal's position.
+        # self._task_data[:, 11 + i*5] = The cosine of the angle between the n th goal and the n+1 th goal's heading.
+        # self._task_data[:, 12 + i*5] = The sine of the angle between the n th goal and the n+1 th goal's heading.
 
     elif task == "GoThrouhPoses":
         task_data_label = [
-            "error_vx",
-            "error_vy",
-            "error_omega",
+            "lin_vel_x",
+            "lin_vel_y",
+            "ang_vel",
+            "dist_to_target",
             "cos_error_heading",
             "sin_error_heading",
+            "cos_error_phi",
+            "sin_error_phi",
+            "dist_to_target_2",
+            "cos_error_heading_2",
+            "sin_error_heading_2",
+            "cos_error_phi_2",
+            "sin_error_phi_2",
+            "prev_action",
         ]
         task_metrics = [
             # plot_single_TrackXYOVelocity_distance_to_target,
@@ -1028,14 +1081,7 @@ def plot_one_episode(
         fig_count = metric(**args)
         args["fig_count"] = fig_count
 
-    df_cols = [
-        "cos_theta",
-        "sin_theta",
-        "lin_vel_x",
-        "lin_vel_y",
-        "ang_vel_z",
-        "task_flag",
-    ] + task_data_label
+    df_cols = task_data_label
     pd.DataFrame.to_csv(
         pd.DataFrame(state_history[:, : len(df_cols)], columns=df_cols),
         save_dir + "states_episode.csv",
@@ -1146,10 +1192,12 @@ def plot_single_relative_heading(
     **kwargs,
 ) -> int:
     """
-    Plot heading of a single agent."""
+    Plot heading relative to target of a single agent."""
 
     headings = state_history[:, :2]
     angles = np.arctan2(headings[:, 1], headings[:, 0])
+    # transform to global frame
+    angles = np.arctan2(np.sin(angles), np.cos(angles))
     # plot position (x, y coordinates)
     fig_count += 1
     plt.figure(fig_count)

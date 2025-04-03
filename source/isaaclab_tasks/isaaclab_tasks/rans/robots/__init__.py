@@ -6,6 +6,7 @@
 from isaaclab_tasks.rans.utils.misc import factory
 
 from .floating_platform import FloatingPlatformRobot
+from .intball2 import IntBall2Robot
 from .jetbot import JetbotRobot
 from .kingfisher import KingfisherRobot
 from .leatherback import LeatherbackRobot
@@ -20,3 +21,4 @@ ROBOT_FACTORY.register("FloatingPlatform", FloatingPlatformRobot)
 ROBOT_FACTORY.register("ModularFreeflyer", ModularFreeflyerRobot)
 ROBOT_FACTORY.register("Kingfisher", KingfisherRobot)
 ROBOT_FACTORY.register("Turtlebot2", TurtleBot2Robot)
+ROBOT_FACTORY.register("IntBall2", IntBall2Robot)

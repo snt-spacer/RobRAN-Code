@@ -146,6 +146,15 @@ POSITION_GOAL_MARKER_CFG = VisualizationMarkersCfg(
 # Navigation goal markers.
 ##
 
+SPHERE_CFG = VisualizationMarkersCfg(
+    markers={
+        "sphere": sim_utils.SphereCfg(
+            radius=0.1,
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+        )
+    }
+)
+
 PIN_SPHERE_CFG = VisualizationMarkersCfg(
     markers={
         "pin_sphere": sim_utils.PinSphereCfg(

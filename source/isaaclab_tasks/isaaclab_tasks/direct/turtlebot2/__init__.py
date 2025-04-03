@@ -15,7 +15,7 @@ from . import agents
 # Register Gym environments.
 ##
 gym.register(
-    id="Isaac-TurtleBot2-TrackVelocities-Direct-v0",
+    id="Isaac-Turtlebot2-TrackVelocities-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_track_velocities_env:TurtleBot2TrackVelocitiesEnv",
     disable_env_checker=True,
     kwargs={
@@ -25,7 +25,7 @@ gym.register(
     },
 )
 gym.register(
-    id="Isaac-TurtleBot2-GoThroughPoses-Direct-v0",
+    id="Isaac-Turtlebot2-GoThroughPoses-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_go_through_poses_env:TurtleBot2GoThroughPosesEnv",
     disable_env_checker=True,
     kwargs={
@@ -36,7 +36,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-TurtleBot2-GoThroughPositions-Direct-v0",
+    id="Isaac-Turtlebot2-GoThroughPositions-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_go_through_positions_env:TurtleBot2GoThroughPositionsEnv",
     disable_env_checker=True,
     kwargs={
@@ -47,7 +47,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-TurtleBot2-GoToPose-Direct-v0",
+    id="Isaac-Turtlebot2-GoToPose-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_go_to_pose_env:TurtleBot2GoToPoseEnv",
     disable_env_checker=True,
     kwargs={
@@ -58,7 +58,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-TurtleBot2-GoToPosition-Direct-v0",
+    id="Isaac-Turtlebot2-GoToPosition-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_go_to_position_env:TurtleBot2GoToPositionEnv",
     disable_env_checker=True,
     kwargs={
@@ -69,7 +69,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-TurtleBot2-PushBlock-Direct-v0",
+    id="Isaac-Turtlebot2-PushBlock-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_push_block_env:TurtleBot2PushBlockEnv",
     disable_env_checker=True,
     kwargs={
@@ -80,7 +80,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-TurtleBot2-RaceWaypoints-Direct-v0",
+    id="Isaac-Turtlebot2-RaceWaypoints-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_race_waypoints_env:TurtleBot2RaceWaypointsEnv",
     disable_env_checker=True,
     kwargs={
@@ -91,7 +91,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-TurtleBot2-RaceWayposes-Direct-v0",
+    id="Isaac-Turtlebot2-RaceWayposes-Direct-v0",
     entry_point=f"{__name__}.turtlebot2_race_wayposes_env:TurtleBot2RaceWayposesEnv",
     disable_env_checker=True,
     kwargs={

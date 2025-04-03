@@ -27,6 +27,12 @@ parser.add_argument(
     action="store_true",
     help="When no checkpoint provided, use the last saved model. Otherwise use the best saved model.",
 )
+parser.add_argument(
+    "--algorithm",
+    type=str,
+    default="PPO",
+    help="The RL algorithm used for training the skrl agent.",
+)
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -49,7 +55,6 @@ import math
 import numpy as np
 import os
 
-from isaacsim.core.utils.viewports import set_camera_view
 from rl_games.common import env_configurations, vecenv
 from rl_games.common.player import BasePlayer
 from rl_games.torch_runner import Runner
@@ -66,12 +71,16 @@ from isaaclab.utils.dict import print_dict
 
 from isaaclab_rl.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
 
+from isaaclab_tasks.rans.utils.perf_metrics import PerformanceMetrics
 from isaaclab_tasks.rans.utils.plot_eval_multi import plot_episode_data_virtual
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
+algorithm = args_cli.algorithm.lower()
+agent_cfg_entry_point = "rl_games_cfg_entry_point" if algorithm in ["ppo"] else f"rl_games_{algorithm}_cfg_entry_point"
 
-@hydra_task_config(args_cli.task, "rl_games_cfg_entry_point")
+
+@hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
 
     # override configurations with non-hydra CLI arguments
@@ -79,9 +88,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
     """Play with RL-Games agent."""
-
-    set_camera_view([100.0, 100.0, 100.0], [0.0, 0.0, 0.0])
-
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rl_games", agent_cfg["params"]["config"]["name"])
     log_root_path = os.path.abspath(log_root_path)
@@ -106,9 +112,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     rl_device = agent_cfg["params"]["config"]["device"]
     clip_obs = agent_cfg["params"]["env"].get("clip_observations", math.inf)
     clip_actions = agent_cfg["params"]["env"].get("clip_actions", math.inf)
-
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
@@ -142,23 +148,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     if "Single" in args_cli.task:
         task_name = env.env.cfg.task_name
+        robot_name = env.env.cfg.robot_name
     else:
         task_name = args_cli.task.split("-")[2]
+        robot_name = agent_cfg["params"]["config"]["name"].split("_")[0]  # make first letter capital
+        robot_name = robot_name[0].upper() + robot_name[1:]
 
-    print_all_agents = True
+    print_all_agents = False
     # set number of actors into agent config
     agent_cfg["params"]["config"]["num_actors"] = env.unwrapped.num_envs
     # create runner from rl-games
     runner = Runner()
     runner.load(agent_cfg)
+
     # obtain the agent from the runner
     agent: BasePlayer = runner.create_player()
     agent.restore(resume_path)
     agent.reset()
 
     # Declare dictionary to store obs, actions, and rewards
-    ep_data = {"act": [], "obs": [], "rews": []}
-    horizon = 300
+    ep_data = {"act": [], "obs": [], "rews": [], "dones": []}
+    horizon = 1000
     # reset environment
     obs = env.reset()
     if isinstance(obs, dict):
@@ -187,6 +197,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         ep_data["act"].append(actions.cpu().numpy())
         ep_data["obs"].append(obs.cpu().numpy())
         ep_data["rews"].append(rews.cpu().numpy())
+        ep_data["dones"].append(dones.cpu().numpy())
 
         if args_cli.video:
             timestep += 1
@@ -196,15 +207,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # Convert data to numpy arrays
     ep_data["obs"], ep_data["rews"], ep_data["act"] = map(np.array, (ep_data["obs"], ep_data["rews"], ep_data["act"]))
+
     save_dir = os.path.join(log_root_path, log_dir, f"eval_{args_cli.num_envs}_envs", task_name)
     print("Saving plots in ", save_dir)
+
     # Plot the episode data
-    plot_episode_data_virtual(
-        ep_data,
-        save_dir=save_dir,
-        task=task_name,
-        all_agents=print_all_agents,
-    )
+    if print_all_agents:
+        print("Plotting data for all agents.")
+        plot_episode_data_virtual(
+            ep_data,
+            save_dir=save_dir,
+            task=task_name,
+            all_agents=print_all_agents,
+        )
+    # Run performance evaluation
+    # evaluator = PerformanceEvaluator(task_name, env.env.cfg.robot_name, ep_data, horizon)
+    evaluator = PerformanceMetrics(task_name, robot_name, ep_data, horizon, plot_metrics=True, save_path=save_dir)
+    evaluator.compute_basic_metrics()
+
+    results = evaluator.evaluate()
+    print_dict(results, nesting=4)
+
     # close the simulator
     env.close()
 
