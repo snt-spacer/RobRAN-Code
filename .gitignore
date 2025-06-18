@@ -62,6 +62,10 @@ _build
 
 # Files
 **/eval_data/*
+**/debug_images/*
+**/skrl_logs/*
+**/navbench_models/*
+**/results/*
 
 # Notebooks
 # **/*.ipynb

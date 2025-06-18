@@ -132,6 +132,8 @@ autodoc_mock_imports = [
     "torchvision",
     "numpy",
     "matplotlib",
+    "seaborn",
+    "pandas",
     "scipy",
     "carb",
     "warp",

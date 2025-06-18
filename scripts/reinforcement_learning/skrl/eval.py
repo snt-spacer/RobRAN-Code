@@ -36,6 +36,12 @@ parser.add_argument(
     # choices=["PPO", "IPPO", "MAPPO"],
     help="The RL algorithm used for training the skrl agent.",
 )
+parser.add_argument(
+    "--horizon",
+    type=int,
+    default=512,
+    help="The maximum number of steps in an episode.",
+)
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -87,8 +93,7 @@ from isaaclab.utils.dict import print_dict
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
-from isaaclab_tasks.rans.utils.perf_metrics import PerformanceMetrics
-from isaaclab_tasks.rans.utils.performance_evaluator import PerformanceEvaluator
+from isaaclab_tasks.rans.utils.performance_evaluator_v2 import PerformanceEvaluatorV2
 from isaaclab_tasks.rans.utils.plot_eval_multi import plot_episode_data_virtual
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
@@ -184,7 +189,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # if hasattr(env.env.cfg, "horizon"):
     #     horizon = env.env.cfg.horizon
     # else:
-    horizon = 1000
+    horizon = args_cli.horizon if args_cli.horizon is not None else 512
 
     # reset environment
     obs, _ = env.reset()
@@ -227,13 +232,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             all_agents=print_all_agents,
         )
     # Run performance evaluation
-    evaluator = PerformanceEvaluator(task_name, env.env.cfg.robot_name, ep_data, horizon)
-    evaluator = PerformanceMetrics(
-        task_name, env.env.cfg.robot_name, ep_data, horizon, plot_metrics=True, save_path=save_dir
-    )
-    evaluator.compute_basic_metrics()
-    results = evaluator.evaluate()
-    print_dict(results, nesting=4)
+    # evaluator = PerformanceEvaluator(task_name, env.env.cfg.robot_name, ep_data, horizon)
+    # evaluator = PerformanceMetrics(
+    #     task_name, env.env.cfg.robot_name, ep_data, horizon, plot_metrics=False, save_path=save_dir
+    # )
+    # evaluator.compute_basic_metrics()
+    # results = evaluator.evaluate()
+    # print_dict(results, nesting=4)
+    robot_name = env.env.cfg.robot_name
+
+    combo_id = f"{robot_name}_{task_name}_skrl"  # lib is 'skrl' or 'rlgames'
+    evaluator = PerformanceEvaluatorV2(task_name, robot_name, "skrl", ep_data, horizon, combo_id, seed=0)
+    metrics = evaluator.evaluate()
+    evaluator.save_csv()  # writes per-run CSV
+    evaluator.export_timeseries_metrics()
+
+    print_dict(metrics, nesting=4)
 
     # close the simulator
     env.close()

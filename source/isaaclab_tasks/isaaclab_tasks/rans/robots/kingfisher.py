@@ -38,8 +38,10 @@ class KingfisherRobot(RobotCore):
         # Hydrostatics, Hydrodynamics, and Thruster Dynamics
         self._hydrostatics = Hydrostatics(num_envs, device, self._robot_cfg.hydrostatics_cfg)
         self._hydrodynamics = Hydrodynamics(num_envs, device, self._robot_cfg.hydrodynamics_cfg)
-        # TODO: the dt should not be hardcoded here, should be passed from the simulation instead.
-        self._thruster_dynamics = PropellerActuator(
+        self._thruster_dynamics_left = PropellerActuator(
+            num_envs=num_envs, device=device, dt=self._physics_dt, cfg=self._robot_cfg.propeller_cfg
+        )
+        self._thruster_dynamics_right = PropellerActuator(
             num_envs=num_envs, device=device, dt=self._physics_dt, cfg=self._robot_cfg.propeller_cfg
         )
 
@@ -54,7 +56,8 @@ class KingfisherRobot(RobotCore):
         )
         self._hydrostatic_force = torch.zeros((self._num_envs, 1, 6), device=self._device, dtype=torch.float32)
         self._hydrodynamic_force = torch.zeros((self._num_envs, 1, 6), device=self._device, dtype=torch.float32)
-        self._thruster_force = torch.zeros((self._num_envs, 1, 6), device=self._device, dtype=torch.float32)
+        self._thruster_forces_left = torch.zeros(self._num_envs, 1, 3, device=self._device, dtype=torch.float32)
+        self._thruster_forces_right = torch.zeros(self._num_envs, 1, 3, device=self._device, dtype=torch.float32)
         self._no_torque = torch.zeros(self._num_envs, 1, 3, device=self._device, dtype=torch.float32)
 
     def run_setup(self, robot: Articulation):
@@ -68,7 +71,8 @@ class KingfisherRobot(RobotCore):
     def create_logs(self):
         super().create_logs()
 
-        self.scalar_logger.add_log("robot_state", "AVG/thrusters", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/thruster_left", "mean")
+        self.scalar_logger.add_log("robot_state", "AVG/thruster_right", "mean")
         self.scalar_logger.add_log("robot_state", "AVG/action_rate", "mean")
         self.scalar_logger.add_log("robot_state", "AVG/joint_acceleration", "mean")
         self.scalar_logger.add_log("robot_reward", "AVG/action_rate", "mean")
@@ -114,13 +118,11 @@ class KingfisherRobot(RobotCore):
     ):
         super().reset(env_ids, gen_actions, env_seeds)
         self._previous_actions[env_ids] = 0
-        self._thruster_dynamics.reset()
+        self._thruster_dynamics_left.reset(env_ids)
+        self._thruster_dynamics_right.reset(env_ids)
 
     def set_initial_conditions(self, env_ids: torch.Tensor | None = None):
-        locking_joints = torch.zeros((len(env_ids), 1), device=self._device)
-
-        self._robot.set_joint_velocity_target(locking_joints, env_ids=env_ids)
-        self._robot.set_joint_position_target(locking_joints, env_ids=env_ids)
+        pass
 
     def process_actions(self, actions: torch.Tensor):
         # Enforce action limits at the robot level
@@ -136,10 +138,11 @@ class KingfisherRobot(RobotCore):
 
         self._previous_actions = self._actions.clone()
         self._actions = actions
-        self._thruster_dynamics.set_target_cmd(self._actions)
+        self._thruster_dynamics_left.set_target_cmd(self._actions[:, 0])
+        self._thruster_dynamics_right.set_target_cmd(self._actions[:, 1])
 
-        # TODO: fix log
-        self.scalar_logger.log("robot_state", "AVG/thrusters", torch.linalg.norm(actions, dim=-1))
+        self.scalar_logger.log("robot_state", "AVG/thruster_left", torch.linalg.norm(actions[:, 0]))
+        self.scalar_logger.log("robot_state", "AVG/thruster_right", torch.linalg.norm(actions[:, 1]))
 
     def compute_physics(self):
         # Compute hydrostatics
@@ -153,7 +156,8 @@ class KingfisherRobot(RobotCore):
         )
 
         # Compute thruster dynamics.
-        self._thruster_force[:, 0, :] = self._thruster_dynamics.update_forces()
+        self._thruster_forces_left[:, 0] = self._thruster_dynamics_left.update_forces()
+        self._thruster_forces_right[:, 0] = self._thruster_dynamics_right.update_forces()
 
     def apply_actions(self):
         # Compute the physics
@@ -164,15 +168,13 @@ class KingfisherRobot(RobotCore):
         combined = self._hydrostatic_force + self._hydrodynamic_force
         self._robot.set_external_force_and_torque(combined[..., :3], combined[..., 3:], body_ids=self._root_idx)
         # only apply thruster forces if they are not zero, otherwise it disables external previous forces.
-        lft_thruster_force = self._thruster_force[..., :3]
-        rgt_thruster_force = self._thruster_force[..., 3:]
-        if lft_thruster_force.any():
+        if self._thruster_forces_left.any():
             self._robot.set_external_force_and_torque(
-                lft_thruster_force, self._no_torque, body_ids=self._left_thruster_idx
+                self._thruster_forces_left, self._no_torque, body_ids=self._left_thruster_idx
             )
-        if rgt_thruster_force.any():
+        if self._thruster_forces_right.any():
             self._robot.set_external_force_and_torque(
-                rgt_thruster_force, self._no_torque, body_ids=self._right_thruster_idx
+                self._thruster_forces_right, self._no_torque, body_ids=self._right_thruster_idx
             )
 
     def configure_gym_env_spaces(self):

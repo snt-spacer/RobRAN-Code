@@ -60,34 +60,37 @@ class KingfisherRobotCfg(RobotCoreCfg):
     )
 
     # Thruster dynamics
-    propeller_cfg: PropellerActuatorCfg = PropellerActuatorCfg()
-    propeller_cfg.cmd_lower_range = -1.0
-    propeller_cfg.cmd_upper_range = 1.0
-    propeller_cfg.command_rate = (propeller_cfg.cmd_upper_range - propeller_cfg.cmd_lower_range) / 2.0
-    propeller_cfg.forces_left = [
-        -4.0,  # -1.0
-        -4.0,  # -0.9
-        -4.0,  # -0.8
-        -4.0,  # -0.7
-        -2.0,  # -0.6
-        -1.0,  # -0.5
-        0.0,  # -0.4
-        0.0,  # -0.3
-        0.0,  # -0.2
-        0.0,  # -0.1
-        0.0,  # 0.0
-        0.0,  # 0.1
-        0.0,  # 0.2
-        0.5,  # 0.3
-        1.5,  # 0.4
-        4.75,  # 0.5
-        8.25,  # 0.6
-        16.0,  # 0.7
-        19.5,  # 0.8
-        19.5,  # 0.9
-        19.5,  # 1.0
-    ]
-    propeller_cfg.forces_right = propeller_cfg.forces_left
+    propeller_cfg: PropellerActuatorCfg = PropellerActuatorCfg(
+        cmd_lower_range=-1.0,
+        cmd_upper_range=1.0,
+        command_rate=1.0,
+        forces=[
+            -4.0,  # -1.0
+            -4.0,  # -0.9
+            -4.0,  # -0.8
+            -4.0,  # -0.7
+            -2.0,  # -0.6
+            -1.0,  # -0.5
+            0.0,  # -0.4
+            0.0,  # -0.3
+            0.0,  # -0.2
+            0.0,  # -0.1
+            0.0,  # 0.0
+            0.0,  # 0.1
+            0.0,  # 0.2
+            0.5,  # 0.3
+            1.5,  # 0.4
+            4.75,  # 0.5
+            8.25,  # 0.6
+            16.0,  # 0.7
+            19.5,  # 0.8
+            19.5,  # 0.9
+            19.5,  # 1.0
+        ],
+        interp_resolution=1001,
+        enable_randomization=True,
+        randomization_range=0.1,
+    )
 
     # Randomization
     mass_rand_cfg: MassRandomizationCfg = MassRandomizationCfg(

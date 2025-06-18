@@ -25,6 +25,9 @@ parser.add_argument("--video_interval", type=int, default=2000, help="Interval b
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
+parser.add_argument("--wandb_project", type=str, default="test", help="WandB project name.")
+parser.add_argument("--wandb_entity", type=str, default="spacer-rl", help="WandB entity name (username or team).")
+
 parser.add_argument(
     "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
 )
@@ -141,12 +144,18 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # specify directory for logging experiments
     if "Single" in args_cli.task:
-        if "wandb_kwargs" in agent_cfg["agent"]["experiment"]:
-            agent_cfg["agent"]["experiment"]["wandb_kwargs"]["project"] = (
-                args_cli.task.split("-")[2] + "-" + env.env.cfg.robot_name + "-" + env.env.cfg.task_name
-            )
+        # if "wandb_kwargs" in agent_cfg["agent"]["experiment"]:
+        #     agent_cfg["agent"]["experiment"]["wandb_kwargs"]["project"] = (
+        #         args_cli.task.split("-")[2] + "-" + env.env.cfg.robot_name + "-" + env.env.cfg.task_name
+        #     )
+        agent_cfg["agent"]["experiment"]["wandb_kwargs"]["project"] = args_cli.wandb_project
+        agent_cfg["agent"]["experiment"]["wandb_kwargs"]["entity"] = args_cli.wandb_entity
+        # set the experiment directory to "Single" if the task is a single-agent task
         agent_cfg["agent"]["experiment"]["directory"] = "Single"
-        agent_cfg["agent"]["experiment"]["experiment_name"] = env.env.cfg.robot_name + "-" + env.env.cfg.task_name
+        agent_cfg["agent"]["experiment"]["experiment_name"] = (
+            env.env.cfg.robot_name + "-" + env.env.cfg.task_name + "_seed_" + str(args_cli.seed)
+        )
+        # set the log root path
         log_root_path = os.path.join("logs", "skrl", args_cli.task.split("-")[2])
     else:
         agent_cfg["agent"]["experiment"]["experiment_name"] = args_cli.task.split("-")[2]

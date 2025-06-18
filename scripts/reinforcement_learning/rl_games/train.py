@@ -20,6 +20,8 @@ parser.add_argument("--video_interval", type=int, default=2000, help="Interval b
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
+parser.add_argument("--wandb_project", type=str, default="test", help="WandB project name.")
+parser.add_argument("--wandb_entity", type=str, default="spacer-rl", help="WandB entity name (username or team).")
 parser.add_argument(
     "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
 )
@@ -138,7 +140,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # set directory into agent config
     # logging directory path: <train_dir>/<full_experiment_name>
     agent_cfg["params"]["config"]["train_dir"] = log_root_path
-    agent_cfg["params"]["config"]["full_experiment_name"] = log_dir
+    agent_cfg["params"]["config"]["full_experiment_name"] = log_dir + "_seed_" + str(args_cli.seed)
 
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_root_path, log_dir, "params", "env.yaml"), env_cfg)
@@ -192,8 +194,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print(f"Using entity: {args_cli.task}")
         if "Single" in args_cli.task:
             name = agent_cfg["params"]["config"]["name"]
-            agent_cfg["params"]["wandb"]["project"] = args_cli.task.split("-")[2] + "-" + name
-            experiment_name = f"{date_str}_{name}_{algorithm}_rlgames"
+            agent_cfg["params"]["wandb"]["project"] = args_cli.wandb_project
+            agent_cfg["params"]["wandb"]["entity"] = args_cli.wandb_entity
+            experiment_name = f"{date_str}_{name}_{algorithm}_rlgames" + "_seed_" + str(args_cli.seed)
 
         wandb.init(
             project=agent_cfg["params"]["wandb"]["project"],

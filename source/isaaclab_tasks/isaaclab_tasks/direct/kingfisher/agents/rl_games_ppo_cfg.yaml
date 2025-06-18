@@ -15,7 +15,7 @@ params:
     name: continuous_a2c_logstd
 
   wandb:
-    enabled: True
+    enabled: False
     project: kingfisher_direct
     entity: spacer-rl
     group: 'zeroG'
