@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from isaaclab.assets import ArticulationCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from isaaclab_tasks.rans.domain_randomization import (
@@ -62,6 +63,14 @@ class TurtleBot2RobotCfg(RobotCoreCfg):
         rescaling_ranges=[(0.8, 1.0)],
         slices=[(0, 2)],
         clip_actions=[(-1, 1)],
+    )
+
+        # Sensors
+    body_contact_forces: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/body_link",
+        update_period=0.0,
+        history_length=3,
+        debug_vis=True,
     )
 
     # Spaces

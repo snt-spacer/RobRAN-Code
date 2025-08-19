@@ -9,6 +9,7 @@ from isaaclab.actuator_force.actuator_force import PropellerActuatorCfg
 from isaaclab.assets import ArticulationCfg
 from isaaclab.physics.hydrodynamics import HydrodynamicsCfg
 from isaaclab.physics.hydrostatics import HydrostaticsCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from isaaclab_tasks.rans.domain_randomization import (
@@ -122,6 +123,14 @@ class KingfisherRobotCfg(RobotCoreCfg):
         slices=[(0, 2)],
         rescaling_ranges=[(0.85, 1.0)],
         clip_actions=[(-1, 1)],
+    )
+
+    # Sensors
+    body_contact_forces: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/base_link",
+        update_period=0.0,
+        history_length=3,
+        debug_vis=True,
     )
 
     # Spaces

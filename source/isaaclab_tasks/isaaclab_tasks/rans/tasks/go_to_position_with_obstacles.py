@@ -348,32 +348,55 @@ class GoToPositionWithObstaclesTask(GoToPositionTask):
             xyz[..., :2] - self._robot.root_link_pos_w[env_ids][..., :2].unsqueeze(1), dim=-1
         )
         # Create a mask to filter out obstacles that are too close to the target or robot
+        # True where obstacles are INVALID (too close)
         obstacles_mask = (distance_obstacle_to_target < self._task_cfg.min_obstacle_distance_from_target) | (
             distance_obstacle_to_robot < self._task_cfg.min_obstacle_distance_from_robot
         )
 
-        # Create indices for obstacles that are too close to the target or robot
-        valid_indices = (~obstacles_mask).nonzero(as_tuple=True)[1]
-        invalid_indices = obstacles_mask.nonzero(as_tuple=True)[1]
-        valid_obstacles = xyz[env_ids, valid_indices]
+        # Count the number of valid obstacles in each environment.
+        # ~obstacles_mask is True for VALID obstacles.
+        num_valid_per_env = (~obstacles_mask).sum(dim=1)
 
-        # Swap obstacles that are too close to the target or robot with valid obstacles
-        if len(env_ids) == 1:
-            valid_obstacles = valid_obstacles.unsqueeze(0)
+        # Handle the edge case where an environment might have zero valid obstacles.
+        # We clamp to 1 to avoid errors in random sampling (e.g., division by zero).
+        # If an env has 0 valid obstacles, it will just sample from itself, which is fine as it's invalid anyway.
+        num_valid_per_env_safe = num_valid_per_env.clamp(min=1)
 
-        if self._task_cfg.max_num_vis_obstacles > valid_obstacles.shape[1]:
-            replacement_indices = self._rng.sample_integer_torch(
-                low=0, high=valid_obstacles.shape[1], shape=(len(invalid_indices),), ids=env_ids
-            )
-        else:
-            replacement_indices = self._rng.sample_unique_integers_torch(
-                min=self._task_cfg.max_num_vis_obstacles,
-                max=valid_obstacles.shape[1],
-                num=len(invalid_indices),
-                ids=env_ids,
-            )
-        replacements = valid_obstacles[env_ids, replacement_indices]
-        xyz[env_ids, invalid_indices] = replacements
+        # 1. Sort obstacles to group valid ones first.
+        # We sort by the inverted mask (valid=True=1, invalid=False=0), descending.
+        # This puts all valid obstacles at the beginning of each row.
+        # `sorted_indices` stores the original indices of the obstacles after sorting.
+        sorted_indices = torch.argsort((~obstacles_mask).int(), dim=1, descending=True)
+        # `unsort_indices` is needed later to revert the sorting.
+        unsort_indices = torch.argsort(sorted_indices, dim=1)
+
+        # Gather the xyz positions into the new sorted order.
+        # Shape: (num_envs, num_obstacles, 3)
+        sorted_xyz = torch.gather(xyz, 1, sorted_indices.unsqueeze(-1).expand_as(xyz))
+
+        # 2. Create a pool of random valid replacements, in sorted order.
+        # For each environment, generate random indices within its valid range [0, num_valid - 1].
+        # Shape: (num_envs, num_obstacles)
+        rand_indices_into_valid_section = torch.floor(
+            torch.rand(xyz.shape[:2], device=self._device) * num_valid_per_env_safe.unsqueeze(1)
+        ).long()
+
+        # Sample from the valid section of sorted_xyz to get replacement positions.
+        # `replacement_pool_sorted` now contains randomly selected valid positions for every slot.
+        replacement_pool_sorted = torch.gather(
+            sorted_xyz, 1, rand_indices_into_valid_section.unsqueeze(-1).expand_as(xyz)
+        )
+
+        # 3. Unsort the replacements to match the original obstacle order.
+        # This maps the shuffled replacements back to their original positions.
+        replacement_xyz = torch.gather(
+            replacement_pool_sorted, 1, unsort_indices.unsqueeze(-1).expand_as(xyz)
+        )
+
+        # 4. Apply the replacements using the original mask.
+        # Where the obstacle was invalid (mask is True), use the new replacement position.
+        # Otherwise, keep the original xyz position.
+        xyz = torch.where(obstacles_mask.unsqueeze(-1), replacement_xyz, xyz)
 
         # Generate quats and concatenate with xyz
         xyzw = self.obstacles.data.object_com_quat_w[env_ids].clone()

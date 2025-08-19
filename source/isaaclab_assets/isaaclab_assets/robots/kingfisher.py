@@ -35,6 +35,7 @@ KINGFISHER_CFG = ArticulationCfg(
             sleep_threshold=0.005,
             stabilization_threshold=0.001,
         ),
+        activate_contact_sensors=True,
         copy_from_source=False,
     ),
     init_state=ArticulationCfg.InitialStateCfg(

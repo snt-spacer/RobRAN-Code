@@ -1,100 +1,153 @@
-![Isaac Lab](docs/source/_static/isaaclab.jpg)
+![RobRAN](docs/source/_static/code_banner.png)
+
+# RobRAN Code:
+### A Unified Robotics Framework for Reinforcement Learning-Based Autonomous Navigation.
+
+This tutorial shows hot to create a robotic system, linking it to tasks, and training a Reinforcement Learning (RL) agent using the RANS version of Isaac Lab framework. As an example, we use the robot named `floating_platform`.
+
+## Overview of the Example Files and Structure
+
+### Main Folders and Their Roles
+- **`RobRAN-Code/source/isaaclab_tasks/isaaclab_tasks/rans/robots/`**:
+  Contains the robot configuration and class descriptions. For example, `floating_platform.py` specifies the `floating_platform` robot's properties.
+
+- **`RobRAN-Code/source/isaaclab_tasks/isaaclab_tasks/direct/ROBOT_NAME`**:
+  Contains task descriptions for robot-task pairs. Tasks are registered as Gym environments with unique IDs in the `__init__.py` file.
+
+- **Subdirectories of `rans`**:
+  - `robots`: Contains specific robot class definitions.
+  - `robots_cfg`: Contains robot-specific configurations.
+  - `tasks`: Implements various tasks for the robots, like navigation or velocity tracking.
+  - `tasks_cfg`: Contains task-specific configuration files.
+  - `utils`: Provides utility functions like generation of unique per-environment RNG, functionalities to evaluate and plot the results of testing a trained model for a specific robot-task pair.
 
 ---
 
-# Isaac Lab
+## Step 1: Configuring the Robot
 
-[![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
-[![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
-[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/20.04/)
-[![Windows platform](https://img.shields.io/badge/platform-windows--64-orange.svg)](https://www.microsoft.com/en-us/)
-[![pre-commit](https://img.shields.io/github/actions/workflow/status/isaac-sim/IsaacLab/pre-commit.yaml?logo=pre-commit&logoColor=white&label=pre-commit&color=brightgreen)](https://github.com/isaac-sim/IsaacLab/actions/workflows/pre-commit.yaml)
-[![docs status](https://img.shields.io/github/actions/workflow/status/isaac-sim/IsaacLab/docs.yaml?label=docs&color=brightgreen)](https://github.com/isaac-sim/IsaacLab/actions/workflows/docs.yaml)
-[![License](https://img.shields.io/badge/license-BSD--3-yellow.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![License](https://img.shields.io/badge/license-Apache--2.0-yellow.svg)](https://opensource.org/license/apache-2-0)
+### Example File: `floating_platform.py`
+**Location**: `RobRAN-Code/source/isaaclab_tasks/isaaclab_tasks/rans/robots/floating_platform.py`
 
+This file defines the robot configuration using the `FLOATING_PLATFORM_CFG` object. Key aspects include:
+- **USD Path**: Specifies the 3D model file.
+- **Physical Properties**: Enables simulation features like gravity and velocity constraints.
+- **Initial State**: Sets default positions and joint values.
 
-**Isaac Lab** is a GPU-accelerated, open-source framework designed to unify and simplify robotics research workflows, such as reinforcement learning, imitation learning, and motion planning. Built on [NVIDIA Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html), it combines fast and accurate physics and sensor simulation, making it an ideal choice for sim-to-real transfer in robotics.
-
-Isaac Lab provides developers with a range of essential features for accurate sensor simulation, such as RTX-based cameras, LIDAR, or contact sensors. The framework's GPU acceleration enables users to run complex simulations and computations faster, which is key for iterative processes like reinforcement learning and data-intensive tasks. Moreover, Isaac Lab can run locally or be distributed across the cloud, offering flexibility for large-scale deployments.
-
-## Key Features
-
-Isaac Lab offers a comprehensive set of tools and environments designed to facilitate robot learning:
-- **Robots**: A diverse collection of robots, from manipulators, quadrupeds, to humanoids, with 16 commonly available models.
-- **Environments**: Ready-to-train implementations of more than 30 environments, which can be trained with popular reinforcement learning frameworks such as RSL RL, SKRL, RL Games, or Stable Baselines. We also support multi-agent reinforcement learning.
-- **Physics**: Rigid bodies, articulated systems, deformable objects
-- **Sensors**: RGB/depth/segmentation cameras, camera annotations, IMU, contact sensors, ray casters.
-
-
-## Getting Started
-
-Our [documentation page](https://isaac-sim.github.io/IsaacLab) provides everything you need to get started, including detailed tutorials and step-by-step guides. Follow these links to learn more about:
-
-- [Installation steps](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html#local-installation)
-- [Reinforcement learning](https://isaac-sim.github.io/IsaacLab/main/source/overview/reinforcement-learning/rl_existing_scripts.html)
-- [Tutorials](https://isaac-sim.github.io/IsaacLab/main/source/tutorials/index.html)
-- [Available environments](https://isaac-sim.github.io/IsaacLab/main/source/overview/environments.html)
-
-
-## Contributing to Isaac Lab
-
-We wholeheartedly welcome contributions from the community to make this framework mature and useful for everyone.
-These may happen as bug reports, feature requests, or code contributions. For details, please check our
-[contribution guidelines](https://isaac-sim.github.io/IsaacLab/main/source/refs/contributing.html).
-
-## Show & Tell: Share Your Inspiration
-
-We encourage you to utilize our [Show & Tell](https://github.com/isaac-sim/IsaacLab/discussions/categories/show-and-tell) area in the
-`Discussions` section of this repository. This space is designed for you to:
-
-* Share the tutorials you've created
-* Showcase your learning content
-* Present exciting projects you've developed
-
-By sharing your work, you'll inspire others and contribute to the collective knowledge
-of our community. Your contributions can spark new ideas and collaborations, fostering
-innovation in robotics and simulation.
-
-## Troubleshooting
-
-Please see the [troubleshooting](https://isaac-sim.github.io/IsaacLab/main/source/refs/troubleshooting.html) section for
-common fixes or [submit an issue](https://github.com/isaac-sim/IsaacLab/issues).
-
-For issues related to Isaac Sim, we recommend checking its [documentation](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html)
-or opening a question on its [forums](https://forums.developer.nvidia.com/c/agx-autonomous-machines/isaac/67).
-
-## Support
-
-* Please use GitHub [Discussions](https://github.com/isaac-sim/IsaacLab/discussions) for discussing ideas, asking questions, and requests for new features.
-* Github [Issues](https://github.com/isaac-sim/IsaacLab/issues) should only be used to track executable pieces of work with a definite scope and a clear deliverable. These can be fixing bugs, documentation issues, new features, or general updates.
-
-## Connect with the NVIDIA Omniverse Community
-
-Have a project or resource you'd like to share more widely? We'd love to hear from you! Reach out to the
-NVIDIA Omniverse Community team at OmniverseCommunity@nvidia.com to discuss potential opportunities
-for broader dissemination of your work.
-
-Join us in building a vibrant, collaborative ecosystem where creativity and technology intersect. Your
-contributions can make a significant impact on the Isaac Lab community and beyond!
-
-## License
-
-The Isaac Lab framework is released under [BSD-3 License](LICENSE). The `isaaclab_mimic` extension and its corresponding standalone scripts are released under [Apache 2.0](LICENSE-mimic). The license files of its dependencies and assets are present in the [`docs/licenses`](docs/licenses) directory.
-
-## Acknowledgement
-
-Isaac Lab development initiated from the [Orbit](https://isaac-orbit.github.io/) framework. We would appreciate if you would cite it in academic publications as well:
-
+Example:
+```python
+FLOATING_PLATFORM_CFG = ArticulationCfg(
+    spawn=sim_utils.UsdFileCfg(
+        usd_path=f"{REPO_ROOT_PATH}/floating_platform.usd",
+        rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=True),
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(pos=(0.0, 0.0, 0.5)),
+)
 ```
-@article{mittal2023orbit,
-   author={Mittal, Mayank and Yu, Calvin and Yu, Qinxi and Liu, Jingzhou and Rudin, Nikita and Hoeller, David and Yuan, Jia Lin and Singh, Ritvik and Guo, Yunrong and Mazhar, Hammad and Mandlekar, Ajay and Babich, Buck and State, Gavriel and Hutter, Marco and Garg, Animesh},
-   journal={IEEE Robotics and Automation Letters},
-   title={Orbit: A Unified Simulation Framework for Interactive Robot Learning Environments},
-   year={2023},
-   volume={8},
-   number={6},
-   pages={3740-3747},
-   doi={10.1109/LRA.2023.3270034}
-}
+
+---
+
+## Step 2: Defining Tasks
+
+### Example Folder: `tasks/`
+**Location**: `RobRAN-Code/source/isaaclab_tasks/isaaclab_tasks/rans/tasks/`
+
+Tasks are implemented here. For example:
+- **File**: `go_to_position.py` describes the "Go To Position" task.
+- **Core Task Logic**: Uses the `TaskCore` base class to define observation space, rewards, and task dynamics.
+
+Example:
+```python
+class GoToPositionTask(TaskCore):
+    def get_observations(self):
+        # Observation logic
+        pass
+
+    def compute_rewards(self):
+        # Reward logic
+        pass
+```
+
+---
+
+## Step 3: Configuring Task Environments
+
+### Example File: `floating_platform_go_to_position.py`
+**Location**: `RobRAN-Code/source/isaaclab_tasks/isaaclab_tasks/direct/floating_platform/floating_platform_go_to_position.py`
+
+This file links the robot and task configurations to create an RL environment.
+
+Example:
+```python
+@configclass
+class FloatingPlatformGoToPositionEnvCfg(DirectRLEnvCfg):
+    scene = InteractiveSceneCfg(num_envs=4096)
+    robot_cfg = FloatingPlatformRobotCfg()
+    task_cfg = GoToPositionCfg()
+    episode_length_s = 40.0
+```
+
+---
+
+## Step 4: Registering Gym Environments
+
+### Example File: `__init__.py`
+**Location**: `RobRAN-Code/source/isaaclab_tasks/isaaclab_tasks/direct/floating_platform/__init__.py`
+
+Gym environments are registered with unique IDs, linking them to specific task and robot configurations.
+
+Example registration:
+```python
+gym.register(
+    id="Isaac-FloatingPlatform-GoToPosition-Direct-v0",
+    entry_point=f"{__name__}.floating_platform_go_to_position_env:FloatingPlatformGoToPositionEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.floating_platform_go_to_position_env:FloatingPlatformGoToPositionEnvCfg",
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FloatingPlatformPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+    },
+)
+```
+
+---
+
+## Step 5: Training an RL Agent
+
+### RL Libraries
+Compatible libraries include `rl_games`, `skrl`, and `Stable-Baselines3`. Example configuration files are referenced in the `__init__.py`.
+
+### Training Command
+
+Start the docker:
+```
+./docker/container.py start
+./docker/container.py enter
+```
+
+Use the environment ID (e.g., `"Isaac-FloatingPlatform-GoToPosition-Direct-v0"`) to start training.
+
+Example command to train a policy with `rl_games`:
+```bash
+ ./isaaclab.sh -p scripts/reinforcement_learning/rl_games/train.py --task Isaac-FloatingPlatform-GoToPosition-Direct-v0 --num_envs 4096 --headless
+```
+
+Example command to play a trained policy with `rl_games`:
+```bash
+ ./isaaclab.sh -p scripts/reinforcement_learning/rl_games/play.py --task Isaac-FloatingPlatform-GoToPosition-Direct-v0 --num_envs 16
+```
+
+Alternatively, to easily switch between robot and tasks, one can use the Single environment:
+```bash
+./isaaclab.sh -p scripts/reinforcement_learning/rl_games/train.py --task Isaac-RANS-Single-v0 --num_envs 4096 --headless env.robot_name=FloatingPlatform env.task_name=GoToPosition
+```
+
+In the previous command, the `env.robot_name` is used to select which robot should be used, and the `env.task_name` is used to select the task that should be loaded.
+These names relate to the ones given inside the factories in these files:
+```bash
+source/isaaclab_tasks/isaaclab_tasks/rans/robots_cfg/__init__.py
+source/isaaclab_tasks/isaaclab_tasks/rans/robots/__init__.py
+source/isaaclab_tasks/isaaclab_tasks/rans/tasks_cfg/__init__.py
+source/isaaclab_tasks/isaaclab_tasks/rans/tasks/__init__.py
 ```

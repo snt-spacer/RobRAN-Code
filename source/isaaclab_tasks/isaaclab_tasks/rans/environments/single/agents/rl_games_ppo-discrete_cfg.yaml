@@ -16,7 +16,7 @@ params:
 
   wandb:
     enabled: True
-    project: floating_platform_direct
+    project: single
     entity: spacer-rl
     group: 'zeroG'
     notes: ''
@@ -50,7 +50,7 @@ params:
   load_path: '' # path to the checkpoint to load
 
   config:
-    name: floating_platform_direct
+    name: single
     env_name: rlgpu
     device: 'cuda:0'
     device_name: 'cuda:0'
@@ -69,7 +69,7 @@ params:
     lr_schedule: adaptive
     kl_threshold: 0.016
     score_to_win: 20000
-    max_epochs: 500
+    max_epochs: 1000
     save_best_after: 50
     save_frequency: 50
     grad_norm: 1.0

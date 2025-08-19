@@ -13,6 +13,7 @@ from isaaclab.scene import InteractiveScene
 from isaaclab_tasks.rans import TurtleBot2RobotCfg
 
 from .robot_core import RobotCore
+from isaaclab.sensors import ContactSensor
 
 
 class TurtleBot2Robot(RobotCore):
@@ -158,3 +159,15 @@ class TurtleBot2Robot(RobotCore):
         action_space = vector.utils.batch_space(single_action_space, self._num_envs)
 
         return single_action_space, action_space
+
+    def activateSensors(self, sensor_type: str, filter: list):
+        if sensor_type == "contacts":
+            self._robot_cfg.contact_sensor_active = True
+            if len(filter) > 0:
+                self._robot_cfg.body_contact_forces.filter_prim_paths_expr = filter
+
+    def register_sensors(self) -> None:
+        # Contact sensor
+        if self._robot_cfg.contact_sensor_active:
+            self.scene.sensors["robot_contacts"] = ContactSensor(self._robot_cfg.body_contact_forces)
+            self.contacts: ContactSensor = self.scene["robot_contacts"]
