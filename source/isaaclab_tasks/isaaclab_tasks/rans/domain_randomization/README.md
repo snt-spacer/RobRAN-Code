@@ -51,7 +51,7 @@ The following table shows all available randomization types, their modes, and wh
 
 **Available Modes**:
 - `"uniform"` - Uniform distribution on reset
-- `"normal"` - Normal distribution on reset  
+- `"normal"` - Normal distribution on reset
 - `"constant_time_decay"` - Mass decays over time during episode
 - `"action_based_decay"` - Mass decays based on action magnitude
 
@@ -245,7 +245,7 @@ wrench_rand_cfg: WrenchRandomizationCfg = WrenchRandomizationCfg(
 
 ### **Reset-based Randomization** (applied when environment resets):
 - Mass (uniform/normal modes)
-- CoM (uniform/normal modes)  
+- CoM (uniform/normal modes)
 - Inertia (uniform/normal modes)
 - Noisy Actions (uniform/normal modes)
 - Actions Rescaler (uniform mode)
@@ -275,7 +275,7 @@ class RobotCfg:
         max_delta=0.1,
         mass_change_rate=-0.025
     )
-    
+
     # CoM randomization - changes on reset only
     com_rand_cfg: CoMRandomizationCfg = CoMRandomizationCfg(
         enable=True,
@@ -283,7 +283,7 @@ class RobotCfg:
         body_name="core",
         max_delta=0.05
     )
-    
+
     # Action noise - adds noise to actions
     noisy_actions_cfg: NoisyActionsCfg = NoisyActionsCfg(
         enable=True,
@@ -292,7 +292,7 @@ class RobotCfg:
         max_delta=[0.025],
         clip_actions=[(-1, 1)]
     )
-    
+
     # Action scaling - varies actuator gains
     actions_rescaler_cfg: ActionsRescalerCfg = ActionsRescalerCfg(
         enable=True,
@@ -301,7 +301,7 @@ class RobotCfg:
         rescaling_ranges=[(0.8, 1.0)],
         clip_actions=[(-1, 1)]
     )
-    
+
     # External wrenches - sporadic kicks
     wrench_rand_cfg: WrenchRandomizationCfg = WrenchRandomizationCfg(
         enable=True,
@@ -340,4 +340,4 @@ The randomization system is built on the `RandomizationCore` class which provide
 - Environment-specific application
 - Data logging and monitoring capabilities
 
-Each randomization type inherits from `RandomizationCore` and implements specific behavior for its domain. 
+Each randomization type inherits from `RandomizationCore` and implements specific behavior for its domain.

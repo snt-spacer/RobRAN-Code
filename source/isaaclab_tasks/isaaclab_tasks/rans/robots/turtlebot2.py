@@ -9,11 +9,11 @@ from gymnasium import spaces, vector
 
 from isaaclab.assets import Articulation
 from isaaclab.scene import InteractiveScene
+from isaaclab.sensors import ContactSensor
 
 from isaaclab_tasks.rans import TurtleBot2RobotCfg
 
 from .robot_core import RobotCore
-from isaaclab.sensors import ContactSensor
 
 
 class TurtleBot2Robot(RobotCore):

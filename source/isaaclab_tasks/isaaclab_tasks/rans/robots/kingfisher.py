@@ -195,4 +195,3 @@ class KingfisherRobot(RobotCore):
         if self._robot_cfg.contact_sensor_active:
             self.scene.sensors["robot_contacts"] = ContactSensor(self._robot_cfg.body_contact_forces)
             self.contacts: ContactSensor = self.scene["robot_contacts"]
-

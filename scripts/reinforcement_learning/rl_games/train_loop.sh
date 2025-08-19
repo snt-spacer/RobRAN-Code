@@ -13,14 +13,14 @@ do
     for robot in "${ROBOTS[@]}"
     do
         echo "Training with robot: $robot and seed: $seed"
-        
+
         # Set algorithm based on robot type
         if [ "$robot" = "FloatingPlatform" ]; then
             algorithm="ppo-discrete"
         else
             algorithm="ppo"
         fi
-        
+
         ./isaaclab.sh -p scripts/reinforcement_learning/rl_games/train.py \
         --task Isaac-RANS-Single-v0 \
         env.task_name=GoToPositionWithObstacles \
@@ -28,6 +28,6 @@ do
         --num_envs 4096 \
         --headless \
         --algorithm=$algorithm \
-        --seed $seed 
+        --seed $seed
     done
 done

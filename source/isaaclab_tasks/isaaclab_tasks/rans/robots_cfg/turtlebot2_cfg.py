@@ -65,7 +65,7 @@ class TurtleBot2RobotCfg(RobotCoreCfg):
         clip_actions=[(-1, 1)],
     )
 
-        # Sensors
+    # Sensors
     body_contact_forces: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/body_link",
         update_period=0.0,

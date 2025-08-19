@@ -389,9 +389,7 @@ class GoToPositionWithObstaclesTask(GoToPositionTask):
 
         # 3. Unsort the replacements to match the original obstacle order.
         # This maps the shuffled replacements back to their original positions.
-        replacement_xyz = torch.gather(
-            replacement_pool_sorted, 1, unsort_indices.unsqueeze(-1).expand_as(xyz)
-        )
+        replacement_xyz = torch.gather(replacement_pool_sorted, 1, unsort_indices.unsqueeze(-1).expand_as(xyz))
 
         # 4. Apply the replacements using the original mask.
         # Where the obstacle was invalid (mask is True), use the new replacement position.
